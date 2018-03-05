@@ -32,15 +32,19 @@ def get_user_id_from_request(event):
     except:
         raise Exception('Unauthorized')  # Token not a valid JWT
 
-    raw_user_id = token.get('sub', ':')
-    if raw_user_id == ':' or ':' not in raw_user_id:
-        # Support legacy JWTs from Ruby API
-        if 'user_id' in token:
-            raw_user_id = '{}:{}'.format(os.environ['AWS_REGION'], token['user_id'])
-        else:
-            raise Exception('Unauthorized')  # Invalid raw_user_id
+    print(token)
+    if 'sub' in token:
+        raw_user_id = token['sub']
+    elif 'user_id' in token:
+        raw_user_id = token['user_id']
+    else:
+        raise Exception('Unauthorized')  # No user id in token
 
-    region, user_id = raw_user_id.split(':', 1)
+    if ':' in raw_user_id:
+        region, user_id = raw_user_id.split(':', 1)
+    else:
+        region, user_id = os.environ['AWS_REGION'], raw_user_id
+
     if region != os.environ['AWS_REGION']:
         raise Exception('Unauthorized')  # Mismatching region
     if not validate_uuid4(user_id):
