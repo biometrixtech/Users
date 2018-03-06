@@ -5,3 +5,5 @@
 apigateway/*
 !apigateway/*.py
 !apigateway/pip_requirements
+apigateway/flask_lambda.py
+apigateway/itsdangerous.py
