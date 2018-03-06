@@ -29,15 +29,6 @@ Resources:
                     Action: "sts:AssumeRole"
             ManagedPolicyArns:
               - "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
-            Policies:
-              - PolicyName: "default"
-                PolicyDocument:
-                    Version: "2012-10-17"
-                    Statement:
-                      - Action:
-                          - "dynamodb:GetItem"
-                        Effect: "Allow"
-                        Resource: { "Fn::Sub": "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/alerts-${Environment}-*" }
             RoleName: { "Fn::Sub": "users-${Environment}-apigateway-authenticate-${AWS::Region}" }
 
     CustomAuthLambda:
