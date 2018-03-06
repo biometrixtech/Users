@@ -1,3 +1,7 @@
 # Don't commit libraries for lambdas, people should rebuild them from the pip_requirements
 /lambdas/*/*/
 *.zip
+
+apigateway/*
+!apigateway/*.py
+!apigateway/pip_requirements
