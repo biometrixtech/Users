@@ -8,9 +8,9 @@ def handler(event, _):
 
     user_id = get_user_id_from_request(event)
 
-    return {
-        "principalId": user_id,
-        "policyDocument": {
+    ret = {"principalId": user_id}
+    if 'methodArn' in event:
+        ret["policyDocument"] = {
             "Version": "2012-10-17",
             "Statement": [{
                 "Action": "execute-api:Invoke",
@@ -18,7 +18,7 @@ def handler(event, _):
                 "Resource": event['methodArn'].split('/')[0] + '/*',
             }]
         }
-    }
+    return ret
 
 
 def get_user_id_from_request(event):
