@@ -29,7 +29,8 @@ def handle_user_get(user_id):
                     role AS user_role,
                     organization_id AS organization_id,
                     created_at AS created_date,
-                    updated_at AS updated_date
+                    updated_at AS updated_date,
+                    weight AS user_mass_lb
                 FROM users WHERE id = %s""",
             [user_id]
         ),
@@ -53,6 +54,10 @@ def handle_user_get(user_id):
         'updated_date': datetime.datetime.strptime(user_data[0]['updated_date'], "%Y-%m-%dT%H:%M:%S.%f").strftime("%Y-%m-%dT%H:%M:%SZ"),
         'team_id': teams[0]['team_id'] if len(teams) else None,
         'training_group_ids': [t['training_group_id'] for t in training_groups],
+        'mass': {
+            'lb': round(user_data[0]['user_mass_lb'], 1),
+            'kg': round(user_data[0]['user_mass_lb'] * 0.453592, 1),
+        }
     }
 
     return json.dumps({'user': user}, default=json_serialise)
