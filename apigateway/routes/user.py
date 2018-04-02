@@ -13,6 +13,7 @@ app = Blueprint('user', __name__)
 
 
 @app.route('/<user_id>', methods=['GET'])
+@xray_recorder.capture('routes.user.get')
 def handle_user_get(user_id):
     if not validate_uuid4(user_id):
         raise InvalidSchemaException('user_id must be a uuid')
