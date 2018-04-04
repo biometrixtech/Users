@@ -3,29 +3,11 @@ import sys
 import traceback
 
 from exceptions import ApplicationException
-from flask import Response, jsonify
-from flask_lambda import FlaskLambda
-from serialisable import json_serialise
-
 from aws_xray_sdk.core import patch_all
 patch_all()
 
-
-class ApiResponse(Response):
-    @classmethod
-    def force_type(cls, rv, environ=None):
-        if isinstance(rv, dict):
-            # Round-trip through our JSON serialiser to make it parseable by AWS's
-            rv = json.loads(json.dumps(rv, sort_keys=True, default=json_serialise))
-            rv = jsonify(rv)
-        return super().force_type(rv, environ)
-
-
-app = FlaskLambda(__name__)
-app.response_class = ApiResponse
-app.url_map.strict_slashes = False
-
-from routes.user import app as user_routes
+from flask_app import app
+from routes.user import user_app as user_routes
 app.register_blueprint(user_routes, url_prefix='/v1/user')
 app.register_blueprint(user_routes, url_prefix='/users/user')
 

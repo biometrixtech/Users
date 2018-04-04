@@ -1,18 +1,111 @@
 from aws_xray_sdk.core import xray_recorder
-from flask import Blueprint
+from flask import Blueprint, request, abort, jsonify
+
 import boto3
 import datetime
 import json
 import os
 import uuid
+from sqlalchemy.orm import Session
 
 from exceptions import InvalidSchemaException, NoSuchEntityException
 from serialisable import json_serialise
 
-app = Blueprint('user', __name__)
+from db import engine, Users
+from flask_app import bcrypt
+
+user_app = Blueprint('user', __name__)
+
+session = Session(bind=engine)
 
 
-@app.route('/<user_id>', methods=['GET'])
+def extract_email_and_password_from_request(headers=None, params=None, data=None):
+    """
+    Check params, headers and json data for email and password
+    :param request:
+    :return:
+    """
+
+    try:
+        email = data['email']
+        password_received = data['password']
+        return email, password_received
+    except Exception as e:
+        print(e)
+        abort(404)
+
+
+def orm_to_dictionary(object_model):
+    """
+    Converts a table object model into a dictionary for serialisation
+    :param object_model:
+    :return:
+    """
+    return {k: v for k, v in object_model.__dict__.items() if not k.startswith("_")}
+
+
+@user_app.route('/sign_in', methods=['POST'])
+def user_sign_in():
+    """
+    Given a username and password, this retrieves the user object and authenticates the user, returning their info if valid.
+    :return: {
+        "auth_token": "",
+        "id": "",
+        "email": "glitch0@gmail.com",
+        "role": "biometrix_admin",
+        "first_name": "Chris",
+        "last_name": "Cassano",
+        "facebook_id": null,
+        "phone_number": "9191234567",
+        "created_at": "2017-04-14T23:49:52.777Z",
+        "updated_at": "2018-04-02T17:16:40.280Z",
+        "position": "Administrator",
+        "active": true,
+        "in_training": false,
+        "deleted_at": null,
+        "height_feet": 6,
+        "height_inches": null,
+        "weight": 120,
+        "gender": "male",
+        "status": "full_volume",
+        "push_token": null,
+        "push_type": null,
+        "onboarded": true,
+        "birthday": "01/02/03",
+        "organization_id": "f62fbd5b-aafc-436f-b358-be2b34e1fe58",
+        "primary_training_group_id": null,
+        "year_in_school": 2,
+        "avatar_url": "https://dashboard-v2.biometrixtech.com/images/full/missing.png",
+        "recent_sensors": [],
+        "needs_base_calibration": false,
+        "jwt": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoiZTg1MTQ0ODktOGRlOS00N2UwLWIzZDUtYjE1ZGEyNDQ3ODNmIiwiY3JlYXRlZF9hdCI6IjIwMTgtMDQtMDIgMTc6MTY6NDAgKzAwMDAiLCJzaWduX2luX21ldGhvZCI6Impzb24iLCJyb2xlIjoiYmlvbWV0cml4X2FkbWluIn0.GaRpLZN82pOJKgxV5GQVxHt_3IL56_wFaOGbXdAQ-MY",
+        "teams": [
+            {
+                "id": "f87e1deb-f022-4223-acaa-4926b6094343",
+                "name": "Womens Soccer",
+                "organization_id": "f62fbd5b-aafc-436f-b358-be2b34e1fe58",
+                "created_at": "2017-08-15T07:55:39.894Z",
+                "updated_at": "2017-10-16T16:11:34.424Z",
+                "athlete_subscriptions": 10,
+                "athlete_manager_subscriptions": 10,
+                "gender": "female",
+                "sport_id": "8534c4ea-4b37-40a0-a037-cad00cf03f74"
+            }
+        ]
+        }
+    """
+    # Check for email and password within the request
+    email, password_received = extract_email_and_password_from_request(data=request.json)
+
+    # Pull the User Object given the email address
+    user = session.query(Users).filter_by(email=email).first()
+    # Attempt to authenticate the user
+    if user and password_received:
+        if bcrypt.check_password_hash(user.password_digest, password_received): # Check if the password matches
+            return json.dumps(orm_to_dictionary(user), default=json_serialise)
+
+
+@user_app.route('/<user_id>', methods=['GET'])
 @xray_recorder.capture('routes.user.get')
 def handle_user_get(user_id):
     if not validate_uuid4(user_id):
