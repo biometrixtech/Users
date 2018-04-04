@@ -78,7 +78,7 @@ def user_sign_in():
         "avatar_url": "https://dashboard-v2.biometrixtech.com/images/full/missing.png",
         "recent_sensors": [],
         "needs_base_calibration": false,
-        "jwt": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoiZTg1MTQ0ODktOGRlOS00N2UwLWIzZDUtYjE1ZGEyNDQ3ODNmIiwiY3JlYXRlZF9hdCI6IjIwMTgtMDQtMDIgMTc6MTY6NDAgKzAwMDAiLCJzaWduX2luX21ldGhvZCI6Impzb24iLCJyb2xlIjoiYmlvbWV0cml4X2FkbWluIn0.GaRpLZN82pOJKgxV5GQVxHt_3IL56_wFaOGbXdAQ-MY",
+        "jwt": "...",
         "teams": [
             {
                 "id": "f87e1deb-f022-4223-acaa-4926b6094343",
