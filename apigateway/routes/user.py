@@ -7,16 +7,24 @@ import json
 import os
 import uuid
 from sqlalchemy.orm import Session
+import jwt
+
 
 from exceptions import InvalidSchemaException, NoSuchEntityException
 from serialisable import json_serialise
-
-from db import engine, Users
 from flask_app import bcrypt
+
+import config
+from db import engine, Users, Sensors, Teams
+
 
 user_app = Blueprint('user', __name__)
 
 session = Session(bind=engine)
+
+sign_in_methods = ['json-subject-creation',
+                   'json',
+                   'json-accessory']
 
 
 def extract_email_and_password_from_request(headers=None, params=None, data=None):
@@ -42,6 +50,30 @@ def orm_to_dictionary(object_model):
     :return:
     """
     return {k: v for k, v in object_model.__dict__.items() if not k.startswith("_")}
+
+
+def create_avatar_url(avatar_file_name):
+    """
+    Converts the file_name into a valid url
+    :param avatar_file_name:
+    :return:
+    """
+    pass
+
+
+def jwt_make_payload(user_id, sign_in_method, role):
+    """
+    Creates the payload for the jwt
+    :return:
+    """
+    jwt_payload = {"user_id": user_id,
+                   "created_at": datetime.datetime.now(),
+                   "sign_in_method": sign_in_method,
+                   "role": role
+                   }
+    hmac_secret = config.SECRET_KEY_BASE
+    jwt_payload_encoded = jwt.encode({'some': 'payload'}, hmac_secret, algorithm='HS256')
+    return jwt_payload_encoded
 
 
 @user_app.route('/sign_in', methods=['POST'])
@@ -97,12 +129,35 @@ def user_sign_in():
     # Check for email and password within the request
     email, password_received = extract_email_and_password_from_request(data=request.json)
 
-    # Pull the User Object given the email address
-    user = session.query(Users).filter_by(email=email).first()
     # Attempt to authenticate the user
-    if user and password_received:
+    user = session.query(Users).filter_by(email=email).join(Teams).join(Sensors).first()
+    if email and password_received:
         if bcrypt.check_password_hash(user.password_digest, password_received): # Check if the password matches
-            return json.dumps(orm_to_dictionary(user), default=json_serialise)
+            # Add needs_base_calibration = False to response
+            # Create avatar_url
+            # create jwt :
+            #   def jwt_payload
+            #     {
+            #       user_id: id,
+            #       created_at: Time.now,
+            #       sign_in_method: @sign_in_method,
+            #       role: role
+            #     }
+            #   end
+            #
+            #   def jwt
+            #     payload = jwt_payload
+            #     hmac_secret = Rails.application.secrets.secret_key_base
+            #     JWT.encode payload, hmac_secret, 'HS256'
+            #   end
+            user_resp = orm_to_dictionary(user)
+            user_resp['needs_base_calibration'] = False # Legacy option as devices no longer need to be calibrated
+            user_resp['avatar_url'] = create_avatar_url(user_resp['avatar_file_name'])
+            user_resp['jwt'] = jwt_make_payload(user_id=user_resp['id'],
+                                                sign_in_method='json',
+                                                role=user_resp['role']
+                                               )
+            return json.dumps(user_resp, default=json_serialise)
 
 
 @user_app.route('/<user_id>', methods=['GET'])

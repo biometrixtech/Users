@@ -9,15 +9,21 @@ engine = create_engine(POSTGRES_DB_URI, connect_args={'connect_timeout': 10})
 # session = Session(bind=engine)
 # base = declarative_base()
 
-def load_user_class():
 
+def define_auto_map_base():
     metadata = MetaData()
-    metadata.reflect(engine, only=['users'])
+    metadata.reflect(engine, only=['users', 'teams', 'sensors', ''])
 
     AutoMapBase = automap_base(metadata=metadata)
     AutoMapBase.prepare(engine, reflect=True)
+    return AutoMapBase
+
+
+def load_table_classes(AutoMapBase):
     Users = AutoMapBase.classes.users
+    Teams = AutoMapBase.classes.teams
+    Sensors = AutoMapBase.classes.sensors
+    return Users, Teams, Sensors
 
-    return Users
 
-Users = load_user_class()
+Users, Teams, Sensors = load_table_classes(define_auto_map_base())
