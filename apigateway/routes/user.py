@@ -15,7 +15,7 @@ from serialisable import json_serialise
 from flask_app import bcrypt
 
 import config
-from db import engine, Users, Sensors, Teams
+from db import engine, Users, Sensors, Teams, TeamsUsers
 
 
 user_app = Blueprint('user', __name__)
@@ -67,12 +67,12 @@ def jwt_make_payload(user_id, sign_in_method, role):
     :return:
     """
     jwt_payload = {"user_id": user_id,
-                   "created_at": datetime.datetime.now(),
+                   "created_at": datetime.datetime.now().isoformat(),
                    "sign_in_method": sign_in_method,
                    "role": role
                    }
     hmac_secret = config.SECRET_KEY_BASE
-    jwt_payload_encoded = jwt.encode({'some': 'payload'}, hmac_secret, algorithm='HS256')
+    jwt_payload_encoded = jwt.encode(jwt_payload, hmac_secret, algorithm='HS256') #, default=json_serialise)
     return jwt_payload_encoded
 
 
@@ -128,28 +128,19 @@ def user_sign_in():
     """
     # Check for email and password within the request
     email, password_received = extract_email_and_password_from_request(data=request.json)
-
+# Remove these:
+#       :avatar_file_name,
+#       :avatar_file_size,
+#       :avatar_updated_at,
+#       :avatar_content_type,
+#       :password_digest
     # Attempt to authenticate the user
-    user = session.query(Users).filter_by(email=email).join(Teams).join(Sensors).first()
-    if email and password_received:
+    user_query = session.query(Users).filter_by(email=email)
+    user = user_query.first()
+    recent_sensors = session.query(Sensors).filter(Sensors.last_user_id == user.id).order_by(Sensors.updated_at).limit(3).all()
+    teams = session.query(Teams).join(TeamsUsers).filter(TeamsUsers.user_id == user.id).all()
+    if user and password_received:
         if bcrypt.check_password_hash(user.password_digest, password_received): # Check if the password matches
-            # Add needs_base_calibration = False to response
-            # Create avatar_url
-            # create jwt :
-            #   def jwt_payload
-            #     {
-            #       user_id: id,
-            #       created_at: Time.now,
-            #       sign_in_method: @sign_in_method,
-            #       role: role
-            #     }
-            #   end
-            #
-            #   def jwt
-            #     payload = jwt_payload
-            #     hmac_secret = Rails.application.secrets.secret_key_base
-            #     JWT.encode payload, hmac_secret, 'HS256'
-            #   end
             user_resp = orm_to_dictionary(user)
             user_resp['needs_base_calibration'] = False # Legacy option as devices no longer need to be calibrated
             user_resp['avatar_url'] = create_avatar_url(user_resp['avatar_file_name'])
@@ -157,7 +148,10 @@ def user_sign_in():
                                                 sign_in_method='json',
                                                 role=user_resp['role']
                                                )
+            user_resp['recent_sensors'] = [orm_to_dictionary(sensor) for sensor in recent_sensors]
+            user_resp['teams'] = [orm_to_dictionary(team) for team in teams]
             return json.dumps(user_resp, default=json_serialise)
+    return json.dumps({'message': 'User not found'}, default=json_serialise)
 
 
 @user_app.route('/<user_id>', methods=['GET'])
