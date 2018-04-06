@@ -43,13 +43,16 @@ def extract_email_and_password_from_request(headers=None, params=None, data=None
         abort(404)
 
 
-def orm_to_dictionary(object_model):
+def orm_to_dictionary(object_model, keys_to_exclude=None):
     """
     Converts a table object model into a dictionary for serialisation
     :param object_model:
     :return:
     """
-    return {k: v for k, v in object_model.__dict__.items() if not k.startswith("_")}
+    if keys_to_exclude:
+        return {k: v for k, v in object_model.__dict__.items() if not k.startswith("_") and k not in keys_to_exclude}
+    else:
+        return {k: v for k, v in object_model.__dict__.items() if not k.startswith("_")}
 
 
 def create_avatar_url(avatar_file_name):
@@ -128,12 +131,7 @@ def user_sign_in():
     """
     # Check for email and password within the request
     email, password_received = extract_email_and_password_from_request(data=request.json)
-# Remove these:
-#       :avatar_file_name,
-#       :avatar_file_size,
-#       :avatar_updated_at,
-#       :avatar_content_type,
-#       :password_digest
+
     # Attempt to authenticate the user
     user_query = session.query(Users).filter_by(email=email)
     user = user_query.first()
@@ -141,9 +139,14 @@ def user_sign_in():
     teams = session.query(Teams).join(TeamsUsers).filter(TeamsUsers.user_id == user.id).all()
     if user and password_received:
         if bcrypt.check_password_hash(user.password_digest, password_received): # Check if the password matches
-            user_resp = orm_to_dictionary(user)
+            keys_to_exclude = ['avatar_file_name',
+                               'avatar_file_size',
+                               'avatar_updated_at',
+                               'avatar_content_type',
+                               'password_digest']
+            user_resp = orm_to_dictionary(user, keys_to_exclude)
             user_resp['needs_base_calibration'] = False # Legacy option as devices no longer need to be calibrated
-            user_resp['avatar_url'] = create_avatar_url(user_resp['avatar_file_name'])
+            user_resp['avatar_url'] = create_avatar_url(user.avatar_file_name)
             user_resp['jwt'] = jwt_make_payload(user_id=user_resp['id'],
                                                 sign_in_method='json',
                                                 role=user_resp['role']
