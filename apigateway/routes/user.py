@@ -15,7 +15,8 @@ from serialisable import json_serialise
 from flask_app import bcrypt
 
 import config
-from db import engine, Users, Sensors, Teams, TeamsUsers
+from db_connection import engine
+from models import Users, Sensors, Teams, TeamsUsers
 
 
 user_app = Blueprint('user', __name__)
@@ -69,7 +70,7 @@ def jwt_make_payload(user_id, sign_in_method, role):
     Creates the payload for the jwt
     :return:
     """
-    jwt_payload = {"user_id": user_id,
+    jwt_payload = {"user_id": str(user_id),
                    "created_at": datetime.datetime.now().isoformat(),
                    "sign_in_method": sign_in_method,
                    "role": role

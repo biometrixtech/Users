@@ -9,5 +9,6 @@ apigateway/*
 !apigateway/*.py
 !apigateway/pip_requirements
 !apigateway/routes
+!apigateway/models
 apigateway/flask_lambda.py
 apigateway/itsdangerous.py
