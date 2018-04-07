@@ -189,6 +189,8 @@ def handle_user_get(user_id):
     if len(user_data) == 0:
         raise NoSuchEntityException()
 
+    user_mass = float(user_data[0]['user_mass_lb'])
+
     user = {
         'user_id': user_data[0]['user_id'],
         'role': user_data[0]['user_role'],
@@ -197,8 +199,8 @@ def handle_user_get(user_id):
         'team_id': teams[0]['team_id'] if len(teams) else None,
         'training_group_ids': [t['training_group_id'] for t in training_groups],
         'mass': {
-            'lb': round(user_data[0]['user_mass_lb'], 1),
-            'kg': round(user_data[0]['user_mass_lb'] * 0.453592, 1),
+            'lb': round(user_mass, 1),
+            'kg': round(user_mass * 0.453592, 1),
         }
     }
 
