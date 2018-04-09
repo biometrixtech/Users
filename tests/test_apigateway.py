@@ -22,3 +22,10 @@ def test_sign_in(client):
     assert type(res_data) == dict
     print(res_data)
     assert res_data == expected_ouptut
+
+
+def test_no_email(client):
+
+    res = client.post('/v1/user/sign_in', headers={'content-type': 'application/json'})
+    print(res.data)
+    assert res.status_code == 400

@@ -29,6 +29,11 @@ def handle_server_error(e):
     return {'message': str(e.with_traceback(tb))}, 500, {'Status': type(e).__name__}
 
 
+@app.errorhandler(400)
+def handle_bad_request(_):
+    return {"message": "Request not formed properly. Please check params or data."}, 400, {'Status': 'BadRequest'}
+
+
 @app.errorhandler(404)
 def handle_unrecognised_endpoint(_):
     return {"message": "You must specify an endpoint"}, 404, {'Status': 'UnrecognisedEndpoint'}
