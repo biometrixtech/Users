@@ -39,9 +39,8 @@ def extract_email_and_password_from_request(headers=None, params=None, data=None
         email = data['email']
         password_received = data['password']
         return email, password_received
-    except Exception as e:
-        print(e)
-        abort(404)
+    except KeyError as e:
+        abort(401)
 
 
 def orm_to_dictionary(object_model, keys_to_exclude=None):

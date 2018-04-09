@@ -3,6 +3,8 @@ from apigateway import app
 import json
 from .sample_data import sample_logins
 
+
+LOGIN_URL = "/v1/user/sign_in"
 @pytest.fixture
 def client():
 
@@ -13,7 +15,7 @@ def client():
 def test_sign_in(client):
     dev_login, expected_ouptut = sample_logins[0]['input'], sample_logins[0]['expected_output']
 
-    res = client.post('/v1/user/sign_in',
+    res = client.post(LOGIN_URL,
                       headers={'content-type': 'application/json'},
                       data=json.dumps(dev_login)
                       )
@@ -24,8 +26,17 @@ def test_sign_in(client):
     assert res_data == expected_ouptut
 
 
-def test_no_email(client):
+def test_no_data(client):
 
-    res = client.post('/v1/user/sign_in', headers={'content-type': 'application/json'})
-    print(res.data)
+    res = client.post(LOGIN_URL, headers={'content-type': 'application/json'})
+    # print(res.data)
     assert res.status_code == 400
+
+
+def test_no_password(client):
+
+    res = client.post(LOGIN_URL, headers={'content-type': 'application/json'},
+                      data=json.dumps({'username': 'test1234',
+                                       'email': 'testaccount@gmail.com'}))
+    # print(res.data)
+    assert res.status_code == 401

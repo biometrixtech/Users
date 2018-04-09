@@ -34,6 +34,12 @@ def handle_bad_request(_):
     return {"message": "Request not formed properly. Please check params or data."}, 400, {'Status': 'BadRequest'}
 
 
+@app.errorhandler(401)
+def handle_unauthorized(_):
+    return {"message": "Unauthorized. Please check the email/password or authorization token."}, 401, \
+           {'Status': 'Unauthorized'}
+
+
 @app.errorhandler(404)
 def handle_unrecognised_endpoint(_):
     return {"message": "You must specify an endpoint"}, 404, {'Status': 'UnrecognisedEndpoint'}
