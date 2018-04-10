@@ -1,0 +1,17 @@
+AWSTemplateFormatVersion : '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Users serverless endpoint
+
+Resources:
+
+  Products:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: apigateway.handler
+      Runtime: python3.6
+      Events:
+        GetUser:
+          Type: Api
+          Properties:
+            Path: /users/user/{user_id}
+            Method: get
