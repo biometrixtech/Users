@@ -188,7 +188,10 @@ def handle_user_get(user_id):
     if len(user_data) == 0:
         raise NoSuchEntityException()
 
-    user_mass = float(user_data[0]['user_mass_lb'])
+    if user_data[0]['user_mass_lb']:
+        user_mass = float(user_data[0]['user_mass_lb'])
+    else:
+        user_mass = 0
 
     user = {
         'user_id': user_data[0]['user_id'],
