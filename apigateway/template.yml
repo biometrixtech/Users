@@ -4,14 +4,20 @@ Description: Users serverless endpoint
 
 Resources:
 
-  Products:
+  UsersAPI:
     Type: AWS::Serverless::Function
     Properties:
       Handler: apigateway.handler
       Runtime: python3.6
+      Timeout: 30
       Events:
         GetUser:
           Type: Api
           Properties:
             Path: /users/user/{user_id}
             Method: get
+      Environment:
+        Variables:
+          ENVIRONMENT: dev
+          AWS_ACCOUNT_ID: a123456789
+          AWS_REGION: us-west-2
