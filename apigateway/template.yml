@@ -19,5 +19,4 @@ Resources:
       Environment:
         Variables:
           ENVIRONMENT: dev
-          AWS_ACCOUNT_ID: a123456789
           AWS_REGION: us-west-2
