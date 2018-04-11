@@ -135,7 +135,11 @@ def user_sign_in():
     """
     # Check for email and password within the request
     if not request.json:
-        abort(401)
+        # abort(401)
+        return jsonify({
+                        "message": "No data received.",
+                        "received": request.data}
+                       )
 
     email, password_received = extract_email_and_password_from_request(data=request.json)
 
