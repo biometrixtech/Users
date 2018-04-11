@@ -16,6 +16,11 @@ Resources:
           Properties:
             Path: /users/user/{user_id}
             Method: get
+        UserSignIn:
+          Type: Api
+          Properties:
+            Path: /users/user/sign_in
+            Method: post
       Environment:
         Variables:
           ENVIRONMENT: dev

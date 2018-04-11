@@ -9,7 +9,6 @@ import uuid
 from sqlalchemy.orm import Session
 import jwt
 
-
 from exceptions import InvalidSchemaException, NoSuchEntityException
 from serialisable import json_serialise
 from flask_app import bcrypt
@@ -36,10 +35,15 @@ def extract_email_and_password_from_request(headers=None, params=None, data=None
     """
 
     try:
-        email = data['email']
-        password_received = data['password']
-        return email, password_received
+        email = data.get('email')
+        password_received = data.get('password')
+        if email and password_received:
+            return email, password_received
+        else:
+            abort(401)
     except KeyError as e:
+        abort(401)
+    except TypeError as e:
         abort(401)
 
 
@@ -130,6 +134,9 @@ def user_sign_in():
         }
     """
     # Check for email and password within the request
+    if not request.json:
+        abort(401)
+
     email, password_received = extract_email_and_password_from_request(data=request.json)
 
     # Attempt to authenticate the user
