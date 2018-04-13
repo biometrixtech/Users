@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 import jwt
 
 from decorators import authentication_required
-from exceptions import InvalidSchemaException, NoSuchEntityException
+from exceptions import InvalidSchemaException, NoSuchEntityException, UnauthorizedException
 from serialisable import json_serialise
 from flask_app import bcrypt
 
@@ -21,8 +21,6 @@ from models import Users, Sensors, Teams, TeamsUsers
 
 user_app = Blueprint('user', __name__)
 
-@app.route('/<user_id>', methods=['GET'])
-@authentication_required
 session = Session(bind=engine)
 
 sign_in_methods = ['json-subject-creation',
@@ -43,11 +41,11 @@ def extract_email_and_password_from_request(headers=None, params=None, data=None
         if email and password_received:
             return email, password_received
         else:
-            abort(401)
+            raise InvalidSchemaException('Email or password were missing')
     except KeyError as e:
-        abort(401)
+        raise InvalidSchemaException('Email or password were missing')
     except TypeError as e:
-        abort(401)
+        raise InvalidSchemaException('Request payload was not received')
 
 
 def orm_to_dictionary(object_model, keys_to_exclude=None):
@@ -60,15 +58,6 @@ def orm_to_dictionary(object_model, keys_to_exclude=None):
         return {k: v for k, v in object_model.__dict__.items() if not k.startswith("_") and k not in keys_to_exclude}
     else:
         return {k: v for k, v in object_model.__dict__.items() if not k.startswith("_")}
-
-
-def create_avatar_url(avatar_file_name):
-    """
-    Converts the file_name into a valid url
-    :param avatar_file_name:
-    :return:
-    """
-    pass
 
 
 def jwt_make_payload(user_id, sign_in_method, role):
@@ -140,7 +129,7 @@ def user_sign_in():
     if not request.json:
         # abort(401)
         return jsonify({
-                        "message": "No data received.",
+                        "message": "No data received. Verify headers include Content-Type: application/json",
                         "received": request.data}
                        )
 
@@ -149,29 +138,32 @@ def user_sign_in():
     # Attempt to authenticate the user
     user_query = session.query(Users).filter_by(email=email)
     user = user_query.first()
-    recent_sensors = session.query(Sensors).filter(Sensors.last_user_id == user.id).order_by(Sensors.updated_at).limit(3).all()
-    teams = session.query(Teams).join(TeamsUsers).filter(TeamsUsers.user_id == user.id).all()
-    if user and password_received:
-        if bcrypt.check_password_hash(user.password_digest, password_received): # Check if the password matches
-            keys_to_exclude = ['avatar_file_name',
-                               'avatar_file_size',
-                               'avatar_updated_at',
-                               'avatar_content_type',
-                               'password_digest']
-            user_resp = orm_to_dictionary(user, keys_to_exclude)
-            user_resp['needs_base_calibration'] = False # Legacy option as devices no longer need to be calibrated
-            user_resp['avatar_url'] = create_avatar_url(user.avatar_file_name)
-            user_resp['jwt'] = jwt_make_payload(user_id=user_resp['id'],
-                                                sign_in_method='json',
-                                                role=user_resp['role']
-                                               )
-            user_resp['recent_sensors'] = [orm_to_dictionary(sensor) for sensor in recent_sensors]
-            user_resp['teams'] = [orm_to_dictionary(team) for team in teams]
-            return json.dumps(user_resp, default=json_serialise)
+    if user:
+        recent_sensors = session.query(Sensors).filter(Sensors.last_user_id == user.id).order_by(Sensors.updated_at).limit(3).all()
+        teams = session.query(Teams).join(TeamsUsers).filter(TeamsUsers.user_id == user.id).all()
+        if password_received:
+            if bcrypt.check_password_hash(user.password_digest, password_received): # Check if the password matches
+                keys_to_exclude = ['avatar_file_name',
+                                   'avatar_file_size',
+                                   'avatar_updated_at',
+                                   'avatar_content_type',
+                                   'password_digest']
+                user_resp = orm_to_dictionary(user, keys_to_exclude)
+                user_resp['needs_base_calibration'] = False # Legacy option as devices no longer need to be calibrated
+                user_resp['jwt'] = jwt_make_payload(user_id=user_resp['id'],
+                                                    sign_in_method='json',
+                                                    role=user_resp['role']
+                                                   )
+                user_resp['recent_sensors'] = [orm_to_dictionary(sensor) for sensor in recent_sensors]
+                user_resp['teams'] = [orm_to_dictionary(team) for team in teams]
+                return json.dumps(user_resp, default=json_serialise)
+            else:
+                raise UnauthorizedException("Password was not correct.")
     return json.dumps({'message': 'User not found'}, default=json_serialise)
 
 
 @user_app.route('/<user_id>', methods=['GET'])
+@authentication_required
 @xray_recorder.capture('routes.user.get')
 def handle_user_get(user_id):
     if not validate_uuid4(user_id):

@@ -34,10 +34,12 @@ class GenderEnumType(types.TypeDecorator):
     impl = types.Integer
 
     def process_bind_param(self, value, dialect):
-        return GenderEnum[value].value    # Convert name to an integer
+        if value:
+            return GenderEnum[value].value    # Convert name to an integer
 
     def process_result_value(self, value, dialect):
-        return GenderEnum(value).name    # Convert an integer to a name
+        if value:
+            return GenderEnum(value).name    # Convert an integer to a name
 
 
 class AthleteStatus(enum.Enum):
@@ -51,10 +53,12 @@ class AthleteStatusEnumType(types.TypeDecorator):
     impl = types.Integer
 
     def process_bind_param(self, value, dialect):
-        return AthleteStatus[value].value    # Convert name to an integer
+        if value:
+            return AthleteStatus[value].value    # Convert name to an integer
 
     def process_result_value(self, value, dialect):
-        return AthleteStatus(value).name    # Convert an integer to a name
+        if value:
+            return AthleteStatus(value).name    # Convert an integer to a name
 
 
 class PushType(enum.Enum):

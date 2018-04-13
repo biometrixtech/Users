@@ -16,7 +16,7 @@ def authentication_required(decorated_function):
             # Legacy 10.1 firmware
             return decorated_function(*args, **kwargs)
         else:
-            raise UnauthorizedException()
+            raise UnauthorizedException("Unauthorized")
     return wrapper
 
 
