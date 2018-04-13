@@ -28,6 +28,6 @@ def test_create_user_dictionary():
     user = user_query.first()
     teams = session.query(Teams).join(TeamsUsers).filter(TeamsUsers.user_id == user.id).all()
     # training_groups = session.query(TrainingGroups).join(TrainingGroupsUsers).filter(TrainingGroupsUsers.user_id == user.id).all()
-    user_dictionary = create_user_dictionary(user, teams)
+    user_dictionary = create_user_dictionary(user)
     assert type(user_dictionary) == dict
 

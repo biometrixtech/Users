@@ -60,16 +60,77 @@ def orm_to_dictionary(object_model, keys_to_exclude=None):
         return {k: v for k, v in object_model.__dict__.items() if not k.startswith("_")}
 
 
-def create_user_dictionary(user, team):
+def feet_to_meters(feet, inches):
+    """
+    Converts feet + inches into meters
+    :param feet:
+    :param inches:
+    :return:
+    """
+    if feet:
+        if inches:
+            return (feet + inches/12)*0.3048
+        else:
+            return feet*0.3048
+    elif inches:
+        return (inches/12)*0.3048
+
+
+def lb_to_kg(weight_lbs):
+    """
+    Converts pounds to kilograms.
+    Handles the case where the weight is None
+    :param weight_lbs:
+    :return:
+    """
+    if weight_lbs:
+        return weight_lbs * 0.453592
+
+
+def create_user_dictionary(user):
     """
     Convert the user ORM to the desired output format
     :param user_model:
     :return:
     """
-    pass
+    return {"biometric_data": {
+                "sex": user.gender,
+                "height": {
+                    "ft_in": [user.height_feet, user.height_inches],
+                    "m": feet_to_meters(user.height_feet, user.height_inches)
+                },
+                "mass": {
+                    "lb": round(user.weight, 1),
+                    "kg": round(lb_to_kg(user.weight), 1)
+                }
+            },
+            "created_date": user.created_at,
+            "deleted_date": user.deleted_at,
+            "id": user.id,
+            "personal_data": {
+                "birth_date": user.birthday,
+                "email": user.email,
+                # "zip_code": user.zipcode,  # TODO: Add to database
+                # "competition_level": enum,
+                # "sports": [sports_position_id,
+                #     sports_position_id,
+                #     sports_position_id
+                # ],
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+                "phone_number": user.phone_number,
+                #"account_type": user.account_type,
+                "account_status": user.active,
+            },
+            "role": user.role,
+            "updated_date": user.updated_at,
+            "training_status": user.status,
+            #"teams": [Team, ...],
+            #"training_groups": [TrainingGroup, ...]
+        }
 
 
-def jwt_make_payload(user_id, sign_in_method, role):
+def jwt_make_payload(expires_at=None, user_id=None, sign_in_method=None, role=None):
     """
     Creates the payload for the jwt
     :return:
@@ -77,11 +138,26 @@ def jwt_make_payload(user_id, sign_in_method, role):
     jwt_payload = {"user_id": str(user_id),
                    "created_at": datetime.datetime.now().isoformat(),
                    "sign_in_method": sign_in_method,
-                   "role": role
+                   "role": role,
+                   "exp": expires_at
                    }
     hmac_secret = config.SECRET_KEY_BASE
     jwt_payload_encoded = jwt.encode(jwt_payload, hmac_secret, algorithm='HS256') #, default=json_serialise)
     return jwt_payload_encoded
+
+
+def create_authorization_resp(**kwargs):
+    """
+    Return a dictionary for the authorization data
+    :param kwargs:
+    :return:
+    """
+    expiration_time = datetime.datetime.utcnow() + datetime.timedelta(minutes=60)
+    token = jwt_make_payload(expires_at=expiration_time, **kwargs)
+    return  {
+                "expires": expiration_time.isoformat(),
+                "jwt": token
+            }
 
 
 @user_app.route('/sign_in', methods=['POST'])
@@ -144,20 +220,17 @@ def user_sign_in():
         teams = session.query(Teams).join(TeamsUsers).filter(TeamsUsers.user_id == user.id).all()
         if password_received:
             if bcrypt.check_password_hash(user.password_digest, password_received): # Check if the password matches
-                keys_to_exclude = ['avatar_file_name',
-                                   'avatar_file_size',
-                                   'avatar_updated_at',
-                                   'avatar_content_type',
-                                   'password_digest']
-                user_resp = orm_to_dictionary(user, keys_to_exclude)
-                user_resp['needs_base_calibration'] = False # Legacy option as devices no longer need to be calibrated
-                user_resp['jwt'] = jwt_make_payload(user_id=user_resp['id'],
-                                                    sign_in_method='json',
-                                                    role=user_resp['role']
-                                                   )
-                user_resp['recent_sensors'] = [orm_to_dictionary(sensor) for sensor in recent_sensors]
+                user_resp = create_user_dictionary(user)
                 user_resp['teams'] = [orm_to_dictionary(team) for team in teams]
-                return json.dumps(user_resp, default=json_serialise)
+                # user_resp['training_groups'] = [orm_to_dictionary(training_group) for training_group in training_groups]
+                resp = {"authorization": create_authorization_resp(
+                                                user_id=user_resp['id'],
+                                                sign_in_method='json',
+                                                role=user_resp['role']
+                                                ),
+                        "user": user_resp
+                        }
+                return json.dumps(resp, default=json_serialise)
             else:
                 raise UnauthorizedException("Password was not correct.")
     return json.dumps({'message': 'User not found'}, default=json_serialise)
