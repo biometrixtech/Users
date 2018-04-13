@@ -6,6 +6,7 @@ import json
 import os
 import uuid
 
+from decorators import authentication_required
 from exceptions import InvalidSchemaException, NoSuchEntityException
 from serialisable import json_serialise
 
@@ -13,6 +14,7 @@ app = Blueprint('user', __name__)
 
 
 @app.route('/<user_id>', methods=['GET'])
+@authentication_required
 @xray_recorder.capture('routes.user.get')
 def handle_user_get(user_id):
     if not validate_uuid4(user_id):
