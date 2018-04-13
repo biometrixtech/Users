@@ -9,6 +9,7 @@ import uuid
 from sqlalchemy.orm import Session
 import jwt
 
+from decorators import authentication_required
 from exceptions import InvalidSchemaException, NoSuchEntityException
 from serialisable import json_serialise
 from flask_app import bcrypt
@@ -20,6 +21,8 @@ from models import Users, Sensors, Teams, TeamsUsers
 
 user_app = Blueprint('user', __name__)
 
+@app.route('/<user_id>', methods=['GET'])
+@authentication_required
 session = Session(bind=engine)
 
 sign_in_methods = ['json-subject-creation',
