@@ -16,7 +16,7 @@ from flask_app import bcrypt
 
 import config
 from db_connection import engine
-from models import Users, Sensors, Teams, TeamsUsers
+from models import Users, Teams, TeamsUsers, TrainingGroups, TrainingGroupsUsers
 
 
 user_app = Blueprint('user', __name__)
@@ -218,11 +218,13 @@ def user_sign_in():
     if user:
         # recent_sensors = session.query(Sensors).filter(Sensors.last_user_id == user.id).order_by(Sensors.updated_at).limit(3).all()
         teams = session.query(Teams).join(TeamsUsers).filter(TeamsUsers.user_id == user.id).all()
+        training_groups = session.query(TrainingGroups).join(TrainingGroupsUsers)\
+                                 .filter(TrainingGroupsUsers.user_id == user.id).all()
         if password_received:
             if bcrypt.check_password_hash(user.password_digest, password_received): # Check if the password matches
                 user_resp = create_user_dictionary(user)
                 user_resp['teams'] = [orm_to_dictionary(team) for team in teams]
-                # user_resp['training_groups'] = [orm_to_dictionary(training_group) for training_group in training_groups]
+                user_resp['training_groups'] = [orm_to_dictionary(training_group) for training_group in training_groups]
                 resp = {"authorization": create_authorization_resp(
                                                 user_id=user_resp['id'],
                                                 sign_in_method='json',
