@@ -60,6 +60,15 @@ def orm_to_dictionary(object_model, keys_to_exclude=None):
         return {k: v for k, v in object_model.__dict__.items() if not k.startswith("_")}
 
 
+def create_user_dictionary(user, team):
+    """
+    Convert the user ORM to the desired output format
+    :param user_model:
+    :return:
+    """
+    pass
+
+
 def jwt_make_payload(user_id, sign_in_method, role):
     """
     Creates the payload for the jwt
@@ -80,49 +89,41 @@ def user_sign_in():
     """
     Given a username and password, this retrieves the user object and authenticates the user, returning their info if valid.
     :return: {
-        "auth_token": "",
-        "id": "",
-        "email": "glitch0@gmail.com",
-        "role": "biometrix_admin",
-        "first_name": "Chris",
-        "last_name": "Cassano",
-        "facebook_id": null,
-        "phone_number": "9191234567",
-        "created_at": "2017-04-14T23:49:52.777Z",
-        "updated_at": "2018-04-02T17:16:40.280Z",
-        "position": "Administrator",
-        "active": true,
-        "in_training": false,
-        "deleted_at": null,
-        "height_feet": 6,
-        "height_inches": null,
-        "weight": 120,
-        "gender": "male",
-        "status": "full_volume",
-        "push_token": null,
-        "push_type": null,
-        "onboarded": true,
-        "birthday": "01/02/03",
-        "organization_id": "f62fbd5b-aafc-436f-b358-be2b34e1fe58",
-        "primary_training_group_id": null,
-        "year_in_school": 2,
-        "avatar_url": "https://dashboard-v2.biometrixtech.com/images/full/missing.png",
-        "recent_sensors": [],
-        "needs_base_calibration": false,
-        "jwt": "...",
-        "teams": [
-            {
-                "id": "f87e1deb-f022-4223-acaa-4926b6094343",
-                "name": "Womens Soccer",
-                "organization_id": "f62fbd5b-aafc-436f-b358-be2b34e1fe58",
-                "created_at": "2017-08-15T07:55:39.894Z",
-                "updated_at": "2017-10-16T16:11:34.424Z",
-                "athlete_subscriptions": 10,
-                "athlete_manager_subscriptions": 10,
-                "gender": "female",
-                "sport_id": "8534c4ea-4b37-40a0-a037-cad00cf03f74"
-            }
-        ]
+            "biometric_data": {
+                "gender": Gender,
+                "height": {
+                    "ft_in": [integer, integer],
+                    "m": number
+                },
+                "mass": {
+                    "lb": number,
+                    "kg": number
+                }
+            },
+            "created_date": Datetime,
+            "deleted_date": Datetime,
+            "id": Uuid,
+            "organization_id": Uuid,
+            "personal_data": {
+                "birth_date": Date,
+                "email": string,
+                "zip_code": number,
+                "competition_level": enum,
+                "sports": [sports_position_id,
+                    sports_position_id,
+                    sports_position_id
+                ],
+                "first_name": string,
+                "last_name": string,
+                "phone_number": Phonenumber,
+                "account_type": enum,
+                "account_status" enum,
+            },
+            "role": enum,
+            "updated_date": Datetime,
+            "training_status": enum,
+            "teams": [Team, ...],
+            "training_groups": [TrainingGroup, ...]
         }
     """
     # Check for email and password within the request
@@ -139,7 +140,7 @@ def user_sign_in():
     user_query = session.query(Users).filter_by(email=email)
     user = user_query.first()
     if user:
-        recent_sensors = session.query(Sensors).filter(Sensors.last_user_id == user.id).order_by(Sensors.updated_at).limit(3).all()
+        # recent_sensors = session.query(Sensors).filter(Sensors.last_user_id == user.id).order_by(Sensors.updated_at).limit(3).all()
         teams = session.query(Teams).join(TeamsUsers).filter(TeamsUsers.user_id == user.id).all()
         if password_received:
             if bcrypt.check_password_hash(user.password_digest, password_received): # Check if the password matches
