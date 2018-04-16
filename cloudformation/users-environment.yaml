@@ -42,7 +42,9 @@ Resources:
         Properties:
             Code:
                 S3Bucket: { "Fn::Sub": "biometrix-infrastructure-${AWS::Region}" }
-                S3Key: { "Fn::Sub": "lambdas/users-${Environment}/custom_auth.zip" }
+                S3Key: { "Fn::Sub": [ "lambdas/users/${TemplateVersion}/custom_auth.zip", {
+                    TemplateVersion: { "Fn::FindInMap": [ "TemplateVersion", "Self", "Commit" ] }
+                } ] }
             Handler: "custom_auth.handler"
             Runtime: "python3.6"
             Timeout: "1"
@@ -88,7 +90,9 @@ Resources:
         Properties:
             Code:
                 S3Bucket: { "Fn::ImportValue": "InfrastructureBucketName" }
-                S3Key: { "Fn::Sub": "lambdas/users-${Environment}/apigateway.zip" }
+                S3Key: { "Fn::Sub": [ "lambdas/users/${TemplateVersion}/apigateway.zip", {
+                    TemplateVersion: { "Fn::FindInMap": [ "TemplateVersion", "Self", "Commit" ] }
+                } ] }
             Environment:
                 Variables:
                     ENVIRONMENT: { Ref: 'Environment' }

@@ -60,6 +60,7 @@ def main():
 
     print("Deploying Lambda functions")
     upload_lambda_bundle('apigateway', s3_bucket)
+    upload_lambda_bundle('lambdas/custom_auth', s3_bucket)
 
 
 if __name__ == '__main__':
