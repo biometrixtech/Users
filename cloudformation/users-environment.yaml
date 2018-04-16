@@ -72,6 +72,15 @@ Resources:
               - "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
               - "arn:aws:iam::aws:policy/AWSXrayWriteOnlyAccess"
               - { "Fn::ImportValue": { "Fn::Sub": "QuerypostgresPolicyArn-${Environment}" } }
+            Policies:
+              - PolicyName: "default"
+                PolicyDocument:
+                    Version: "2012-10-17"
+                    Statement:
+                      - Action:
+                          - "lambda:InvokeFunction"
+                        Effect: "Allow"
+                        Resource: { "Fn::Sub": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:users-${Environment}-apigateway-authenticate" }
             RoleName: { "Fn::Sub": "users-${Environment}-apigateway-execute-${AWS::Region}" }
 
     ApiGatewayLambda:
