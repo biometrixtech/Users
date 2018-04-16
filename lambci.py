@@ -29,7 +29,7 @@ def upload_cf_template(template, s3_bucket):
 
 def upload_lambda_bundle(filename, s3_bucket):
     filename = os.path.join(os.environ['SHALLOW_DIR'], filename)
-    print('Zipping bundle in {}'.format(filename))
+    print('Zipping bundle in {}'.format(filename)) 
     if filename[-3:] == '.py':
         # Zipping one file
         output_filename = filename.replace('.py', '.zip')
