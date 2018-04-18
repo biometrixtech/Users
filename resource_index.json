@@ -13,7 +13,7 @@
             "name": "users-{ENVIRONMENT}-apigateway-authenticate",
             "s3_filename": "custom_auth.zip",
             "src": "lambdas/custom_auth",
-            "pip": false
+            "pip": true
         }
     ],
     "datastores": [
