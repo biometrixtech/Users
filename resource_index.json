@@ -1,0 +1,21 @@
+{
+    "templates": [
+        { "s3_filename": "users-environment.yaml", "src": "cloudformation/users-environment.yaml" }
+    ],
+    "lambdas": [
+        {
+            "name": "users-{ENVIRONMENT}-apigateway-execute",
+            "s3_filename": "apigateway.zip",
+            "src": "apigateway",
+            "pip": true
+        },
+        {
+            "name": "users-{ENVIRONMENT}-apigateway-authenticate",
+            "s3_filename": "custom_auth.zip",
+            "src": "lambdas/custom_auth",
+            "pip": false
+        }
+    ],
+    "datastores": [
+    ]
+}
