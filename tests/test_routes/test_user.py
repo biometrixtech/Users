@@ -1,4 +1,15 @@
+import pytest
+from sqlalchemy.orm import Session
+
 from routes.user import jwt_make_payload
+from db_connection import engine
+from models import Users, Teams, TeamsUsers# , TrainingGroups, TrainingGroupsUsers
+from routes.user import create_user_dictionary
+
+
+@pytest.fixture
+def session():
+    return Session(bind=engine)
 
 
 def test_jwt_make_payload():
@@ -8,3 +19,15 @@ def test_jwt_make_payload():
     jwt_token = jwt_make_payload(user_id, sign_in_method, role)
     assert type(jwt_token) == bytes
     # print(jwt_token)
+
+
+def test_create_user_dictionary():
+
+    email = "glitch0@gmail.com"
+    user_query = session.query(Users).filter_by(email=email)
+    user = user_query.first()
+    teams = session.query(Teams).join(TeamsUsers).filter(TeamsUsers.user_id == user.id).all()
+    # training_groups = session.query(TrainingGroups).join(TrainingGroupsUsers).filter(TrainingGroupsUsers.user_id == user.id).all()
+    user_dictionary = create_user_dictionary(user)
+    assert type(user_dictionary) == dict
+

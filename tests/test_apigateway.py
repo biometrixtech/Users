@@ -38,5 +38,16 @@ def test_no_password(client):
     res = client.post(LOGIN_URL, headers={'content-type': 'application/json'},
                       data=json.dumps({'username': 'test1234',
                                        'email': 'testaccount@gmail.com'}))
-    # print(res.data)
+    print(res.data)
+    assert res.status_code == 401
+
+
+def test_incorrect_password(client):
+    user_login = {
+                  "email": "glitch0@gmail.com",
+                  "password": "muffins1s"
+                 }
+    res = client.post(LOGIN_URL, headers={'content-type': 'application/json'},
+                      data=json.dumps(user_login))
+    print(res.data)
     assert res.status_code == 401
