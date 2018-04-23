@@ -1,10 +1,18 @@
 # Don't commit libraries for lambdas, people should rebuild them from the pip_requirements
 /lambdas/*/*/
 *.zip
-
+.env
+.idea/*
+sample_data.py
+.pytest*
+__pycache__
 apigateway/*
 !apigateway/*.py
 !apigateway/pip_requirements
 !apigateway/routes
+!apigateway/models
+!apigateway/template.yml
+apigateway/flask_bcrypt.py
+apigateway/six.py
 apigateway/flask_lambda.py
 apigateway/itsdangerous.py

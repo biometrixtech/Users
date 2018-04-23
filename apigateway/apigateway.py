@@ -1,5 +1,3 @@
-from flask import Response, jsonify
-from flask_lambda import FlaskLambda
 import json
 import os
 import sys
@@ -7,32 +5,20 @@ import traceback
 
 
 # Break out of Lambda's X-Ray sandbox so we can define our own segments and attach metadata, annotations, etc, to them
-lambda_task_root_key = os.getenv('LAMBDA_TASK_ROOT')
-del os.environ['LAMBDA_TASK_ROOT']
+lambda_task_root_key = os.getenv('LAMBDA_TASK_ROOT', ".")
+if lambda_task_root_key != ".":
+    del os.environ['LAMBDA_TASK_ROOT']
 from aws_xray_sdk.core import patch_all, xray_recorder
 from aws_xray_sdk.core.models.trace_header import TraceHeader
 patch_all()
 os.environ['LAMBDA_TASK_ROOT'] = lambda_task_root_key
 
 from exceptions import ApplicationException
-from serialisable import json_serialise
+from aws_xray_sdk.core import patch_all
+patch_all()
 
-
-class ApiResponse(Response):
-    @classmethod
-    def force_type(cls, rv, environ=None):
-        if isinstance(rv, dict):
-            # Round-trip through our JSON serialiser to make it parseable by AWS's
-            rv = json.loads(json.dumps(rv, sort_keys=True, default=json_serialise))
-            rv = jsonify(rv)
-        return super().force_type(rv, environ)
-
-
-app = FlaskLambda(__name__)
-app.response_class = ApiResponse
-app.url_map.strict_slashes = False
-
-from routes.user import app as user_routes
+from flask_app import app
+from routes.user import user_app as user_routes
 app.register_blueprint(user_routes, url_prefix='/v1/user')
 app.register_blueprint(user_routes, url_prefix='/users/user')
 
@@ -41,6 +27,17 @@ app.register_blueprint(user_routes, url_prefix='/users/user')
 def handle_server_error(e):
     tb = sys.exc_info()[2]
     return {'message': str(e.with_traceback(tb))}, 500, {'Status': type(e).__name__}
+
+
+@app.errorhandler(400)
+def handle_bad_request(_):
+    return {"message": "Request not formed properly. Please check params or data."}, 400, {'Status': 'BadRequest'}
+
+
+@app.errorhandler(401)
+def handle_unauthorized(_):
+    return {"message": "Unauthorized. Please check the email/password or authorization token."}, 401, \
+           {'Status': 'Unauthorized'}
 
 
 @app.errorhandler(404)

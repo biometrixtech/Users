@@ -1,6 +1,7 @@
 from abc import ABCMeta, abstractmethod
 from decimal import Decimal
 import json
+from uuid import UUID
 
 
 class Serialisable:
@@ -27,4 +28,6 @@ def json_serialise(obj):
         return list(obj)
     if isinstance(obj, bytes):
         return obj.decode('utf-8')
+    if isinstance(obj, UUID):
+        return str(obj)
     raise TypeError("Type {} is not serializable".format(type(obj).__name__))
