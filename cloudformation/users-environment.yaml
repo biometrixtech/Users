@@ -16,7 +16,7 @@ Parameters:
 Mappings:
     TemplateVersion:
         Self: { Commit: "da39a3ee5e6b4b0d3255bfef95601890afd80709" }
-        Infrastructure: { Commit: "438cfa1991ac6bfac3ceb11f5a2b980a773ea06e" }
+        Infrastructure: { Commit: "2d222e78ee364e58b7db1709f89effdf4d1d4c7d" }
         
 Resources:
 
@@ -42,7 +42,9 @@ Resources:
         Properties:
             Code:
                 S3Bucket: { "Fn::Sub": "biometrix-infrastructure-${AWS::Region}" }
-                S3Key: { "Fn::Sub": "lambdas/users-${Environment}/custom_auth.zip" }
+                S3Key: { "Fn::Sub": [ "lambdas/users/${TemplateVersion}/custom_auth.zip", {
+                    TemplateVersion: { "Fn::FindInMap": [ "TemplateVersion", "Self", "Commit" ] }
+                } ] }
             Handler: "custom_auth.handler"
             Runtime: "python3.6"
             Timeout: "1"
@@ -72,6 +74,15 @@ Resources:
               - "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
               - "arn:aws:iam::aws:policy/AWSXrayWriteOnlyAccess"
               - { "Fn::ImportValue": { "Fn::Sub": "QuerypostgresPolicyArn-${Environment}" } }
+            Policies:
+              - PolicyName: "default"
+                PolicyDocument:
+                    Version: "2012-10-17"
+                    Statement:
+                      - Action:
+                          - "lambda:InvokeFunction"
+                        Effect: "Allow"
+                        Resource: { "Fn::Sub": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:users-${Environment}-apigateway-authenticate" }
             RoleName: { "Fn::Sub": "users-${Environment}-apigateway-execute-${AWS::Region}" }
 
     ApiGatewayLambda:
@@ -79,7 +90,9 @@ Resources:
         Properties:
             Code:
                 S3Bucket: { "Fn::ImportValue": "InfrastructureBucketName" }
-                S3Key: { "Fn::Sub": "lambdas/users-${Environment}/apigateway.zip" }
+                S3Key: { "Fn::Sub": [ "lambdas/users/${TemplateVersion}/apigateway.zip", {
+                    TemplateVersion: { "Fn::FindInMap": [ "TemplateVersion", "Self", "Commit" ] }
+                } ] }
             Environment:
                 Variables:
                     ENVIRONMENT: { Ref: 'Environment' }
@@ -107,6 +120,7 @@ Resources:
                 Service: "apigateway"
                 LambdaArn: { "Fn::GetAtt": [ "ApiGatewayLambda", "Arn" ] }
                 CustomAuthLambdaArn: { "Fn::GetAtt": [ "CustomAuthLambda", "Arn" ] }
+                CreateCustomDomain: "true"
             Tags:
               - { Key: "Name", Value: { "Fn::Sub": "users-${Environment}-apigateway" } }
               - { Key: "Management", Value: "managed" }
