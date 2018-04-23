@@ -119,7 +119,7 @@ def create_user_dictionary(user):
                 "first_name": user.first_name,
                 "last_name": user.last_name,
                 "phone_number": user.phone_number,
-                #"account_type": user.account_type,
+                #"account_type": user.account_type,   # enum
                 "account_status": user.active,
             },
             "role": user.role,
