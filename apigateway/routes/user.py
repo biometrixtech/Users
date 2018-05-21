@@ -1,5 +1,5 @@
 from aws_xray_sdk.core import xray_recorder
-from flask import Blueprint, request, abort, jsonify
+from flask import Blueprint, request
 
 import boto3
 import datetime
@@ -11,7 +11,6 @@ import jwt
 
 from decorators import authentication_required
 from exceptions import InvalidSchemaException, NoSuchEntityException, UnauthorizedException
-from serialisable import json_serialise
 from flask_app import bcrypt
 
 from db_connection import engine
@@ -27,10 +26,10 @@ sign_in_methods = ['json-subject-creation',
                    'json-accessory']
 
 
-def extract_email_and_password_from_request(headers=None, params=None, data=None):
+def extract_email_and_password_from_request(data):
     """
     Check params, headers and json data for email and password
-    :param request:
+    :param data:
     :return:
     """
 
@@ -41,9 +40,9 @@ def extract_email_and_password_from_request(headers=None, params=None, data=None
             return email, password_received
         else:
             raise InvalidSchemaException('Email or password were missing')
-    except KeyError as e:
+    except KeyError:
         raise InvalidSchemaException('Email or password were missing')
-    except TypeError as e:
+    except TypeError:
         raise InvalidSchemaException('Request payload was not received')
 
 
@@ -51,6 +50,7 @@ def orm_to_dictionary(object_model, keys_to_exclude=None):
     """
     Converts a table object model into a dictionary for serialisation
     :param object_model:
+    :param keys_to_exclude:
     :return:
     """
     if keys_to_exclude:
@@ -89,7 +89,7 @@ def lb_to_kg(weight_lbs):
 def create_user_dictionary(user):
     """
     Convert the user ORM to the desired output format
-    :param user_model:
+    :param user:
     :return:
     """
     return {"biometric_data": {
@@ -152,10 +152,10 @@ def create_authorization_resp(**kwargs):
     """
     expiration_time = datetime.datetime.utcnow() + datetime.timedelta(minutes=60)
     token = jwt_make_payload(expires_at=expiration_time, **kwargs)
-    return  {
-                "expires": expiration_time.isoformat(),
-                "jwt": token
-            }
+    return {
+        "expires": expiration_time.isoformat(),
+        "jwt": token
+    }
 
 
 @user_app.route('/sign_in', methods=['POST'])
@@ -202,38 +202,29 @@ def user_sign_in():
     """
     # Check for email and password within the request
     if not request.json:
-        # abort(401)
-        return jsonify({
-                        "message": "No data received. Verify headers include Content-Type: application/json",
-                        "received": request.data}
-                       )
+        raise InvalidSchemaException("No data received. Verify headers include Content-Type: application/json")
 
-    email, password_received = extract_email_and_password_from_request(data=request.json)
+    email, password_received = extract_email_and_password_from_request(request.json)
 
     # Attempt to authenticate the user
     user_query = session.query(Users).filter_by(email=email)
     user = user_query.first()
     if user:
-        # recent_sensors = session.query(Sensors).filter(Sensors.last_user_id == user.id).order_by(Sensors.updated_at).limit(3).all()
         teams = session.query(Teams).join(TeamsUsers).filter(TeamsUsers.user_id == user.id).all()
         training_groups = session.query(TrainingGroups).join(TrainingGroupsUsers)\
                                  .filter(TrainingGroupsUsers.user_id == user.id).all()
         if password_received:
-            if bcrypt.check_password_hash(user.password_digest, password_received): # Check if the password matches
+            if bcrypt.check_password_hash(user.password_digest, password_received):  # Check if the password matches
                 user_resp = create_user_dictionary(user)
                 user_resp['teams'] = [orm_to_dictionary(team) for team in teams]
                 user_resp['training_groups'] = [orm_to_dictionary(training_group) for training_group in training_groups]
-                resp = {"authorization": create_authorization_resp(
-                                                user_id=user_resp['id'],
-                                                sign_in_method='json',
-                                                role=user_resp['role']
-                                                ),
-                        "user": user_resp
-                        }
-                return json.dumps(resp, default=json_serialise)
+                return {
+                    "authorization": create_authorization_resp(user_id=user_resp['id'], sign_in_method='json', role=user_resp['role']),
+                    "user": user_resp
+                }
             else:
                 raise UnauthorizedException("Password was not correct.")
-    return json.dumps({'message': 'User not found'}, default=json_serialise)
+    raise NoSuchEntityException('User not found')
 
 
 @user_app.route('/<user_id>', methods=['GET'])
@@ -286,7 +277,7 @@ def handle_user_get(user_id):
         }
     }
 
-    return json.dumps({'user': user}, default=json_serialise)
+    return {'user': user}
 
 
 @xray_recorder.capture('apigateway.query_postgres')
