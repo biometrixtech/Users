@@ -87,47 +87,62 @@ def lb_to_kg(weight_lbs):
         return weight_lbs * 0.453592
 
 
+def format_date(date_input):
+    """
+    Formats a date in ISO8601 short format.
+    Handles the case where the input is None
+    :param date_input:
+    :return:
+    """
+    if date_input is None:
+        return None
+    if not isinstance(date_input, datetime.datetime):
+        date_input = datetime.datetime.strptime(date_input, "%Y-%m-%dT%H:%M:%S.%f")
+    return date_input.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
 def create_user_dictionary(user):
     """
     Convert the user ORM to the desired output format
     :param user_model:
     :return:
     """
-    return {"biometric_data": {
-                "sex": user.gender,
-                "height": {
-                    "ft_in": [user.height_feet, user.height_inches],
-                    "m": feet_to_meters(user.height_feet, user.height_inches)
-                },
-                "mass": {
-                    "lb": round(user.weight, 1),
-                    "kg": round(lb_to_kg(user.weight), 1)
-                }
+    return {
+        "biometric_data": {
+            "sex": user.gender,
+            "height": {
+                "ft_in": [user.height_feet, user.height_inches],
+                "m": feet_to_meters(user.height_feet, user.height_inches)
             },
-            "created_date": user.created_at,
-            "deleted_date": user.deleted_at,
-            "id": user.id,
-            "personal_data": {
-                "birth_date": user.birthday,
-                "email": user.email,
-                # "zip_code": user.zipcode,  # TODO: Add to database
-                # "competition_level": enum,
-                # "sports": [sports_position_id,
-                #     sports_position_id,
-                #     sports_position_id
-                # ],
-                "first_name": user.first_name,
-                "last_name": user.last_name,
-                "phone_number": user.phone_number,
-                #"account_type": user.account_type,   # enum
-                "account_status": user.active,
-            },
-            "role": user.role,
-            "updated_date": user.updated_at,
-            "training_status": user.status,
-            #"teams": [Team, ...],
-            #"training_groups": [TrainingGroup, ...]
-        }
+            "mass": {
+                "lb": round(user.weight, 1),
+                "kg": round(lb_to_kg(user.weight), 1)
+            }
+        },
+        "created_date": format_date(user.created_at),
+        "deleted_date": format_date(user.deleted_at),
+        "id": user.id,
+        "personal_data": {
+            "birth_date": user.birthday,
+            "email": user.email,
+            # "zip_code": user.zipcode,  # TODO: Add to database
+            # "competition_level": enum,
+            # "sports": [sports_position_id,
+            #     sports_position_id,
+            #     sports_position_id
+            # ],
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "phone_number": user.phone_number,
+            # "account_type": user.account_type,   # enum
+            "account_status": user.active,
+        },
+        "role": user.role,
+        "updated_date": format_date(user.updated_at),
+        "training_status": user.status,
+        # "teams": [Team, ...],
+        # "training_groups": [TrainingGroup, ...]
+    }
 
 
 def jwt_make_payload(expires_at=None, user_id=None, sign_in_method=None, role=None):
@@ -273,8 +288,8 @@ def handle_user_get(user_id):
     user = {
         'user_id': user_data[0]['user_id'],
         'role': user_data[0]['user_role'],
-        'created_date': datetime.datetime.strptime(user_data[0]['created_date'], "%Y-%m-%dT%H:%M:%S.%f").strftime("%Y-%m-%dT%H:%M:%SZ"),
-        'updated_date': datetime.datetime.strptime(user_data[0]['updated_date'], "%Y-%m-%dT%H:%M:%S.%f").strftime("%Y-%m-%dT%H:%M:%SZ"),
+        'created_date': format_date(user_data[0]['created_date']),
+        'updated_date': format_date(user_data[0]['updated_date']),
         'team_id': teams[0]['team_id'] if len(teams) else None,
         'training_group_ids': [t['training_group_id'] for t in training_groups],
         'mass': {
