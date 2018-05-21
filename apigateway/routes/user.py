@@ -14,7 +14,6 @@ from exceptions import InvalidSchemaException, NoSuchEntityException, Unauthoriz
 from serialisable import json_serialise
 from flask_app import bcrypt
 
-import config
 from db_connection import engine
 from models import Users, Sensors, Teams, TeamsUsers
 
@@ -70,8 +69,7 @@ def jwt_make_payload(user_id, sign_in_method, role):
                    "sign_in_method": sign_in_method,
                    "role": role
                    }
-    hmac_secret = config.SECRET_KEY_BASE
-    jwt_payload_encoded = jwt.encode(jwt_payload, hmac_secret, algorithm='HS256') #, default=json_serialise)
+    jwt_payload_encoded = jwt.encode(jwt_payload, os.environ['SECRET_KEY_BASE'], algorithm='HS256')
     return jwt_payload_encoded
 
 
