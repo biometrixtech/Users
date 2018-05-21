@@ -112,7 +112,7 @@ class Users(Base):
     organization_id = Column(String) # uuid,
     primary_training_group_id = Column(String) # uuid,
     year_in_school = Column(Integer) #  integer
-
+    # zip_code = Column(Integer)
 
 """
 ﻿   id uuid NOT NULL DEFAULT uuid_generate_v4(),
