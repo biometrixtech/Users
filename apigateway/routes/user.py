@@ -41,9 +41,9 @@ def extract_email_and_password_from_request(headers=None, params=None, data=None
             return email, password_received
         else:
             raise InvalidSchemaException('Email or password were missing')
-    except KeyError as e:
+    except KeyError:
         raise InvalidSchemaException('Email or password were missing')
-    except TypeError as e:
+    except TypeError:
         raise InvalidSchemaException('Request payload was not received')
 
 
@@ -51,6 +51,7 @@ def orm_to_dictionary(object_model, keys_to_exclude=None):
     """
     Converts a table object model into a dictionary for serialisation
     :param object_model:
+    :param keys_to_exclude:
     :return:
     """
     if keys_to_exclude:
@@ -126,10 +127,7 @@ def user_sign_in():
     # Check for email and password within the request
     if not request.json:
         # abort(401)
-        return jsonify({
-                        "message": "No data received. Verify headers include Content-Type: application/json",
-                        "received": request.data}
-                       )
+        raise InvalidSchemaException("No data received. Verify headers include Content-Type: application/json")
 
     email, password_received = extract_email_and_password_from_request(data=request.json)
 
@@ -140,24 +138,21 @@ def user_sign_in():
         recent_sensors = session.query(Sensors).filter(Sensors.last_user_id == user.id).order_by(Sensors.updated_at).limit(3).all()
         teams = session.query(Teams).join(TeamsUsers).filter(TeamsUsers.user_id == user.id).all()
         if password_received:
-            if bcrypt.check_password_hash(user.password_digest, password_received): # Check if the password matches
+            if bcrypt.check_password_hash(user.password_digest, password_received):  # Check if the password matches
                 keys_to_exclude = ['avatar_file_name',
                                    'avatar_file_size',
                                    'avatar_updated_at',
                                    'avatar_content_type',
                                    'password_digest']
                 user_resp = orm_to_dictionary(user, keys_to_exclude)
-                user_resp['needs_base_calibration'] = False # Legacy option as devices no longer need to be calibrated
-                user_resp['jwt'] = jwt_make_payload(user_id=user_resp['id'],
-                                                    sign_in_method='json',
-                                                    role=user_resp['role']
-                                                   )
+                user_resp['needs_base_calibration'] = False  # Legacy option as devices no longer need to be calibrated
+                user_resp['jwt'] = jwt_make_payload(user_id=user_resp['id'], sign_in_method='json', role=user_resp['role'])
                 user_resp['recent_sensors'] = [orm_to_dictionary(sensor) for sensor in recent_sensors]
                 user_resp['teams'] = [orm_to_dictionary(team) for team in teams]
-                return json.dumps(user_resp, default=json_serialise)
+                return user_resp
             else:
                 raise UnauthorizedException("Password was not correct.")
-    return json.dumps({'message': 'User not found'}, default=json_serialise)
+    raise NoSuchEntityException('User not found')
 
 
 @user_app.route('/<user_id>', methods=['GET'])
@@ -210,7 +205,7 @@ def handle_user_get(user_id):
         }
     }
 
-    return json.dumps({'user': user}, default=json_serialise)
+    return {'user': user}
 
 
 @xray_recorder.capture('apigateway.query_postgres')
