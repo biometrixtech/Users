@@ -119,8 +119,8 @@ def create_user_dictionary(user):
         "biometric_data": {
             "sex": user.gender,
             "height": {
-                "ft_in": [user.height_feet, user.height_inches],
-                "m": feet_to_meters(user.height_feet, user.height_inches)
+                "ft_in": [user.height_feet, user.height_inches or 0],
+                "m": round(feet_to_meters(user.height_feet, user.height_inches), 2)
             },
             "mass": {
                 "lb": round(user.weight, 1),
