@@ -46,19 +46,6 @@ def extract_email_and_password_from_request(data):
         raise InvalidSchemaException('Request payload was not received')
 
 
-def orm_to_dictionary(object_model, keys_to_exclude=None):
-    """
-    Converts a table object model into a dictionary for serialisation
-    :param object_model:
-    :param keys_to_exclude:
-    :return:
-    """
-    if keys_to_exclude:
-        return {k: v for k, v in object_model.__dict__.items() if not k.startswith("_") and k not in keys_to_exclude}
-    else:
-        return {k: v for k, v in object_model.__dict__.items() if not k.startswith("_")}
-
-
 def feet_to_meters(feet, inches):
     """
     Converts feet + inches into meters
@@ -161,9 +148,41 @@ def create_user_dictionary(user):
         "role": user.role,
         "updated_date": format_datetime(user.updated_at),
         "training_status": user.status,
-        # "teams": [Team, ...],
-        # "training_groups": [TrainingGroup, ...]
     }
+
+
+def create_team_dictionary(team):
+    """
+    Format a Team object in accordance with the schema
+    :param team:
+    :return: dict
+        {
+            "id": Uuid,
+            "name": string,
+            "organization_id": Uuid,
+            "created_date": Datetime,
+            "updated_date": Datetime,
+            "athlete_subscriptions": integer,
+            "athlete_manager_subscriptions": integer,
+            "gender": Gender,
+            "sport_id": Uuid
+        }
+    """
+    return {
+        "athlete_manager_subscriptions": team.athlete_manager_subscriptions,
+        "athlete_subscriptions": team.athlete_subscriptions,
+        "created_date": format_datetime(team.created_at),
+        "gender": team.gender,
+        "id": team.id,
+        "name": team.name,
+        "organization_id": team.organization_id,
+        "sport_id": team.sport_id,
+        "updated_date": format_datetime(team.updated_at),
+    }
+
+
+def create_training_group_dictionary(training_group):
+    return {'id': training_group.id}
 
 
 def jwt_make_payload(expires_at=None, user_id=None, sign_in_method=None, role=None):
@@ -253,8 +272,8 @@ def user_sign_in():
         if password_received:
             if bcrypt.check_password_hash(user.password_digest, password_received):  # Check if the password matches
                 user_resp = create_user_dictionary(user)
-                user_resp['teams'] = [orm_to_dictionary(team) for team in teams]
-                user_resp['training_groups'] = [orm_to_dictionary(training_group) for training_group in training_groups]
+                user_resp['teams'] = [create_team_dictionary(team) for team in teams]
+                user_resp['training_groups'] = [create_training_group_dictionary(training_group) for training_group in training_groups]
                 return {
                     "authorization": create_authorization_resp(user_id=user_resp['id'], sign_in_method='json', role=user_resp['role']),
                     "user": user_resp
