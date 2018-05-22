@@ -299,22 +299,19 @@ def handle_user_get(user_id):
 
     user_data, teams, training_groups = query_postgres([
         (
-            """SELECT
-                    id AS user_id,
-                    role AS user_role,
-                    organization_id AS organization_id,
-                    created_at AS created_date,
-                    updated_at AS updated_date,
-                    weight AS user_mass_lb
-                FROM users WHERE id = %s""",
+            """SELECT * FROM users WHERE id = %s""",
             [user_id]
         ),
         (
-            """SELECT team_id FROM teams_users WHERE user_id = %s""",
+            """SELECT * FROM teams 
+                    LEFT JOIN teams_users ON teams.id=teams_users.team_id 
+                    WHERE teams_users.user_id = %s""",
             [user_id]
         ),
         (
-            """SELECT training_group_id FROM training_groups_users WHERE user_id = %s""",
+            """SELECT * FROM training_groups 
+                    LEFT JOIN training_groups_users ON training_groups.id=training_groups_users.training_group_id
+                     WHERE training_groups_users.user_id = %s""",
             [user_id]
         ),
     ])
@@ -322,25 +319,16 @@ def handle_user_get(user_id):
     if len(user_data) == 0:
         raise NoSuchEntityException()
 
-    if user_data[0]['user_mass_lb']:
-        user_mass = float(user_data[0]['user_mass_lb'])
+    if user_data[0]['weight']:
+        user_mass = float(user_data[0]['weight'])
     else:
         user_mass = 0
 
-    user = {
-        'user_id': user_data[0]['user_id'],
-        'role': user_data[0]['user_role'],
-        'created_date': format_date(user_data[0]['created_date']),
-        'updated_date': format_date(user_data[0]['updated_date']),
-        'team_id': teams[0]['team_id'] if len(teams) else None,
-        'training_group_ids': [t['training_group_id'] for t in training_groups],
-        'mass': {
-            'lb': round(user_mass, 1),
-            'kg': round(user_mass * 0.453592, 1),
-        }
-    }
+    user_resp = create_user_dictionary(user_data[0])
+    user_resp['teams'] = [create_team_dictionary(team) for team in teams]
+    user_resp['training_groups'] = [create_training_group_dictionary(training_group) for training_group in training_groups]
 
-    return {'user': user}
+    return {'user': user_resp}
 
 
 @xray_recorder.capture('apigateway.query_postgres')
