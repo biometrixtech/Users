@@ -100,6 +100,28 @@ def format_datetime(date_input):
     return date_input.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def format_date(date_input):
+    """
+    Formats a date in ISO8601 short format.
+    Handles the case where the input is None
+    :param date_input:
+    :return:
+    """
+    if date_input is None:
+        return None
+    if isinstance(date_input, datetime.datetime):
+        return date_input.strftime("%Y-%m-%d")
+    else:
+        for format_string in ('%Y-%m-%d', '%m/%d/%y', '%Y-%m'):
+            try:
+                date_input = datetime.datetime.strptime(date_input, format_string)
+                return date_input.strftime("%Y-%m-%d")
+            except ValueError:
+                pass
+        return None
+        # raise ValueError('no valid date format found')
+
+
 def create_user_dictionary(user):
     """
     Convert the user ORM to the desired output format
@@ -122,7 +144,7 @@ def create_user_dictionary(user):
         "deleted_date": format_datetime(user.deleted_at),
         "id": user.id,
         "personal_data": {
-            "birth_date": user.birthday,
+            "birth_date": format_date(user.birthday),
             "email": user.email,
             # "zip_code": user.zipcode,  # TODO: Add to database
             # "competition_level": enum,
