@@ -1,6 +1,6 @@
 from aws_xray_sdk.core import xray_recorder
 from flask import Blueprint, request
-
+from collections import namedtuple
 import boto3
 import datetime
 import json
@@ -115,6 +115,9 @@ def create_user_dictionary(user):
     :param user:
     :return:
     """
+    if isinstance(user, dict):
+        user = namedtuple("User", user.keys())(*user.values())
+
     return {
         "biometric_data": {
             "sex": user.gender,
@@ -168,6 +171,8 @@ def create_team_dictionary(team):
             "sport_id": Uuid
         }
     """
+    if isinstance(team, dict):
+        team = namedtuple("Team", team.keys())(*team.values())
     return {
         "athlete_manager_subscriptions": team.athlete_manager_subscriptions,
         "athlete_subscriptions": team.athlete_subscriptions,
@@ -182,6 +187,8 @@ def create_team_dictionary(team):
 
 
 def create_training_group_dictionary(training_group):
+    if isinstance(training_group, dict):
+        training_group = namedtuple("TrainingGroup", training_group.keys())(*training_group.values())
     return {'id': training_group.id}
 
 
