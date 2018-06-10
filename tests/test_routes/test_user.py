@@ -31,3 +31,14 @@ def test_create_user_dictionary():
     user_dictionary = create_user_dictionary(user)
     assert type(user_dictionary) == dict
 
+
+def test_get_athlete_permissions():
+    expected_resp = {'permissions':
+                     {'current_user': 1234,
+                      'athlete_list': [
+                                       {'user': 1, 'access_level': 'view'},
+                                       {'user': 2, 'access_level': 'view'},
+                                       {'user': 3, 'access_level': 'view'},
+                                      ]
+                     }
+                   }

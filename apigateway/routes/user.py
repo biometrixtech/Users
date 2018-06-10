@@ -238,6 +238,26 @@ def user_sign_in():
     return json.dumps({'message': 'User not found'}, default=json_serialise)
 
 
+@user_app.route('/athlete_permissions', methods=['GET'])
+@authentication_required
+@xray_recorder.capture('routes.user.athlete_permissions')
+def user_athlete_permissions_get():
+    """
+    Returns a dictionary containing a list of the athletes the user has access to and the users permission level
+    :return:
+    {'permissions':
+                       {'current_user': "UserIdRequestingAccess",
+                         'athlete_list': [{'user': user_id, access_level: 'view'},
+                                             {'user': user_id, access_level: 'view'},
+                                             {'user': user_id, access_level: 'view'},
+                                             ]
+                         }
+    """
+    pass
+
+
+
+
 @user_app.route('/<user_id>', methods=['GET'])
 @authentication_required
 @xray_recorder.capture('routes.user.get')
