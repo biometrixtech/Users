@@ -1,6 +1,6 @@
 from aws_xray_sdk.core import xray_recorder
-from flask import Blueprint, request, abort, jsonify
-
+from flask import Blueprint, request
+from collections import namedtuple
 import boto3
 import datetime
 import json
@@ -11,10 +11,8 @@ import jwt
 
 from decorators import authentication_required
 from exceptions import InvalidSchemaException, NoSuchEntityException, UnauthorizedException
-from serialisable import json_serialise
 from flask_app import bcrypt
 
-import config
 from db_connection import engine
 from models import Users, Teams, TeamsUsers, TrainingGroups, TrainingGroupsUsers
 
@@ -28,10 +26,10 @@ sign_in_methods = ['json-subject-creation',
                    'json-accessory']
 
 
-def extract_email_and_password_from_request(headers=None, params=None, data=None):
+def extract_email_and_password_from_request(data):
     """
     Check params, headers and json data for email and password
-    :param request:
+    :param data:
     :return:
     """
 
@@ -42,22 +40,10 @@ def extract_email_and_password_from_request(headers=None, params=None, data=None
             return email, password_received
         else:
             raise InvalidSchemaException('Email or password were missing')
-    except KeyError as e:
+    except KeyError:
         raise InvalidSchemaException('Email or password were missing')
-    except TypeError as e:
+    except TypeError:
         raise InvalidSchemaException('Request payload was not received')
-
-
-def orm_to_dictionary(object_model, keys_to_exclude=None):
-    """
-    Converts a table object model into a dictionary for serialisation
-    :param object_model:
-    :return:
-    """
-    if keys_to_exclude:
-        return {k: v for k, v in object_model.__dict__.items() if not k.startswith("_") and k not in keys_to_exclude}
-    else:
-        return {k: v for k, v in object_model.__dict__.items() if not k.startswith("_")}
 
 
 def feet_to_meters(feet, inches):
@@ -87,47 +73,123 @@ def lb_to_kg(weight_lbs):
         return weight_lbs * 0.453592
 
 
+def format_datetime(date_input):
+    """
+    Formats a date in ISO8601 short format.
+    Handles the case where the input is None
+    :param date_input:
+    :return:
+    """
+    if date_input is None:
+        return None
+    if not isinstance(date_input, datetime.datetime):
+        date_input = datetime.datetime.strptime(date_input, "%Y-%m-%dT%H:%M:%S.%f")
+    return date_input.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def format_date(date_input):
+    """
+    Formats a date in ISO8601 short format.
+    Handles the case where the input is None
+    :param date_input:
+    :return:
+    """
+    if date_input is None:
+        return None
+    if isinstance(date_input, datetime.datetime):
+        return date_input.strftime("%Y-%m-%d")
+    else:
+        for format_string in ('%Y-%m-%d', '%m/%d/%y', '%Y-%m'):
+            try:
+                date_input = datetime.datetime.strptime(date_input, format_string)
+                return date_input.strftime("%Y-%m-%d")
+            except ValueError:
+                pass
+        return None
+        # raise ValueError('no valid date format found')
+
+
 def create_user_dictionary(user):
     """
     Convert the user ORM to the desired output format
-    :param user_model:
+    :param user:
     :return:
     """
-    return {"biometric_data": {
-                "sex": user.gender,
-                "height": {
-                    "ft_in": [user.height_feet, user.height_inches],
-                    "m": feet_to_meters(user.height_feet, user.height_inches)
-                },
-                "mass": {
-                    "lb": round(user.weight, 1),
-                    "kg": round(lb_to_kg(user.weight), 1)
-                }
+    if isinstance(user, dict):
+        user = namedtuple("User", user.keys())(*user.values())
+
+    return {
+        "biometric_data": {
+            "sex": user.gender,
+            "height": {
+                "ft_in": [user.height_feet, user.height_inches or 0],
+                "m": round(feet_to_meters(user.height_feet, user.height_inches), 2)
             },
-            "created_date": user.created_at,
-            "deleted_date": user.deleted_at,
-            "id": user.id,
-            "personal_data": {
-                "birth_date": user.birthday,
-                "email": user.email,
-                # "zip_code": user.zipcode,  # TODO: Add to database
-                # "competition_level": enum,
-                # "sports": [sports_position_id,
-                #     sports_position_id,
-                #     sports_position_id
-                # ],
-                "first_name": user.first_name,
-                "last_name": user.last_name,
-                "phone_number": user.phone_number,
-                #"account_type": user.account_type,   # enum
-                "account_status": user.active,
-            },
-            "role": user.role,
-            "updated_date": user.updated_at,
-            "training_status": user.status,
-            #"teams": [Team, ...],
-            #"training_groups": [TrainingGroup, ...]
+            "mass": {
+                "lb": round(user.weight, 1),
+                "kg": round(lb_to_kg(user.weight), 1)
+            }
+        },
+        "created_date": format_datetime(user.created_at),
+        "deleted_date": format_datetime(user.deleted_at),
+        "id": user.id,
+        "personal_data": {
+            "birth_date": format_date(user.birthday),
+            "email": user.email,
+            # "zip_code": user.zipcode,  # TODO: Add to database
+            # "competition_level": enum,
+            # "sports": [sports_position_id,
+            #     sports_position_id,
+            #     sports_position_id
+            # ],
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "phone_number": user.phone_number,
+            # "account_type": user.account_type,   # enum
+            "account_status": user.active,
+        },
+        "role": user.role,
+        "updated_date": format_datetime(user.updated_at),
+        "training_status": user.status,
+    }
+
+
+def create_team_dictionary(team):
+    """
+    Format a Team object in accordance with the schema
+    :param team:
+    :return: dict
+        {
+            "id": Uuid,
+            "name": string,
+            "organization_id": Uuid,
+            "created_date": Datetime,
+            "updated_date": Datetime,
+            "athlete_subscriptions": integer,
+            "athlete_manager_subscriptions": integer,
+            "gender": Gender,
+            "sport_id": Uuid
         }
+    """
+    if isinstance(team, dict):
+        team = namedtuple("Team", team.keys())(*team.values())
+    return {
+        "athlete_manager_subscriptions": team.athlete_manager_subscriptions,
+        "athlete_subscriptions": team.athlete_subscriptions,
+        "created_date": format_datetime(team.created_at),
+        "gender": team.gender,
+        "id": team.id,
+        "name": team.name,
+        "organization_id": team.organization_id,
+        "sport_id": team.sport_id,
+        "updated_date": format_datetime(team.updated_at),
+    }
+
+
+def create_training_group_dictionary(training_group):
+    if isinstance(training_group, dict):
+        training_group = namedtuple("TrainingGroup", training_group.keys())(*training_group.values())
+    return {'id': training_group.id}
 
 
 def jwt_make_payload(expires_at=None, user_id=None, sign_in_method=None, role=None):
@@ -141,8 +203,7 @@ def jwt_make_payload(expires_at=None, user_id=None, sign_in_method=None, role=No
                    "role": role,
                    "exp": expires_at
                    }
-    hmac_secret = config.SECRET_KEY_BASE
-    jwt_payload_encoded = jwt.encode(jwt_payload, hmac_secret, algorithm='HS256') #, default=json_serialise)
+    jwt_payload_encoded = jwt.encode(jwt_payload, os.environ['SECRET_KEY_BASE'], algorithm='HS256')
     return jwt_payload_encoded
 
 
@@ -154,10 +215,10 @@ def create_authorization_resp(**kwargs):
     """
     expiration_time = datetime.datetime.utcnow() + datetime.timedelta(minutes=60)
     token = jwt_make_payload(expires_at=expiration_time, **kwargs)
-    return  {
-                "expires": expiration_time.isoformat(),
-                "jwt": token
-            }
+    return {
+        "expires": expiration_time.isoformat(),
+        "jwt": token
+    }
 
 
 @user_app.route('/sign_in', methods=['POST'])
@@ -204,38 +265,29 @@ def user_sign_in():
     """
     # Check for email and password within the request
     if not request.json:
-        # abort(401)
-        return jsonify({
-                        "message": "No data received. Verify headers include Content-Type: application/json",
-                        "received": request.data}
-                       )
+        raise InvalidSchemaException("No data received. Verify headers include Content-Type: application/json")
 
-    email, password_received = extract_email_and_password_from_request(data=request.json)
+    email, password_received = extract_email_and_password_from_request(request.json)
 
     # Attempt to authenticate the user
     user_query = session.query(Users).filter_by(email=email)
     user = user_query.first()
     if user:
-        # recent_sensors = session.query(Sensors).filter(Sensors.last_user_id == user.id).order_by(Sensors.updated_at).limit(3).all()
         teams = session.query(Teams).join(TeamsUsers).filter(TeamsUsers.user_id == user.id).all()
         training_groups = session.query(TrainingGroups).join(TrainingGroupsUsers)\
                                  .filter(TrainingGroupsUsers.user_id == user.id).all()
         if password_received:
-            if bcrypt.check_password_hash(user.password_digest, password_received): # Check if the password matches
+            if bcrypt.check_password_hash(user.password_digest, password_received):  # Check if the password matches
                 user_resp = create_user_dictionary(user)
-                user_resp['teams'] = [orm_to_dictionary(team) for team in teams]
-                user_resp['training_groups'] = [orm_to_dictionary(training_group) for training_group in training_groups]
-                resp = {"authorization": create_authorization_resp(
-                                                user_id=user_resp['id'],
-                                                sign_in_method='json',
-                                                role=user_resp['role']
-                                                ),
-                        "user": user_resp
-                        }
-                return json.dumps(resp, default=json_serialise)
+                user_resp['teams'] = [create_team_dictionary(team) for team in teams]
+                user_resp['training_groups'] = [create_training_group_dictionary(training_group) for training_group in training_groups]
+                return {
+                    "authorization": create_authorization_resp(user_id=user_resp['id'], sign_in_method='json', role=user_resp['role']),
+                    "user": user_resp
+                }
             else:
                 raise UnauthorizedException("Password was not correct.")
-    return json.dumps({'message': 'User not found'}, default=json_serialise)
+    raise NoSuchEntityException('User not found')
 
 
 @user_app.route('/<user_id>', methods=['GET'])
@@ -247,22 +299,19 @@ def handle_user_get(user_id):
 
     user_data, teams, training_groups = query_postgres([
         (
-            """SELECT
-                    id AS user_id,
-                    role AS user_role,
-                    organization_id AS organization_id,
-                    created_at AS created_date,
-                    updated_at AS updated_date,
-                    weight AS user_mass_lb
-                FROM users WHERE id = %s""",
+            """SELECT * FROM users WHERE id = %s""",
             [user_id]
         ),
         (
-            """SELECT team_id FROM teams_users WHERE user_id = %s""",
+            """SELECT * FROM teams 
+                    LEFT JOIN teams_users ON teams.id=teams_users.team_id 
+                    WHERE teams_users.user_id = %s""",
             [user_id]
         ),
         (
-            """SELECT training_group_id FROM training_groups_users WHERE user_id = %s""",
+            """SELECT * FROM training_groups 
+                    LEFT JOIN training_groups_users ON training_groups.id=training_groups_users.training_group_id
+                     WHERE training_groups_users.user_id = %s""",
             [user_id]
         ),
     ])
@@ -270,25 +319,16 @@ def handle_user_get(user_id):
     if len(user_data) == 0:
         raise NoSuchEntityException()
 
-    if user_data[0]['user_mass_lb']:
-        user_mass = float(user_data[0]['user_mass_lb'])
+    if user_data[0]['weight']:
+        user_mass = float(user_data[0]['weight'])
     else:
         user_mass = 0
 
-    user = {
-        'user_id': user_data[0]['user_id'],
-        'role': user_data[0]['user_role'],
-        'created_date': datetime.datetime.strptime(user_data[0]['created_date'], "%Y-%m-%dT%H:%M:%S.%f").strftime("%Y-%m-%dT%H:%M:%SZ"),
-        'updated_date': datetime.datetime.strptime(user_data[0]['updated_date'], "%Y-%m-%dT%H:%M:%S.%f").strftime("%Y-%m-%dT%H:%M:%SZ"),
-        'team_id': teams[0]['team_id'] if len(teams) else None,
-        'training_group_ids': [t['training_group_id'] for t in training_groups],
-        'mass': {
-            'lb': round(user_mass, 1),
-            'kg': round(user_mass * 0.453592, 1),
-        }
-    }
+    user_resp = create_user_dictionary(user_data[0])
+    user_resp['teams'] = [create_team_dictionary(team) for team in teams]
+    user_resp['training_groups'] = [create_training_group_dictionary(training_group) for training_group in training_groups]
 
-    return json.dumps({'user': user}, default=json_serialise)
+    return {'user': user_resp}
 
 
 @xray_recorder.capture('apigateway.query_postgres')

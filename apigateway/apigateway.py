@@ -3,6 +3,9 @@ import os
 import sys
 import traceback
 
+# Load config
+from config import load_secrets
+load_secrets()
 
 # Break out of Lambda's X-Ray sandbox so we can define our own segments and attach metadata, annotations, etc, to them
 lambda_task_root_key = os.getenv('LAMBDA_TASK_ROOT', ".")
@@ -17,6 +20,7 @@ from exceptions import ApplicationException
 from aws_xray_sdk.core import patch_all
 patch_all()
 
+# Load Flask and routes
 from flask_app import app
 from routes.user import user_app as user_routes
 app.register_blueprint(user_routes, url_prefix='/v1/user')
