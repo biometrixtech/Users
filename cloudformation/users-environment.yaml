@@ -13,12 +13,41 @@ Parameters:
         Type: "String"
         Description: "The name of the environment"
 
+    DynamodbReadCapacity:
+        Default: 1
+        Description: "The read capacity of the DynamoDb table"
+        MinValue: 1
+        Type: "Number"
+
+    DynamodbWriteCapacity:
+        Default: 1
+        Description: "The write capacity of the DynamoDb table"
+        MinValue: 1
+        Type: "Number"
+
 Mappings:
     TemplateVersion:
         Self: { Commit: "da39a3ee5e6b4b0d3255bfef95601890afd80709" }
         Infrastructure: { Commit: "2d222e78ee364e58b7db1709f89effdf4d1d4c7d" }
         
 Resources:
+
+    ##########################################################################################################
+    ##  DATABASE
+    ##########################################################################################################
+
+    UsersTable:
+        Type: "AWS::DynamoDB::Table"
+        Properties:
+            TableName: { "Fn::Sub": "users-${Environment}-users" }
+            AttributeDefinitions:
+              - { AttributeName: "id", AttributeType: "S" }
+            KeySchema:
+              - { AttributeName: "id", KeyType: "HASH" }
+            ProvisionedThroughput:
+                ReadCapacityUnits: { Ref: "DynamodbReadCapacity" }
+                WriteCapacityUnits: { Ref: "DynamodbWriteCapacity" }
+        DeletionPolicy : "Retain"
 
     ##########################################################################################################
     ##  AUTHENTICATION
@@ -87,6 +116,16 @@ Resources:
                           - "secretsmanager:GetSecretValue"
                         Effect: "Allow"
                         Resource: { "Fn::Sub": "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:users/dev/*" }
+                  - Action:
+                      - "dynamodb:GetItem"
+                      - "dynamodb:Query"
+                      - "dynamodb:UpdateItem"
+                      - "dynamodb:DeleteItem"
+                      - "dynamodb:PutItem"
+                    Effect: "Allow"
+                    Resource:
+                      - { "Fn::Sub": "${UsersTable.Arn}" }
+                      - { "Fn::Sub": "${UsersTable.Arn}/*" }
             RoleName: { "Fn::Sub": "users-${Environment}-apigateway-execute-${AWS::Region}" }
 
     ApiGatewayLambda:
