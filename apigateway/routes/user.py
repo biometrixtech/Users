@@ -1,7 +1,9 @@
 from aws_xray_sdk.core import xray_recorder
 from flask import Blueprint, request
+from boto3.dynamodb.conditions import Attr, Key
 from collections import namedtuple
 import boto3
+import binascii
 import datetime
 import json
 import os
@@ -24,6 +26,10 @@ session = Session(bind=engine)
 sign_in_methods = ['json-subject-creation',
                    'json',
                    'json-accessory']
+
+MAX_SESSIONS = 3
+
+users_table = boto3.resource('dynamodb').Table('users-{ENVIRONMENT}-users'.format(**os.environ))
 
 
 def extract_email_and_password_from_request(data):
@@ -221,6 +227,39 @@ def create_authorization_resp(**kwargs):
     }
 
 
+def create_session_for_user(user_id, sessions, atomic_date):
+    """
+    Expire old sessions for the user, and create a new session token
+    :param user_id: String uuid
+    :param atomic_date: String ISO8601 datetime
+    :param sessions: List of objects
+    :return: string new session token
+    """
+    now = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    # Remove old sessions to get down below the limit
+    sessions.sort(key=lambda s: s['created_date'])
+    sessions = sessions[min(1-MAX_SESSIONS, 0):]
+
+    new_session_id = binascii.hexlify(os.urandom(32)).decode()
+    sessions.append({
+        'created_date': now,
+        'id': new_session_id,
+    })
+    users_table.update_item(
+        Key={'id': user_id},
+        UpdateExpression='SET sessions = :sessions, updated_date = :updated_date',
+        ExpressionAttributeValues={':sessions': sessions, ':updated_date': now},
+        ConditionExpression=Attr('updated_date').eq(atomic_date) | Attr('updated_date').not_exists(),
+    )
+    return new_session_id
+
+
+def get_user_from_ddb(user_id):
+    res = users_table.query(KeyConditionExpression=Key('id').eq(user_id))
+    return res['Items'][0] if len(res['Items']) else None
+
+
 @user_app.route('/sign_in', methods=['POST'])
 def user_sign_in():
     """
@@ -281,10 +320,18 @@ def user_sign_in():
                 user_resp = create_user_dictionary(user)
                 user_resp['teams'] = [create_team_dictionary(team) for team in teams]
                 user_resp['training_groups'] = [create_training_group_dictionary(training_group) for training_group in training_groups]
-                return {
+
+                user_ddb_res = get_user_from_ddb(str(user_resp['id'])) or {'sessions': [], 'updated_date': '1970-01-01T00:00:00Z'}
+                ret = {
                     "authorization": create_authorization_resp(user_id=user_resp['id'], sign_in_method='json', role=user_resp['role']),
                     "user": user_resp
                 }
+                ret['authorization']['session_token'] = create_session_for_user(
+                    str(user_resp['id']),
+                    user_ddb_res['sessions'],
+                    user_ddb_res['updated_date'],
+                )
+                return ret
             else:
                 raise UnauthorizedException("Password was not correct.")
     raise NoSuchEntityException('User not found')
