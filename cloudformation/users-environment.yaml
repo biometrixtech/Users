@@ -50,8 +50,27 @@ Resources:
         DeletionPolicy : "Retain"
 
     ##########################################################################################################
+    ##  IOT
+    ##########################################################################################################
+    
+    DevicePolicy:
+        Type: "AWS::IoT::Policy"
+        Properties:
+          PolicyName: { "Fn::Sub": "users-${Environment}-device" }
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "iot:Connect"
+                  - "iot:Publish"
+                  - "iot:Subscribe"
+                Resource:
+                  - "*" # TODO
+
+    ##########################################################################################################
     ##  AUTHENTICATION
-    ##########################################################################################################    
+    ##########################################################################################################
 
     CustomAuthLambdaExecutionRole:
         Type: "AWS::IAM::Role"
@@ -117,15 +136,23 @@ Resources:
                         Effect: "Allow"
                         Resource: { "Fn::Sub": "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:users/dev/*" }
                       - Action:
+                          - "dynamodb:DeleteItem"
                           - "dynamodb:GetItem"
+                          - "dynamodb:PutItem"
                           - "dynamodb:Query"
                           - "dynamodb:UpdateItem"
-                          - "dynamodb:DeleteItem"
-                          - "dynamodb:PutItem"
                         Effect: "Allow"
                         Resource:
                           - { "Fn::Sub": "${UsersTable.Arn}" }
                           - { "Fn::Sub": "${UsersTable.Arn}/*" }
+                      - Action:
+                          - "iot:AddThingToThingGroup"
+                          - "iot:AttachThingPrincipal"
+                          - "iot:CreateKeysAndCertificate"
+                          - "iot:CreateThing"
+                          - "iot:DescribeThing"
+                        Effect: "Allow"
+                        Resource: "*"
             RoleName: { "Fn::Sub": "users-${Environment}-apigateway-execute-${AWS::Region}" }
 
     ApiGatewayLambda:
