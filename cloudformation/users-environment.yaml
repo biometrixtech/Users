@@ -56,7 +56,7 @@ Resources:
     DevicePolicy:
         Type: "AWS::IoT::Policy"
         Properties:
-          PolicyName: { "Fn::Sub": "users-${Environment}-devices" }
+          PolicyName: { "Fn::Sub": "users-${Environment}-device" }
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
