@@ -354,6 +354,24 @@ def handle_user_authorise(user_id):
     return {'authorization': create_authorization_resp(user_id=user_ddb_res['id'], sign_in_method='json', role=None)}
 
 
+@user_app.route('/<uuid:user_id>/logout', methods=['POST'])
+@authentication_required
+@xray_recorder.capture('routes.user.logout')
+def handle_user_logout(user_id):
+    user_ddb_res = get_user_from_ddb(user_id)
+    now = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+    users_table.update_item(
+        Key={'id': user_id},
+        UpdateExpression='SET sessions = :sessions, updated_date = :updated_date',
+        ExpressionAttributeValues={':sessions': [], ':updated_date': now},
+    )
+
+    if request.json['session_token'] not in [s['id'] for s in user_ddb_res['sessions']]:
+        raise UnauthorizedException('Session token is not valid for this user')
+
+    return {'authorization': create_authorization_resp(user_id=user_ddb_res['id'], sign_in_method='json', role=None)}
+
+
 @user_app.route('/<uuid:user_id>', methods=['GET'])
 @authentication_required
 @xray_recorder.capture('routes.user.get')
