@@ -337,6 +337,23 @@ def user_sign_in():
     raise NoSuchEntityException('User not found')
 
 
+@user_app.route('/<uuid:user_id>/authorise', methods=['POST'])
+@user_app.route('/<uuid:user_id>/authorize', methods=['POST'])
+@xray_recorder.capture('routes.user.authorise')
+def handle_user_authorise(user_id):
+    if not request.json or 'session_token' not in request.json:
+        raise InvalidSchemaException('Must supply session_token')
+
+    user_ddb_res = get_user_from_ddb(user_id)
+    if user_ddb_res is None:
+        raise NoSuchEntityException()
+
+    if 'sessions' not in user_ddb_res or request.json['session_token'] not in [s['id'] for s in user_ddb_res['sessions']]:
+        raise UnauthorizedException('Session token is not valid for this user')
+
+    return {'authorization': create_authorization_resp(user_id=user_ddb_res['id'], sign_in_method='json', role=None)}
+
+
 @user_app.route('/<uuid:user_id>', methods=['GET'])
 @authentication_required
 @xray_recorder.capture('routes.user.get')
