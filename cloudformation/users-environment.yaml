@@ -152,6 +152,7 @@ Resources:
                           - "iot:CreateKeysAndCertificate"
                           - "iot:CreateThing"
                           - "iot:DescribeThing"
+                          - "iot:UpdateThing"
                         Effect: "Allow"
                         Resource: "*"
             RoleName: { "Fn::Sub": "users-${Environment}-apigateway-execute-${AWS::Region}" }

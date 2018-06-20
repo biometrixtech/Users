@@ -7,6 +7,7 @@ from botocore.exceptions import ClientError
 
 from decorators import authentication_required, authenticate_user_jwt
 from exceptions import InvalidSchemaException, NoSuchEntityException, UnauthorizedException, DuplicateEntityException
+from utils import validate_uuid4
 
 
 device_app = Blueprint('device', __name__)
@@ -74,3 +75,28 @@ def handle_device_register(device_id):
             'private_key': certificate_response['keyPair']['PrivateKey'],
         }
     }
+
+
+@device_app.route('/<uuid:device_id>', methods=['PATCH'])
+@authentication_required
+@xray_recorder.capture('routes.device.affiliate')
+def handle_device_patch(device_id):
+    if not request.json:
+        raise InvalidSchemaException('Body must be JSON formatted')
+
+    modified = False
+    if 'owner_id' in request.json:
+        owner_id = request.json['owner_id']
+        if owner_id is None or validate_uuid4(owner_id):
+            iot_client.update_thing(
+                thingName=device_id,
+                attributePayload={'attributes': {'owner_id': '' if owner_id is None else owner_id}}
+            )
+            modified = True
+        else:
+            raise InvalidSchemaException('owner_id must be uuid or none')
+
+    if modified:
+        return {"message": "Update successful"}, 200
+    else:
+        return {"message": "No updates"}, 204
