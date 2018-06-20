@@ -52,7 +52,7 @@ Resources:
     ##########################################################################################################
     ##  IOT
     ##########################################################################################################
-    
+
     DevicePolicy:
         Type: "AWS::IoT::Policy"
         Properties:
@@ -63,10 +63,14 @@ Resources:
               - Effect: "Allow"
                 Action:
                   - "iot:Connect"
+                Resource:
+                  - "*"
+              - Effect: "Allow"
+                Action:
                   - "iot:Publish"
                   - "iot:Subscribe"
                 Resource:
-                  - "*" # TODO
+                  - { "Fn::Sub": "arn:aws:iot:${AWS::Region}:${AWS::AccountId}:topic/${!iot:Connection.Thing.ThingName}" }
 
     ##########################################################################################################
     ##  AUTHENTICATION
