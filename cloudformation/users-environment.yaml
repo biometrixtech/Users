@@ -147,6 +147,7 @@ Resources:
                           - { "Fn::Sub": "${UsersTable.Arn}/*" }
                       - Action:
                           - "iot:AddThingToThingGroup"
+                          - "iot:AttachPrincipalPolicy"
                           - "iot:AttachThingPrincipal"
                           - "iot:CreateKeysAndCertificate"
                           - "iot:CreateThing"

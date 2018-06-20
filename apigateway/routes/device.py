@@ -46,11 +46,19 @@ def handle_device_register(device_id):
 
     certificate_response = iot_client.create_keys_and_certificate(setAsActive=True)
 
-    iot_client.attach_thing_principal(thingName=device_id, principal=certificate_response['certificateArn'])
+    iot_client.attach_thing_principal(
+        thingName=device_id,
+        principal=certificate_response['certificateArn']
+    )
 
     iot_client.add_thing_to_thing_group(
         thingGroupName='users-{ENVIRONMENT}-device'.format(**os.environ),
         thingName=device_id,
+    )
+
+    iot_client.attach_principal_policy(
+        policyName='users-{ENVIRONMENT}-device'.format(**os.environ),
+        principal=certificate_response['certificateArn']
     )
 
     return {
