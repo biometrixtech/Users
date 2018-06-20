@@ -19,8 +19,8 @@ class ApplicationException(Exception):
 
 
 class DuplicateEntityException(ApplicationException):
-    def __init__(self):
-        super().__init__(409, 'DuplicateEntity', 'Duplicate Entity')
+    def __init__(self, message='Duplicate Entity'):
+        super().__init__(409, 'DuplicateEntity', message)
 
 
 class InvalidSchemaException(ApplicationException):
