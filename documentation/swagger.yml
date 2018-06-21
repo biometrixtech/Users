@@ -66,7 +66,7 @@ paths:
                                         maxLength: 32
                             user:
                                 $ref: '#/definitions/User'
-                400:
+                401:
                     description: 'Authentication failed'
                 404:
                     description: >-
@@ -152,7 +152,7 @@ paths:
                                         type: string
                                         minLength: 32
                                         maxLength: 32
-                400:
+                401:
                     description: 'The session token was not (or is no longer) valid'
                 404:
                     description: 'No such user'
@@ -177,7 +177,7 @@ paths:
             responses:
                 200:
                     description: 'Logout successful'
-                400:
+                401:
                     description: 'Invalid authentication'
                 404:
                     description: 'No such user'
@@ -238,7 +238,7 @@ paths:
                                         description: 'An RSA keypair in PEM format.'
                             device:
                                 $ref: '#/definitions/Device'
-                400:
+                401:
                     description: 'Invalid authentication'
                 404:
                     description: 'No such user'
@@ -281,7 +281,7 @@ paths:
                                 type: string
                                 enum:
                                   - 'No updates'
-                400:
+                401:
                     description: 'Invalid authentication'
                 404:
                     description: 'No such device'
