@@ -75,7 +75,7 @@ Resources:
     DeviceTopicRule:
         Type: "AWS::IoT::TopicRule"
         Properties: 
-            RuleName: { "Fn::Sub": "users-${Environment}-device" }
+            RuleName: { "Fn::Sub": "users_${Environment}_device" }
             TopicRulePayload:
                 RuleDisabled: "false"
                 Sql: { "Fn::Sub": "SELECT * FROM 'users-${Environment}-device/#'" }
