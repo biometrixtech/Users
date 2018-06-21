@@ -169,7 +169,8 @@ If the authentication was successful, the Service __will__ respond with HTTP Sta
 {
     "authorization": {
         "expires": String,
-        "jwt": String
+        "jwt": String,
+        "session_token": String
     },
     "user": User
 }
@@ -185,7 +186,8 @@ Example response:
 {
     "authorization": {
         "expires": "2018-04-06:31:19Z",
-        "jwt": "eyJraWQ...ajBc4VQ"
+        "jwt": "eyJraWQ...ajBc4VQ",
+        "session_token": "bf652a1a90f4a3edc0887716c6bc309939a5bf87d1274ad624de0374e3ad1b1e"
     },
     "user": {
 		"biometric_data": {
@@ -273,3 +275,168 @@ The Service __will__ respond with an HTTP status of `200 OK` and a body with the
     "user": User
 }
 ```
+ 
+### Authorise
+
+This endpoint can be called by a client, which has previously logged in, renew its JWT authorisation token.  The user __must__ have been registered prior to requesting this endpoint.
+
+#### Query String
+ 
+The client __must__ submit a request to the endpoint `/user/{user_id}/authorise`.
+
+#### Request
+
+The client __must__ submit a request body containing a JSON object with the following schema:
+
+```
+{
+	"session_token": String
+}
+```
+
+* `session_token` __must__ be a session token string previously returned from a call to `login`.
+
+```
+POST /users/user/e8514489-8de9-47e0-b3d5-b15da244783f/authorise HTTP/1.1
+Host: apis.env.fathomai.com
+Content-Type: application/json
+
+{
+	"session_token": "bf652a1a90f4a3edc0887716c6bc309939a5bf87d1274ad624de0374e3ad1b1e"
+}
+
+```
+
+Authentication is not required for this endpoint.
+
+#### Responses
+ 
+If the authentication was successful, the Service __will__ respond with HTTP Status `200 OK`, and with a body with the following syntax:
+ 
+```
+{
+    "authorization": {
+        "expires": String,
+        "jwt": String,
+    }
+}
+```
+
+* `authorization.jwt` __will__ be a String forming a valid JWT Bearer Token.
+* `authorization.expires` __will__ be a Datetime, representing the time at which the JWT will expire.
+
+Example response:
+
+```
+{
+    "authorization": {
+        "expires": "2018-04-06:31:19Z",
+        "jwt": "eyJraWQ...ajBc4VQ"
+    }
+}
+```
+
+If the authentication was not successful, the Service __will__ respond with one of the following HTTP Status codes:
+
+* `400 Unauthorized`, if the session token was not (or is no longer) valid
+* `404 Not Found`, if no user with that uuid was found.
+
+ 
+### Logout
+
+This endpoint can be called by a client, which has previously logged in, to log out.
+
+#### Query String
+ 
+The client __must__ submit a request to the endpoint `/user/{user_id}/logout`.
+
+#### Request
+
+This endpoint takes no request body.
+
+
+```
+POST /users/user/e8514489-8de9-47e0-b3d5-b15da244783f/logout HTTP/1.1
+Host: apis.env.fathomai.com
+Content-Type: application/json
+```
+
+#### Responses
+ 
+If the logout was successful, the Service __will__ respond with HTTP Status `200 OK`, and with an empty body.
+
+## Device
+
+### Register
+
+This endpoint can be called by a client to register a new mobile device.
+
+#### Query String
+ 
+The client __must__ submit a request to the endpoint `/device/{device_id}`. The request method __must__ be `POST`.
+
+The `device_id` __must__ be a `Uuid`, and __must__ be unique to the device.
+
+#### Request
+
+The client __must__ submit a request body containing a JSON object with the following schema:
+
+```
+{
+	"device_type": String
+}
+```
+
+* `device_type` __must__ be either `ios` or `android`.
+
+```
+POST /users/device/e8514489-8de9-47e0-b3d5-b15da244783f HTTP/1.1
+Host: apis.env.fathomai.com
+Content-Type: application/json
+Authorization: eyJraWQ...ajBc4VQ
+
+{
+	"device_type": "ios"
+}
+
+```
+
+
+#### Responses
+ 
+If the registration was successful, the Service __will__ respond with HTTP Status `201 Created`, and with a body with the following syntax:
+ 
+```
+{
+    "certificate": {
+        "id": String,
+        "pem": String,
+        "private_key": String,
+        "public_key": String
+    },
+    "device": {
+        "id": Uuid,
+        "thing_id": Uuid,
+        "type": String
+    }
+}
+```
+
+* `certificate.pem`, `certificate.private_key` and `certificate.public_key` __will__ be Strings representing an RSA keypair in PEM format.
+
+Example response:
+
+```
+{
+    "authorization": {
+        "expires": "2018-04-06:31:19Z",
+        "jwt": "eyJraWQ...ajBc4VQ"
+    }
+}
+```
+
+If the authentication was not successful, the Service __will__ respond with one of the following HTTP Status codes:
+
+* `400 Unauthorized`, if the session token was not (or is no longer) valid
+* `404 Not Found`, if no user with that uuid was found.
+
