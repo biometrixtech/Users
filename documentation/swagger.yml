@@ -1,0 +1,458 @@
+swagger: '2.0'
+info:
+    version: '1.0'
+    title: "Users Service"
+    description: This API allows clients to perform actions related to Users and Devices.
+    license:
+        name: Proprietary
+host: apis.environment.fathomai.com
+basePath: /users
+schemes:
+  - https
+consumes:
+  - application/json
+produces:
+  - application/json
+
+paths:
+    /user/sign_in:
+        # x-summary: Login
+        post:
+            description: >-
+                This endpoint can be called by a client, once registered, to acquire
+                credentials with which to access other endpoints.  The user __must__
+                have been registered prior to requesting this endpoint.
+            # summary: Login with username and password
+            parameters:
+              - name: body
+                in: body
+                required: true
+                schema:
+                    type: object
+                    properties:
+                        email:
+                            type: string
+                            example: 'glitch0@fathomai.com'
+                            description: 'The email address that the user registered with.'
+                        password:
+                            type: string
+                            example: 'oatcakes'
+                            # minLength: 8
+                            description: '__must__ be a string containing 8 or more characters, with no leading or trailing spaces.'
+                    required:
+                        - email
+                        - password
+                    example: >-
+                        {
+                            "email": "glitch0@fathomai.com",
+                            "password": "oatcakes"
+                        }
+            responses:
+                200:
+                    description: 'Authentication successful'
+                    schema:
+                        type: object
+                        properties:
+                            authorization:
+                                type: object
+                                properties:
+                                    expires:
+                                        $ref: '#/definitions/Datetime'
+                                    jwt:
+                                        type: string
+                                    session_token:
+                                        type: string
+                                        minLength: 32
+                                        maxLength: 32
+                            user:
+                                $ref: '#/definitions/User'
+                400:
+                    description: 'Authentication failed'
+                404:
+                    description: >-
+                        If no user with those credentials was found and the Service is
+                        willing to reveal that fact (note that the Service __may__ choose
+                        to reply with `400 Unauthorized` in this instance, for security
+                        reasons).
+            tags:
+              - user
+
+    /user/{user_id}:
+        # x-summary: Get a user
+        get:
+            description: >-
+                This endpoint allows the client to get information about a user,
+                including the current user.
+            # summary: Get a user
+            parameters:
+              - name: user_id
+                in: path
+                type: string
+                required: true
+                description: >-
+                    The user ID. __must__ be a Uuid.
+              - $ref: '#/parameters/authorization'
+            responses:
+                200:
+                    description: 'Ok'
+                    schema:
+                        type: object
+                        properties:
+                            user:
+                                $ref: '#/definitions/User'
+                404:
+                    description: 'No such user'
+            tags:
+              - user
+
+    /user/{user_id}/authorise:
+        # x-summary: Authorise a user
+        post:
+            description: >-
+                This endpoint can be called by a client, which has previously logged in, renew
+                its JWT authorisation token
+            # summary: Authorise a user
+            parameters:
+              - name: user_id
+                in: path
+                type: string
+                required: true
+                description: >-
+                    The user ID. __must__ be a Uuid.
+              - name: body
+                in: body
+                required: true
+                schema:
+                    type: object
+                    properties:
+                        session_token:
+                            type: string
+                            example: 'bf652a1a90f4a3edc0887716c6bc309939a5bf87d1274ad624de0374e3ad1b1e'
+                            description: 'The session token previously returned from a call to /login.'
+                    required:
+                        - session_token
+                    example: >-
+                        {
+                            "session_token": "bf652a1a90f4a3edc0887716c6bc309939a5bf87d1274ad624de0374e3ad1b1e"
+                        }
+            responses:
+                200:
+                    description: 'Authentication successful'
+                    schema:
+                        type: object
+                        properties:
+                            authorization:
+                                type: object
+                                properties:
+                                    expires:
+                                        $ref: '#/definitions/Datetime'
+                                    jwt:
+                                        type: string
+                                    session_token:
+                                        type: string
+                                        minLength: 32
+                                        maxLength: 32
+                400:
+                    description: 'The session token was not (or is no longer) valid'
+                404:
+                    description: 'No such user'
+            tags:
+              - user
+
+    /user/{user_id}/logout:
+        # x-summary: Logout
+        post:
+            description: >-
+                This endpoint can be called by a client, which has previously logged in,
+                to log out.
+            # summary: Log a user out
+            parameters:
+              - name: user_id
+                in: path
+                type: string
+                required: true
+                description: >-
+                    The user ID. __must__ be a Uuid.
+              - $ref: '#/parameters/authorization'
+            responses:
+                200:
+                    description: 'Logout successful'
+                400:
+                    description: 'Invalid authentication'
+                404:
+                    description: 'No such user'
+            tags:
+              - user
+
+    /device/{device_id}:
+        parameters:
+          - name: device_id
+            in: path
+            type: string
+            required: true
+            description: >-
+                The device ID. __must__ be a Uuid, and __must__ be unique to the device.
+          - $ref: '#/parameters/authorization'
+        post:
+            description: >-
+                This endpoint can be called by a client to register a new mobile device.
+            parameters:
+              - name: body
+                in: body
+                required: true
+                schema:
+                    type: object
+                    properties:
+                        device_type:
+                            type: string
+                            enum:
+                              - ios
+                              - android
+                            example: 'ios'
+                            description: 'The hardware type of the device'
+                    required:
+                        - device_type
+                    example: >-
+                        {
+                            "device_type": "android"
+                        }
+            responses:
+                200:
+                    description: 'Authentication successful'
+                    schema:
+                        type: object
+                        properties:
+                            certificate:
+                                type: object
+                                properties:
+                                    id:
+                                        type: string
+                                    pem:
+                                        type: string
+                                        description: 'An RSA keypair in PEM format.'
+                                    private_key:
+                                        type: string
+                                        description: 'An RSA keypair in PEM format.'
+                                    public_key:
+                                        type: string
+                                        description: 'An RSA keypair in PEM format.'
+                            device:
+                                $ref: '#/definitions/Device'
+                400:
+                    description: 'Invalid authentication'
+                404:
+                    description: 'No such user'
+            tags:
+              - device
+
+        patch:
+            description: >-
+                This endpoint can be called by a client to affiliate an already-registered device to a new user
+            parameters:
+              - name: body
+                in: body
+                required: true
+                schema:
+                    type: object
+                    properties:
+                        owner_id:
+                            $ref: '#/definitions/Uuid'
+                            description: 'The new owner of the device, or null to de-affiliate the device from all users.'
+                    example: >-
+                        {
+                          "owner_id": "e8514489-8de9-47e0-b3d5-b15da244783f"
+                        }
+            responses:
+                200:
+                    description: 'Authentication successful'
+                    schema:
+                        type: object
+                        properties:
+                            message:
+                                type: string
+                                enum:
+                                  - 'Update successful'
+                204:
+                    description: 'Not modified'
+                    schema:
+                        type: object
+                        properties:
+                            message:
+                                type: string
+                                enum:
+                                  - 'No updates'
+                400:
+                    description: 'Invalid authentication'
+                404:
+                    description: 'No such device'
+            tags:
+              - device
+
+parameters:
+    authorization:
+        in: header
+        name: 'Authorization'
+        required: true
+        type: string
+        description: 'JWT authentication token'
+        default: 'eyJraWQ...ajBc4VQ'
+
+definitions:
+    Date:
+        title: Date
+        type: string
+        description: >-
+            A date in [ISO 8601](https://www.iso.org/iso-8601-date-and-time-format.html)
+            'YYYY-MM-DD' format.
+        # format: date
+        pattern: '^\d{4}-\d{2}-\d{2}$'
+        example: '2018-06-21'
+    Datetime:
+        title: Datetime
+        type: string
+        description: >-
+            A datetime in [ISO 8601](https://www.iso.org/iso-8601-date-and-time-format.html)
+            'YYYY-MM-DD HH:MM:SS' format.
+        # format: date-time
+        pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$'
+        example: '2018-06-21T11:33:45Z'
+    Uuid:
+        title: Uuid
+        type: string
+        description: >-
+            An [RFC 4122](https://tools.ietf.org/html/rfc4122) UUID.
+        # format: uuid
+        pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+        example: 'e8514489-8de9-47e0-b3d5-b15da244783f'
+    Gender:
+        title: Gender
+        type: string
+        enum:
+          - male
+          - female
+          - mixed
+          - other
+        example: 'e8514489-8de9-47e0-b3d5-b15da244783f'
+
+    User:
+        title: User
+        type: object
+        properties:
+            biometric_data:
+                type: object
+                properties:
+                    gender:
+                        $ref: '#/definitions/Gender'
+                    height:
+                        type: object
+                        properties:
+                            ft_in:
+                                type: array
+                                items:
+                                    type: integer
+                                    minimum: 0
+                            m:
+                                type: number
+                                minimum: 0
+                    mass:
+                        type: object
+                        properties:
+                            lb:
+                                type: number
+                                minimum: 0
+                            kg:
+                                type: number
+                                minimum: 0
+            created_date:
+                $ref: '#/definitions/Datetime'
+            deleted_date:
+                $ref: '#/definitions/Datetime'
+            id:
+                $ref: '#/definitions/Uuid'
+            organization_id:
+                $ref: '#/definitions/Uuid'
+            personal_data:
+                type: object
+                properties:
+                    birth_date:
+                        $ref: '#/definitions/Date'
+                    email:
+                        type: string
+                    first_name:
+                        type: string
+                    last_name:
+                        type: string
+                    phone_number:
+                        type: string
+                    position:
+                        type: string
+            role:
+                type: string
+                enum:
+                  - athlete
+                  - manager
+                  - admin
+                  - super_admin
+                  - biometrix_admin
+                  - subject
+                  - consumer
+            updated_date:
+                $ref: '#/definitions/Datetime'
+            training_status:
+                type: string
+                enum:
+                  - todo
+            teams:
+                type: array
+                items:
+                    $ref: '#/definitions/Team'
+            training_groups:
+                type: array
+                items:
+                    $ref: '#/definitions/TrainingGroup'
+
+    Team:
+        title: 'Team'
+        type: object
+        properties:
+            id:
+                $ref: '#/definitions/Uuid'
+            name:
+                type: string
+            organization_id:
+                $ref: '#/definitions/Uuid'
+            sport_id:
+                $ref: '#/definitions/Uuid'
+            created_date:
+                $ref: '#/definitions/Datetime'
+            updated_date:
+                $ref: '#/definitions/Datetime'
+            athlete_subscriptions:
+                type: integer
+                minimum: 0
+            athlete_manager_subscriptions:
+                type: integer
+                minimum: 0
+            gender:
+                $ref: '#/definitions/Gender'
+
+    TrainingGroup:
+        title: 'Training Group'
+        type: object
+        properties:
+            id:
+                $ref: '#/definitions/Uuid'
+
+    Device:
+        title: 'Device'
+        type: object
+        properties:
+            id:
+                $ref: '#/definitions/Uuid'
+            thing_id:
+                $ref: '#/definitions/Uuid'
+            type:
+                type: string
+                enum:
+                  - 'ios'
+                  - 'android'
