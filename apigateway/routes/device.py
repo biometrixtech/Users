@@ -74,7 +74,7 @@ def handle_device_register(device_id):
             'public_key': certificate_response['keyPair']['PublicKey'],
             'private_key': certificate_response['keyPair']['PrivateKey'],
         }
-    }
+    }, 201
 
 
 @device_app.route('/<uuid:device_id>', methods=['PATCH'])
