@@ -222,7 +222,7 @@ def create_authorization_resp(**kwargs):
     expiration_time = datetime.datetime.utcnow() + datetime.timedelta(minutes=60)
     token = jwt_make_payload(expires_at=expiration_time, **kwargs)
     return {
-        "expires": expiration_time.isoformat(),
+        "expires": expiration_time.strftime("%Y-%m-%dT%H:%M:%SZ"),
         "jwt": token
     }
 
