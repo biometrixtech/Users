@@ -70,8 +70,10 @@ Resources:
                   - "iot:Publish"
                   - "iot:Subscribe"
                 Resource:
-                  - { "Fn::Sub": "arn:aws:iot:${AWS::Region}:${AWS::AccountId}:topic/users-${Environment}-device/${!iot:Connection.Thing.ThingName}" }
-                  - { "Fn::Sub": "arn:aws:iot:${AWS::Region}:${AWS::AccountId}:topic/users-${Environment}-device/${!iot:Connection.Thing.ThingName}/#" }
+                  - { "Fn::Sub": "arn:aws:iot:${AWS::Region}:${AWS::AccountId}:topic/users/${Environment}/device/${!iot:Connection.Thing.ThingName}" }
+                  - { "Fn::Sub": "arn:aws:iot:${AWS::Region}:${AWS::AccountId}:topic/users/${Environment}/device/${!iot:Connection.Thing.ThingName}/#" }
+                  - { "Fn::Sub": "arn:aws:iot:${AWS::Region}:${AWS::AccountId}:topic/users/${Environment}/user/${!iot:Connection.Thing.Attributes[owner_id]}" }
+                  - { "Fn::Sub": "arn:aws:iot:${AWS::Region}:${AWS::AccountId}:topic/users/${Environment}/user/${!iot:Connection.Thing.Attributes[owner_id]}/#" }
 
     DeviceTopicRule:
         Type: "AWS::IoT::TopicRule"
