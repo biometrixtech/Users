@@ -58,7 +58,7 @@ def handle_device_register(device_id):
     )
 
     iot_client.attach_principal_policy(
-        policyName='users-{ENVIRONMENT}-device'.format(**os.environ),
+        policyName=os.environ['IOT_POLICY_NAME'],
         principal=certificate_response['certificateArn']
     )
 

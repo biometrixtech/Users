@@ -56,7 +56,6 @@ Resources:
     DevicePolicy:
         Type: "AWS::IoT::Policy"
         Properties:
-          PolicyName: { "Fn::Sub": "users-${Environment}-device" }
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
@@ -218,6 +217,7 @@ Resources:
                 Variables:
                     ENVIRONMENT: { Ref: 'Environment' }
                     AWS_ACCOUNT_ID: { Ref: "AWS::AccountId" }
+                    IOT_POLICY_NAME: { Ref: "DevicePolicy" }
             Handler: "apigateway.handler"
             Runtime: "python3.6"
             Timeout: "30"
