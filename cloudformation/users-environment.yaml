@@ -70,9 +70,9 @@ Resources:
                   - "iot:Subscribe"
                 Resource:
                   - { "Fn::Sub": "arn:aws:iot:${AWS::Region}:${AWS::AccountId}:topic/users/${Environment}/device/${!iot:Connection.Thing.ThingName}" }
-                  - { "Fn::Sub": "arn:aws:iot:${AWS::Region}:${AWS::AccountId}:topic/users/${Environment}/device/${!iot:Connection.Thing.ThingName}/#" }
+                  - { "Fn::Sub": "arn:aws:iot:${AWS::Region}:${AWS::AccountId}:topic/users/${Environment}/device/${!iot:Connection.Thing.ThingName}/*" }
                   - { "Fn::Sub": "arn:aws:iot:${AWS::Region}:${AWS::AccountId}:topic/users/${Environment}/user/${!iot:Connection.Thing.Attributes[owner_id]}" }
-                  - { "Fn::Sub": "arn:aws:iot:${AWS::Region}:${AWS::AccountId}:topic/users/${Environment}/user/${!iot:Connection.Thing.Attributes[owner_id]}/#" }
+                  - { "Fn::Sub": "arn:aws:iot:${AWS::Region}:${AWS::AccountId}:topic/users/${Environment}/user/${!iot:Connection.Thing.Attributes[owner_id]}/*" }
 
     DeviceTopicRule:
         Type: "AWS::IoT::TopicRule"
@@ -80,7 +80,7 @@ Resources:
             RuleName: { "Fn::Sub": "users_${Environment}_device" }
             TopicRulePayload:
                 RuleDisabled: "false"
-                Sql: { "Fn::Sub": "SELECT * FROM 'users-${Environment}-device/#'" }
+                Sql: { "Fn::Sub": "SELECT * FROM 'users/${Environment}/device/#'" }
                 Actions: 
                   - Lambda:
                         FunctionArn: { "Fn::GetAtt": [ "DeviceTopicLambda", "Arn" ] }
