@@ -80,7 +80,7 @@ Resources:
             RuleName: { "Fn::Sub": "users_${Environment}_device" }
             TopicRulePayload:
                 RuleDisabled: "false"
-                Sql: { "Fn::Sub": "SELECT *, topic() AS topic, principal() AS principal FROM 'users/${Environment}/device/#'" }
+                Sql: { "Fn::Sub": "SELECT * AS payload, topic() AS topic, principal() AS principal FROM 'users/${Environment}/device/#'" }
                 Actions: 
                   - Lambda:
                         FunctionArn: { "Fn::GetAtt": [ "DeviceTopicLambda", "Arn" ] }
@@ -97,9 +97,10 @@ Resources:
 
                     def handler(event, _):
                         print(event)
+                        payload = event['payload']
 
-                        if 'poc_numbers' in event:
-                            ret = sum(event['poc_numbers'])
+                        if 'poc_numbers' in payload:
+                            ret = sum(payload['poc_numbers'])
                             print(ret)
                             iotd_client.publish(
                                 topic='users/dev/users/foo/poc',
