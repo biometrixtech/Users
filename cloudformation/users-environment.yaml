@@ -80,7 +80,7 @@ Resources:
             RuleName: { "Fn::Sub": "users_${Environment}_device" }
             TopicRulePayload:
                 RuleDisabled: "false"
-                Sql: { "Fn::Sub": "SELECT *, topic(), principal() FROM 'users/${Environment}/device/#'" }
+                Sql: { "Fn::Sub": "SELECT *, topic() AS topic, principal() AS principal FROM 'users/${Environment}/device/#'" }
                 Actions: 
                   - Lambda:
                         FunctionArn: { "Fn::GetAtt": [ "DeviceTopicLambda", "Arn" ] }
