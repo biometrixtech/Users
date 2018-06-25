@@ -93,19 +93,22 @@ Resources:
                 ZipFile: |
                     import boto3
                     import json
+                    iot_client = boto3.client('iot')
                     iotd_client = boto3.client('iot-data')
 
                     def handler(event, _):
-                        payload = event['payload']
-                        print(json.dumps(payload))
+                        device_id = event['topic'].split('/')[3]
+                        res = iot_client.describe_thing(thingName=device_id)
+                        owner_id = res['attributes'].get('owner_id', None)
 
+                        payload = event['payload']
                         if 'poc_numbers' in payload:
                             ret = sum(payload['poc_numbers'])
-                            print(ret)
-                            iotd_client.publish(
-                                topic='users/dev/users/foo/poc',
-                                payload=json.dumps({'poc_sum': ret}).encode()
-                            )
+                            if owner_id is not None:
+                                iotd_client.publish(
+                                    topic='users/dev/user/{}/poc'.format(owner_id),
+                                    payload=json.dumps({'poc_sum': ret}).encode()
+                                )
             Environment:
                 Variables:
                     ENVIRONMENT: { Ref: "Environment" }
