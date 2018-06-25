@@ -71,7 +71,8 @@ Resources:
                   - "iot:Subscribe"
                 Resource:
                   - { "Fn::Sub": "arn:aws:iot:${AWS::Region}:${AWS::AccountId}:topic/users-${Environment}-device/${!iot:Connection.Thing.ThingName}" }
-                  
+                  - { "Fn::Sub": "arn:aws:iot:${AWS::Region}:${AWS::AccountId}:topic/users-${Environment}-device/${!iot:Connection.Thing.ThingName}/#" }
+
     DeviceTopicRule:
         Type: "AWS::IoT::TopicRule"
         Properties: 
