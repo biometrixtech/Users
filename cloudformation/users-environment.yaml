@@ -81,7 +81,7 @@ Resources:
             TopicRulePayload:
                 RuleDisabled: "false"
                 AwsIotSqlVersion: '2016-03-23'
-                Sql: { "Fn::Sub": "SELECT encode(*, 'base64') AS payload, topic() AS topic, principal() AS principal FROM 'users/${Environment}/device/#'" }
+                Sql: { "Fn::Sub": "SELECT * AS payload, topic() AS topic, principal() AS principal FROM 'users/${Environment}/device/#'" }
                 Actions: 
                   - Lambda:
                         FunctionArn: { "Fn::GetAtt": [ "DeviceTopicLambda", "Arn" ] }
@@ -91,16 +91,13 @@ Resources:
         Properties:
             Code:
                 ZipFile: |
-                    import base64
                     import boto3
                     import json
-
                     iotd_client = boto3.client('iot-data')
 
                     def handler(event, _):
-                        print(event)
-                        payload = json.loads(base64.b64decode(event['payload']))
-                        print(payload)
+                        payload = event['payload']
+                        print(json.dumps(payload))
 
                         if 'poc_numbers' in payload:
                             ret = sum(payload['poc_numbers'])
