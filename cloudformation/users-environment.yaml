@@ -80,7 +80,7 @@ Resources:
             RuleName: { "Fn::Sub": "users_${Environment}_device" }
             TopicRulePayload:
                 RuleDisabled: "false"
-                Sql: { "Fn::Sub": "SELECT * FROM 'users/${Environment}/device/#'" }
+                Sql: { "Fn::Sub": "SELECT *, topic(), principal() FROM 'users/${Environment}/device/#'" }
                 Actions: 
                   - Lambda:
                         FunctionArn: { "Fn::GetAtt": [ "DeviceTopicLambda", "Arn" ] }
@@ -90,8 +90,21 @@ Resources:
         Properties:
             Code:
                 ZipFile: |
+                    import boto3
+                    import json
+
+                    iotd_client = boto3.client('iot-data')
+
                     def handler(event, _):
                         print(event)
+
+                        if 'poc_numbers' in event:
+                            ret = sum(event['poc_numbers'])
+                            print(ret)
+                            iotd_client.publish(
+                                topic='users/dev/users/foo/poc',
+                                payload=json.dumps({'poc_sum': ret}).encode()
+                            )
             Environment:
                 Variables:
                     ENVIRONMENT: { Ref: "Environment" }
@@ -201,6 +214,7 @@ Resources:
                           - "iot:CreateThing"
                           - "iot:DescribeThing"
                           - "iot:UpdateThing"
+                          - "iot:Publish"
                         Effect: "Allow"
                         Resource: "*"
             RoleName: { "Fn::Sub": "users-${Environment}-apigateway-execute-${AWS::Region}" }
