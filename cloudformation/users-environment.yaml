@@ -106,6 +106,14 @@ Resources:
               - { Key: "Environment", Value: { Ref: "Environment" } }
               - { Key: "Service", Value: "device" }
 
+    DeviceTopicLambdaLambdaInvokePermission:
+        Type: "AWS::Lambda::Permission"
+        Properties:
+            Action: "lambda:InvokeFunction"
+            Principal: "iot.amazonaws.com"
+            SourceArn: { "Fn::GetAtt": [ "DeviceTopicRule", "Arn" ] }
+            FunctionName: { "Fn::GetAtt": [ "DeviceTopicLambda", "Arn" ] }
+
     ##########################################################################################################
     ##  AUTHENTICATION
     ##########################################################################################################
