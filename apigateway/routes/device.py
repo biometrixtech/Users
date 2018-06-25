@@ -88,11 +88,17 @@ def handle_device_patch(device_id):
     if 'owner_id' in request.json:
         owner_id = request.json['owner_id']
         if owner_id is None or validate_uuid4(owner_id):
-            iot_client.update_thing(
-                thingName=device_id,
-                attributePayload={'attributes': {'owner_id': '' if owner_id is None else owner_id}}
-            )
-            modified = True
+            try:
+                iot_client.update_thing(
+                    thingName=device_id,
+                    attributePayload={'attributes': {'owner_id': '' if owner_id is None else owner_id}}
+                )
+                modified = True
+            except ClientError as e:
+                if 'ResourceNotFound' in str(e):
+                    raise NoSuchEntityException('No device with that id')
+                else:
+                    raise
         else:
             raise InvalidSchemaException('owner_id must be uuid or none')
 
