@@ -81,7 +81,7 @@ Resources:
             TopicRulePayload:
                 RuleDisabled: "false"
                 AwsIotSqlVersion: '2016-03-23'
-                Sql: { "Fn::Sub": "SELECT encode(*, base64) AS payload, topic() AS topic, principal() AS principal FROM 'users/${Environment}/device/#'" }
+                Sql: { "Fn::Sub": "SELECT encode(*, 'base64') AS payload, topic() AS topic, principal() AS principal FROM 'users/${Environment}/device/#'" }
                 Actions: 
                   - Lambda:
                         FunctionArn: { "Fn::GetAtt": [ "DeviceTopicLambda", "Arn" ] }
