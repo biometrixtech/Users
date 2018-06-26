@@ -21,7 +21,7 @@ def test_jwt_make_payload():
     # print(jwt_token)
 
 
-def test_create_user_dictionary():
+def test_create_user_dictionary(session):
 
     email = "glitch0@gmail.com"
     user_query = session.query(Users).filter_by(email=email)
@@ -30,4 +30,5 @@ def test_create_user_dictionary():
     # training_groups = session.query(TrainingGroups).join(TrainingGroupsUsers).filter(TrainingGroupsUsers.user_id == user.id).all()
     user_dictionary = create_user_dictionary(user)
     assert type(user_dictionary) == dict
+
 

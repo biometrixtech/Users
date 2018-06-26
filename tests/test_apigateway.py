@@ -12,6 +12,16 @@ def client():
     return client
 
 
+def test_create_user(client):
+    user_data = {}
+    res = client.post('/v1/user/',
+                      headers={'content-type': 'application/json'},
+                      data=json.dumps(user_data))
+    assert res.status_code == 200
+    res_data = json.loads(res.data.decode())
+    assert type(res_data) == dict
+
+
 def test_sign_in(client):
     dev_login, expected_ouptut = sample_logins[0]['input'], sample_logins[0]['expected_output']
 
@@ -19,6 +29,8 @@ def test_sign_in(client):
                       headers={'content-type': 'application/json'},
                       data=json.dumps(dev_login)
                       )
+    if res.status_code != 200:
+        print(res.status_code)
     assert res.status_code == 200
     res_data = json.loads(res.data.decode())
     assert type(res_data) == dict
@@ -39,7 +51,7 @@ def test_no_password(client):
                       data=json.dumps({'username': 'test1234',
                                        'email': 'testaccount@gmail.com'}))
     print(res.data)
-    assert res.status_code == 401
+    assert res.status_code == 400
 
 
 def test_incorrect_password(client):
