@@ -2,7 +2,7 @@ import pytest
 from apigateway import app
 import json
 from .sample_data import sample_logins
-
+from .test_fixtures import example_user_data
 
 LOGIN_URL = "/v1/user/sign_in"
 @pytest.fixture
@@ -13,10 +13,9 @@ def client():
 
 
 def test_create_user(client):
-    user_data = {}
     res = client.post('/v1/user/',
                       headers={'content-type': 'application/json'},
-                      data=json.dumps(user_data))
+                      data=json.dumps(example_user_data))
     assert res.status_code == 200
     res_data = json.loads(res.data.decode())
     assert type(res_data) == dict

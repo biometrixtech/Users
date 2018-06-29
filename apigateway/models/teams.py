@@ -5,6 +5,7 @@ from .organizations import Organizations
 class Teams(Base):
     __tablename__ = "teams"
     id = Column(String, primary_key=True)
+    name = Column(String)
     created_at = Column(DateTime)
     updated_at = Column(DateTime)
     organization_id = Column(String, ForeignKey(Organizations.id))
