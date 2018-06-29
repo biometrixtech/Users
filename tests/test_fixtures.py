@@ -44,25 +44,33 @@ example_user_data = {"email": "susie@smith.com",
                                         ]
                                     },
                      "training_groups": [training_group_id, ...],
-                     "sports": [{"name": "Lacrosse",
-                                "positions": ["Goalie"],
-                                "competition_levels": [{"competition_level": "NCAA Division II",
-                                                          "start_date": "1/1/2015",
-                                                          "end_date": "3/1/2018"
-                                                         },
-                                                          {"competition_level": "High School",
-                                                          "start_date": "9/1/2010",
-                                                          "end_date": "5/1/2014"
-                                                         }
-                                                          ]
-                                    },
-                                    {"name": "Rugby",
-                                     "positions": ["n/a"],
-                                     "competition_levels": [{"competition_level": "High School",
-                                                             "start_date": "9/1/2011",
-                                                             "end_date": "6/1/2012"
+                     "training_schedule": [{"practice": {"days_of_week": "Mon,Tue,Wed,Thu,Fri,Sat",
+                                                        "duration_minutes": 90},
+                                            "competition": {"days_of_week": "Sun",
                                                             }
-                                                          ]
-                                     }
+                                           }],
+                     "training_strength_conditioning": [{"activity": "weight_lifting",
+                                                         "days_of_week": "Tue,Thu",
+                                                         "duration_minutes": 30},
+                                                        {"activity": "yoga",
+                                                         "days_of_week": "Fri",
+                                                         "duration_minutes": 60}
+                                                        ],
+                     "sports": [{"name": "Lacrosse",
+                                 "positions": ["Goalie"],
+                                 "competition_level": "NCAA Division II",
+                                 "start_date": "1/1/2015",
+                                 "end_date": "3/1/2018",
+                                 "season_start_month": "January",
+                                 "season_end_month": "May"
+                                 },
+                                 {"name": "Rugby",
+                                  "positions": ["n/a"],
+                                  "competition_level": "High School",
+                                  "start_date": "9/1/2011",
+                                  "end_date": "6/1/2012",
+                                  "season_start_month": "August",
+                                  "season_end_month": "November"
+                                  }
                                 ]
                      }
