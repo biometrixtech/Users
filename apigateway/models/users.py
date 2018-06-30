@@ -1,5 +1,5 @@
 import enum
-from sqlalchemy import Column, String, Float, Integer, DateTime, Boolean, ForeignKey, Enum
+from sqlalchemy import Column, String, Float, Integer, DateTime, Boolean, ForeignKey, Enum, text
 from db_connection import Base
 from sqlalchemy import types
 
@@ -81,7 +81,7 @@ class PushTypeEnumType(types.TypeDecorator):
 class Users(Base):
     __tablename__ = "users"
 
-    id = Column(String, primary_key=True) # uuid NOT NULL DEFAULT uuid_generate_v4(),
+    id = Column(String, server_default=text("uuid_generate_v4()"), primary_key=True) # uuid NOT NULL DEFAULT uuid_generate_v4(),
     email = Column(String) # character varying COLLATE pg_catalog."default",
     facebook_id = Column(String)  # character varying COLLATE pg_catalog."default",
     auth_token = Column(String) # character varying COLLATE pg_catalog."default",

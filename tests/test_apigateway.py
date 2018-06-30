@@ -16,7 +16,7 @@ def test_create_user(client):
     res = client.post('/v1/user/',
                       headers={'content-type': 'application/json'},
                       data=json.dumps(example_user_data))
-    assert res.status_code == 200
+    assert 200 == res.status_code
     res_data = json.loads(res.data.decode())
     assert type(res_data) == dict
 
