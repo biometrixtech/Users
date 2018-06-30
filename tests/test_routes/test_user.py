@@ -1,15 +1,25 @@
 import pytest
 from sqlalchemy.orm import Session
 
-from routes.user import jwt_make_payload
-from db_connection import engine
+from routes.user import jwt_make_payload, create_user_object
+from db_connection import engine, Base
 from models import Users, Teams, TeamsUsers# , TrainingGroups, TrainingGroupsUsers
 from routes.user import create_user_dictionary
-
+from tests.test_fixtures import example_user_data
 
 @pytest.fixture
 def session():
     return Session(bind=engine)
+
+
+def setup_module(session):
+    Base.metadata.create_all(engine.connect())
+
+
+def tear_down_module(session):
+
+    session.rollback()
+    session.close()
 
 
 def test_jwt_make_payload():
@@ -32,3 +42,11 @@ def test_create_user_dictionary(session):
     assert type(user_dictionary) == dict
 
 
+def test_create_user_object(session):
+
+    user_object = create_user_object(example_user_data)
+    print(type(user_object))
+    assert type(user_object) == Users
+    assert hasattr(user_object, 'first_name')
+    session.add(user_object)
+    session.commit()

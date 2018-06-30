@@ -35,7 +35,7 @@ example_user_data = {"email": "susie@smith.com",
                                          "days_missed": 20
                                         },
                                        {"type": "muscle-tear",
-                                        "body_parts": [anatomy_id, ...],
+                                        "body_parts": [anatomy_id],
                                         "notes": None,
                                         "start_date": "12/1/2016",
                                         "end_date": "1/1/2017",
@@ -43,7 +43,7 @@ example_user_data = {"email": "susie@smith.com",
                                         }
                                         ]
                                     },
-                     "training_groups": [training_group_id, ...],
+                     "training_groups": [training_group_id],
                      "training_schedule": [{"practice": {"days_of_week": "Mon,Tue,Wed,Thu,Fri,Sat",
                                                         "duration_minutes": 90},
                                             "competition": {"days_of_week": "Sun",
