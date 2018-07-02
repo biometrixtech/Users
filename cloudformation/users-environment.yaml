@@ -168,7 +168,7 @@ Resources:
                     iot_client = boto3.client('iot')
                     def handler(event, _):
                         device_attributes = iot_client.describe_thing(thingName=event['thing_name'])
-                        return device_attributes['thingTypeName'].split('-')[1]
+                        return {'environment': device_attributes['thingTypeName'].split('-')[1]}
             Handler: "index.handler"
             MemorySize: "256"
             Runtime: "python3.6"
@@ -196,12 +196,10 @@ Resources:
             TopicRulePayload:
                 RuleDisabled: "false"
                 AwsIotSqlVersion: '2016-03-23'
-                # Note that this will be triggered for *all* connections in *all* environments.  Need to ensure that the
-                # responding lambda function correctly filters out connections from other environments
                 Sql: { "Fn::Sub": "
-                    SELECT * AS payload, topic() AS topic, principal() AS principal
+                    SELECT * AS payload
                     FROM '$aws/events/presence/connected/#'
-                    WHERE aws_lambda('${IotEnvironmentFilterLambda.Arn}', clientId) = '${Environment}'" }
+                    WHERE aws_lambda('arn:aws:lambda:us-west-2:887689817172:function:users-dev-device-iotenvironmentfilter', {'thing_name': clientId}).environment = '${Environment}'" }
                 Actions:
                   - Lambda:
                         FunctionArn: { "Fn::GetAtt": [ "ConnectionMonitoringTopicLambda", "Arn" ] }
