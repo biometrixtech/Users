@@ -197,7 +197,7 @@ Resources:
                 RuleDisabled: "false"
                 AwsIotSqlVersion: '2016-03-23'
                 Sql: { "Fn::Sub": "
-                    SELECT * AS payload
+                    SELECT * AS payload, traceid() AS trace_id
                     FROM '$aws/events/presence/connected/#'
                     WHERE aws_lambda('arn:aws:lambda:us-west-2:887689817172:function:users-dev-device-iotenvironmentfilter', {'thing_name': clientId}).environment = '${Environment}'" }
                 Actions:
@@ -215,7 +215,7 @@ Resources:
         Properties:
             Code:
                 ZipFile: |
-                    import boto3, datetime, json, os
+                    import boto3, json, os
                     iot_client = boto3.client('iot')
                     logs_client = boto3.client('logs')
 
@@ -227,14 +227,20 @@ Resources:
                             'certificate_id': event['payload']['principalIdentifier'],
                             'owner_id': device_attributes['attributes'].get('owner_id', None),
                         }
-                        now = int(datetime.datetime.strptime(event['time'], "%Y-%m-%dT%H:%M:%SZ").timestamp())
-                        logs_client.put_log_events(
-                            logGroupName='/biometrix/users/{ENVIRONMENT}/device-connect'.format(**os.environ),
-                            logEvents=[{'timestamp': now * 1000, 'message': payload}],
+                        logs_client.create_log_stream(
+                            logGroupName=os.environ['LOG_GROUP_NAME'],
+                            logStreamName=event['trace_id']
                         )
+                        logs_client.put_log_events(
+                            logGroupName=os.environ['LOG_GROUP_NAME'],
+                            logStreamName=event['trace_id'],
+                            logEvents=[{'timestamp': event['payload']['timestamp'], 'message': json.dumps(payload)}],
+                        )
+
             Environment:
                 Variables:
                     ENVIRONMENT: { Ref: "Environment" }
+                    LOG_GROUP_NAME: { Ref: "ConnectionMonitoringCloudwatchLogsGroup" }
             Handler: "index.handler"
             MemorySize: "256"
             Runtime: "python3.6"
