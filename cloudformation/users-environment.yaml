@@ -204,18 +204,34 @@ Resources:
                   - Lambda:
                         FunctionArn: { "Fn::GetAtt": [ "ConnectionMonitoringTopicLambda", "Arn" ] }
 
+    ConnectionMonitoringCloudwatchLogsGroup:
+        Type: "AWS::Logs::LogGroup"
+        Properties:
+            LogGroupName: { "Fn::Sub": "/biometrix/users/${Environment}/device-connect" }
+            RetentionInDays: 180
+
     ConnectionMonitoringTopicLambda:
         Type: "AWS::Lambda::Function"
         Properties:
             Code:
                 ZipFile: |
-                    import boto3
-                    import json
+                    import boto3, datetime, json, os
                     iot_client = boto3.client('iot')
-                    iotd_client = boto3.client('iot-data')
+                    logs_client = boto3.client('logs')
 
                     def handler(event, _):
-                        print(event)
+                        device_id = event['payload']['clientId']
+                        device_attributes = iot_client.describe_thing(thingName=device_id)
+                        payload = {
+                            'device_id': device_id,
+                            'certificate_id': event['payload']['principalIdentifier'],
+                            'owner_id': device_attributes['attributes'].get('owner_id', None),
+                        }
+                        now = int(datetime.datetime.strptime(event['time'], "%Y-%m-%dT%H:%M:%SZ").timestamp())
+                        logs_client.put_log_events(
+                            logGroupName='/biometrix/users/{ENVIRONMENT}/device-connect'.format(**os.environ),
+                            logEvents=[{'timestamp': now * 1000, 'message': payload}],
+                        )
             Environment:
                 Variables:
                     ENVIRONMENT: { Ref: "Environment" }
