@@ -24,26 +24,23 @@ def handle_device_register(device_id):
         if key not in request.json:
             raise InvalidSchemaException(f'Missing required field {key}')
 
+    owner_id = authenticate_user_jwt(request.headers['Authorization'])
+
     # Make sure the device isn't already registered
     try:
         iot_client.describe_thing(thingName=device_id)
-        raise DuplicateEntityException('Device already registered')
     except ClientError as e:
         if 'ResourceNotFound' not in str(e):
-            raise
-
-    owner_id = authenticate_user_jwt(request.headers['Authorization'])
-
-    create_response = iot_client.create_thing(
-        thingName=device_id,
-        thingTypeName='users-{ENVIRONMENT}-device'.format(**os.environ),
-        attributePayload={
-            'attributes': {
-                'device_type': request.json['device_type'],
-                'owner_id': owner_id,
-            },
-        }
-    )
+            iot_client.create_thing(
+                thingName=device_id,
+                thingTypeName='users-{ENVIRONMENT}-device'.format(**os.environ),
+                attributePayload={
+                    'attributes': {
+                        'device_type': request.json['device_type'],
+                        'owner_id': owner_id,
+                    },
+                }
+            )
 
     certificate_response = iot_client.create_keys_and_certificate(setAsActive=True)
 
@@ -65,7 +62,6 @@ def handle_device_register(device_id):
     return {
         'device': {
             'id': device_id,
-            'thing_id': create_response['thingId'],
             'type': request.json['device_type'],
         },
         'certificate': {
