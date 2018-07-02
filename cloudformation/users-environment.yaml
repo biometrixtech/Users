@@ -198,7 +198,10 @@ Resources:
                 AwsIotSqlVersion: '2016-03-23'
                 # Note that this will be triggered for *all* connections in *all* environments.  Need to ensure that the
                 # responding lambda function correctly filters out connections from other environments
-                Sql: { "Fn::Sub": "SELECT * AS payload, topic() AS topic, principal() AS principal FROM '$aws/events/presence/connected/#'" }
+                Sql: { "Fn::Sub": "
+                    SELECT * AS payload, topic() AS topic, principal() AS principal
+                    FROM '$aws/events/presence/connected/#'
+                    WHERE aws_lambda('${IotEnvironmentFilterLambda.Arn}', clientId) = '${Environment}'" }
                 Actions:
                   - Lambda:
                         FunctionArn: { "Fn::GetAtt": [ "ConnectionMonitoringTopicLambda", "Arn" ] }
