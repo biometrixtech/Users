@@ -30,14 +30,9 @@ class InvalidSchemaException(ApplicationException):
 
 class UnauthorizedException(ApplicationException):
     def __init__(self, message=''):
-        super().__init__(400, 'Unauthorized', message)
+        super().__init__(401, 'Unauthorized', message)
 
 
 class NoSuchEntityException(ApplicationException):
     def __init__(self, message=''):
         super().__init__(404, 'NoSuchEntity', message)
-
-
-class UnauthorizedException(ApplicationException):
-    def __init__(self, message=''):
-        super().__init__(401, 'Unauthorized', message)
