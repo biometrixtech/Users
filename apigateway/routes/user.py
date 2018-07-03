@@ -1,7 +1,9 @@
 from aws_xray_sdk.core import xray_recorder
 from flask import Blueprint, request
+from boto3.dynamodb.conditions import Attr, Key
 from collections import namedtuple
 import boto3
+import binascii
 import datetime
 import json
 import os
@@ -24,6 +26,10 @@ session = Session(bind=engine)
 sign_in_methods = ['json-subject-creation',
                    'json',
                    'json-accessory']
+
+MAX_SESSIONS = 3
+
+users_table = boto3.resource('dynamodb').Table('users-{ENVIRONMENT}-users'.format(**os.environ))
 
 
 def extract_email_and_password_from_request(data):
@@ -216,9 +222,42 @@ def create_authorization_resp(**kwargs):
     expiration_time = datetime.datetime.utcnow() + datetime.timedelta(minutes=60)
     token = jwt_make_payload(expires_at=expiration_time, **kwargs)
     return {
-        "expires": expiration_time.isoformat(),
+        "expires": expiration_time.strftime("%Y-%m-%dT%H:%M:%SZ"),
         "jwt": token
     }
+
+
+def create_session_for_user(user_id, sessions, atomic_date):
+    """
+    Expire old sessions for the user, and create a new session token
+    :param user_id: String uuid
+    :param atomic_date: String ISO8601 datetime
+    :param sessions: List of objects
+    :return: string new session token
+    """
+    now = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    # Remove old sessions to get down below the limit
+    sessions.sort(key=lambda s: s['created_date'])
+    sessions = sessions[min(1-MAX_SESSIONS, 0):]
+
+    new_session_id = binascii.hexlify(os.urandom(32)).decode()
+    sessions.append({
+        'created_date': now,
+        'id': new_session_id,
+    })
+    users_table.update_item(
+        Key={'id': user_id},
+        UpdateExpression='SET sessions = :sessions, updated_date = :updated_date',
+        ExpressionAttributeValues={':sessions': sessions, ':updated_date': now},
+        ConditionExpression=Attr('updated_date').eq(atomic_date) | Attr('updated_date').not_exists(),
+    )
+    return new_session_id
+
+
+def get_user_from_ddb(user_id):
+    res = users_table.query(KeyConditionExpression=Key('id').eq(user_id))
+    return res['Items'][0] if len(res['Items']) else None
 
 
 @user_app.route('/sign_in', methods=['POST'])
@@ -281,22 +320,62 @@ def user_sign_in():
                 user_resp = create_user_dictionary(user)
                 user_resp['teams'] = [create_team_dictionary(team) for team in teams]
                 user_resp['training_groups'] = [create_training_group_dictionary(training_group) for training_group in training_groups]
-                return {
+
+                user_ddb_res = get_user_from_ddb(str(user_resp['id'])) or {'sessions': [], 'updated_date': '1970-01-01T00:00:00Z'}
+                ret = {
                     "authorization": create_authorization_resp(user_id=user_resp['id'], sign_in_method='json', role=user_resp['role']),
                     "user": user_resp
                 }
+                ret['authorization']['session_token'] = create_session_for_user(
+                    str(user_resp['id']),
+                    user_ddb_res['sessions'],
+                    user_ddb_res['updated_date'],
+                )
+                return ret
             else:
                 raise UnauthorizedException("Password was not correct.")
     raise NoSuchEntityException('User not found')
 
 
-@user_app.route('/<user_id>', methods=['GET'])
+@user_app.route('/<uuid:user_id>/authorise', methods=['POST'])
+@user_app.route('/<uuid:user_id>/authorize', methods=['POST'])
+@xray_recorder.capture('routes.user.authorise')
+def handle_user_authorise(user_id):
+    if not request.json or 'session_token' not in request.json:
+        raise InvalidSchemaException('Must supply session_token')
+
+    user_ddb_res = get_user_from_ddb(user_id)
+    if user_ddb_res is None:
+        raise NoSuchEntityException()
+
+    if 'sessions' not in user_ddb_res or request.json['session_token'] not in [s['id'] for s in user_ddb_res['sessions']]:
+        raise UnauthorizedException('Session token is not valid for this user')
+
+    return {'authorization': create_authorization_resp(user_id=user_ddb_res['id'], sign_in_method='json', role=None)}
+
+
+@user_app.route('/<uuid:user_id>/logout', methods=['POST'])
+@authentication_required
+@xray_recorder.capture('routes.user.logout')
+def handle_user_logout(user_id):
+    user_ddb_res = get_user_from_ddb(user_id)
+    now = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+    users_table.update_item(
+        Key={'id': user_id},
+        UpdateExpression='SET sessions = :sessions, updated_date = :updated_date',
+        ExpressionAttributeValues={':sessions': [], ':updated_date': now},
+    )
+
+    if request.json['session_token'] not in [s['id'] for s in user_ddb_res['sessions']]:
+        raise UnauthorizedException('Session token is not valid for this user')
+
+    return {'authorization': create_authorization_resp(user_id=user_ddb_res['id'], sign_in_method='json', role=None)}
+
+
+@user_app.route('/<uuid:user_id>', methods=['GET'])
 @authentication_required
 @xray_recorder.capture('routes.user.get')
 def handle_user_get(user_id):
-    if not validate_uuid4(user_id):
-        raise InvalidSchemaException('user_id must be a uuid')
-
     user_data, teams, training_groups = query_postgres([
         (
             """SELECT * FROM users WHERE id = %s""",
@@ -345,14 +424,3 @@ def query_postgres(queries):
         raise Exception(list(filter(None, res['Errors'])))
     else:
         return res['Results']
-
-
-def validate_uuid4(uuid_string):
-    try:
-        val = uuid.UUID(uuid_string, version=4)
-        # If the uuid_string is a valid hex code, but an invalid uuid4, the UUID.__init__
-        # will convert it to a valid uuid4. This is bad for validation purposes.
-        return val.hex == uuid_string.replace('-', '')
-    except ValueError:
-        # If it's a value error, then the string is not a valid hex code for a UUID.
-        return False

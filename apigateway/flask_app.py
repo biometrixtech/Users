@@ -3,6 +3,8 @@ from flask_lambda import FlaskLambda
 from flask_bcrypt import Bcrypt
 from flask import Response, jsonify
 from serialisable import json_serialise
+from utils import validate_uuid4
+from werkzeug.routing import BaseConverter, ValidationError
 
 
 class ApiResponse(Response):
@@ -15,9 +17,20 @@ class ApiResponse(Response):
         return super().force_type(rv, environ)
 
 
+class UuidConverter(BaseConverter):
+    def to_python(self, value):
+        if validate_uuid4(value):
+            return value
+        raise ValidationError()
+
+    def to_url(self, value):
+        return value
+
+
 app = FlaskLambda(__name__)
 app.response_class = ApiResponse
 app.url_map.strict_slashes = False
+app.url_map.converters['uuid'] = UuidConverter
 bcrypt = Bcrypt(app)
 
 

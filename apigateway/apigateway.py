@@ -25,6 +25,9 @@ from flask_app import app
 from routes.user import user_app as user_routes
 app.register_blueprint(user_routes, url_prefix='/v1/user')
 app.register_blueprint(user_routes, url_prefix='/users/user')
+from routes.device import device_app as device_routes
+app.register_blueprint(device_routes, url_prefix='/v1/device')
+app.register_blueprint(device_routes, url_prefix='/users/device')
 
 
 @app.errorhandler(500)
