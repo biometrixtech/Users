@@ -8,7 +8,7 @@ Create Date: 2018-05-19 15:15:02.811992
 from alembic import op
 import sqlalchemy as sa
 from models.users import Users
-from models.athlete_permissions import AccessLevelEnumType
+from models.athlete_permissions import PermittedOperationsEnumType
 
 
 # revision identifiers, used by Alembic.
@@ -22,7 +22,7 @@ def upgrade():
     op.create_table('athlete_permissions')
     op.add_column('athlete_permissions', sa.Column('athlete_user_id', sa.ForeignKey(Users.id)))
     op.add_column('athlete_permissions', sa.Column('user_id', sa.ForeignKey(Users.id)))
-    op.add_column('athlete_permissions', sa.Column('role_access_level', AccessLevelEnumType))
+    op.add_column('athlete_permissions', sa.Column('permitted_operations', PermittedOperationsEnumType))
 
 
 def downgrade():
