@@ -12,7 +12,8 @@ from sqlalchemy.orm import Session
 import jwt
 
 from decorators import authentication_required
-from exceptions import InvalidSchemaException, NoSuchEntityException, UnauthorizedException, DuplicateEntityException
+from exceptions import InvalidSchemaException, NoSuchEntityException, UnauthorizedException, DuplicateEntityException, \
+                       ApplicationException
 from flask_app import bcrypt
 
 from db_connection import engine
@@ -320,7 +321,7 @@ def validate_user_inputs(user_data):
 
 
 @user_app.route('/', methods=['POST'])
-@xray_recorder.capture('routes.user.get')
+#@xray_recorder.capture('routes.user.post')
 def create_user():
     """
     Creates a new user given the data and validates the input parameters
@@ -329,17 +330,19 @@ def create_user():
     """
     if not request.json:
         raise InvalidSchemaException("No data received. Verify headers include Content-Type: application/json")
+
     user_data = validate_user_inputs(request.json)
-
-    user = create_user_object(user_data)
-
+    try:
+        user = create_user_object(user_data)
+    except Exception as e:
+        raise ApplicationException(400, 'InvalidSchema', str(e))
     
     # training_groups = TrainingGroups()
     # sports = Sports()
     # injuries = Injuries()
     # training_schedule = TrainingSchedule()
     # training_strength_conditioning = StrengthConditioning()
-    return {"authorization": create_authorization_resp(user_id=user['id'], sign_in_method='json', role=user['role'])}
+    return {"authorization": create_authorization_resp(user_id=user.id, sign_in_method='json', role=user.role)}
 
 
 @user_app.route('/<uuid:user_id>/authorise', methods=['POST'])
