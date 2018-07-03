@@ -9,7 +9,9 @@ from tests.test_fixtures import example_user_data
 
 @pytest.fixture
 def session():
-    return Session(bind=engine)
+    session = Session(bind=engine)
+    session.begin_nested()
+    return session
 
 
 def setup_module(session):
@@ -17,9 +19,8 @@ def setup_module(session):
 
 
 def tear_down_module(session):
-
     session.rollback()
-    session.close()
+    # session.close()  # Closes the transaction and commits all the changes.
 
 
 def test_jwt_make_payload():
