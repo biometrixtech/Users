@@ -257,9 +257,19 @@ def create_user_object(user_data):
                 gender=user_data['biometric_data']['gender'],
                 status=None,
                 # onboarded
-                birthday=user_data['personal_data']['birth_date']
+                birthday=user_data['personal_data']['birth_date'],
+                zip_code=user_data['personal_data']['zip_code']
                )
     return user
+
+
+def validate_user_inputs(user_data):
+    """
+    Reviews each item in the payload to verify it is the correct type
+    :param user_data:
+    :return:
+    """
+    return user_data
 
 
 @user_app.route('/', methods=['POST'])
@@ -272,7 +282,7 @@ def create_user():
     """
     if not request.json:
         raise InvalidSchemaException("No data received. Verify headers include Content-Type: application/json")
-    user_data = validate_inputs(request.json)
+    user_data = validate_user_inputs(request.json)
 
     user = create_user_object(user_data)
 
@@ -282,6 +292,7 @@ def create_user():
     # injuries = Injuries()
     # training_schedule = TrainingSchedule()
     # training_strength_conditioning = StrengthConditioning()
+    return {"authorization": create_authorization_resp(user_id=user['id'], sign_in_method='json', role=user['role'])}
 
 
 @user_app.route('/<user_id>', methods=['GET'])

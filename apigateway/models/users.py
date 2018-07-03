@@ -112,10 +112,17 @@ class Users(Base):
     organization_id = Column(String) # uuid,
     primary_training_group_id = Column(String) # uuid,
     year_in_school = Column(Integer) #  integer
-    # zip_code = Column(Integer)
+    zip_code = Column(String)
+
 
 """
-﻿   id uuid NOT NULL DEFAULT uuid_generate_v4(),
+﻿-- Table: public.users
+
+-- DROP TABLE public.users;
+
+CREATE TABLE public.users
+(
+    id uuid NOT NULL DEFAULT uuid_generate_v4(),
     email character varying COLLATE pg_catalog."default",
     facebook_id character varying COLLATE pg_catalog."default",
     auth_token character varying COLLATE pg_catalog."default",
@@ -146,5 +153,36 @@ class Users(Base):
     organization_id uuid,
     primary_training_group_id uuid,
     year_in_school integer,
+    zip_code character varying COLLATE pg_catalog."default",
+    CONSTRAINT users_pkey PRIMARY KEY (id)
+)
+WITH (
+    OIDS = FALSE
+)
+TABLESPACE pg_default;
 
+ALTER TABLE public.users
+    OWNER to biometrix_admin;
+
+GRANT ALL ON TABLE public.users TO biometrix_admin;
+
+GRANT SELECT ON TABLE public.users TO users_dev;
+
+-- Index: index_users_on_deleted_at
+
+-- DROP INDEX public.index_users_on_deleted_at;
+
+CREATE INDEX index_users_on_deleted_at
+    ON public.users USING btree
+    (deleted_at)
+    TABLESPACE pg_default;
+
+-- Index: index_users_on_email
+
+-- DROP INDEX public.index_users_on_email;
+
+CREATE INDEX index_users_on_email
+    ON public.users USING btree
+    (email COLLATE pg_catalog."default")
+    TABLESPACE pg_default;
 """
