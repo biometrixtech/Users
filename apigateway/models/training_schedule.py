@@ -9,3 +9,8 @@ class TrainingSchedule(Base):
 
     id = Column(Integer)
     user_id = Column(String, ForeignKey(Users.id), primary_key=True)
+    training_type = Column(Enum)  # Pratice, Competition, Strength and conditioning
+    activity = Column(String)
+    day_of_week = Column(String)
+    duration_minutes = Column(Float)
+    location = Column(String)

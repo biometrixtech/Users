@@ -6,36 +6,45 @@ from sqlalchemy import types
 
 # TODO: Refactor Enums to use mixins
 
-class AccountEnum(enum.Enum):
-    paid = 0
-    free = 1
-
-
-class AccountEnumType(types.TypeDecorator):
+class EnumTypeBase(types.TypeDecorator):
     impl = types.Integer
+    name_values = {}
+    reverse_look_up = dict(zip(name_values.values(), name_values.keys()))
 
     def process_bind_param(self, value, dialect):
-        return AccountEnum[value].value    # Convert name to an integer
+        try:
+            return self.name_values[value]    # Convert name to an integer
+        except KeyError:
+            return
 
     def process_result_value(self, value, dialect):
-        return AccountEnum(value).name    # Convert an integer to a name
+        try:
+            return self.reverse_look_up[value]    # Convert an integer to a name
+        except KeyError:
+            return
 
 
-class AccountStatusEnum(enum.Enum):
-    active = 0
-    pending = 1
-    past_due = 2
-    expired = 3
+class InjuryStatusEnumtype(EnumTypeBase):
+    name_values = {
+                'healthy': 0,
+                'healthy_chronically_injured': 1,
+                'injured': 2
+            }
 
 
-class AccountStatusEnumType(types.TypeDecorator):
-    impl = types.Integer
+class AccountEnumType(EnumTypeBase):
+    name_values = { 'paid': 0,
+                    'free': 1
+                  }
 
-    def process_bind_param(self, value, dialect):
-        return AccountStatusEnum[value].value  # Convert name to an integer
 
-    def process_result_value(self, value, dialect):
-        return AccountStatusEnum(value).name  # Convert an integer to a name
+class AccountStatusEnumType(EnumTypeBase):
+    name_values = {
+                  'active': 0,
+                  'pending': 1,
+                  'past_due': 2,
+                  'expired': 3
+                  }
 
 
 class RoleEnum(enum.Enum):
@@ -52,10 +61,12 @@ class RoleEnumType(types.TypeDecorator):
     impl = types.Integer
 
     def process_bind_param(self, value, dialect):
-        return RoleEnum[value].value    # Convert name to an integer
+        if value: # Handle Null case
+            return RoleEnum[value].value    # Convert name to an integer
 
     def process_result_value(self, value, dialect):
-        return RoleEnum(value).name    # Convert an integer to a name
+        if value:
+            return RoleEnum(value).name    # Convert an integer to a name
 
 
 class GenderEnum(enum.Enum):
@@ -148,7 +159,10 @@ class Users(Base):
     primary_training_group_id = Column(String) # uuid,
     year_in_school = Column(Integer) #  integer
     zip_code = Column(String)
-
+    account_type = Column(AccountEnumType)
+    account_status = Column(AccountStatusEnumType)
+    system_type = Column(Integer)
+    injury_status = Column(InjuryStatusEnumtype)
 
 """
 ﻿-- Table: public.users
