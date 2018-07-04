@@ -4,10 +4,8 @@ from boto3.dynamodb.conditions import Attr, Key
 from collections import namedtuple
 import boto3
 import binascii
-import datetime
 import json
 import os
-import uuid
 from sqlalchemy.orm import Session
 import jwt
 
@@ -17,7 +15,7 @@ from exceptions import InvalidSchemaException, NoSuchEntityException, Unauthoriz
 from flask_app import bcrypt
 
 from db_connection import engine
-from models import Users, Teams, TeamsUsers, TrainingGroups, TrainingGroupsUsers
+from models import Users, Teams, TeamsUsers, TrainingGroups, TrainingGroupsUsers, Sport #SportHistory, Sport
 from utils import *
 
 user_app = Blueprint('user', __name__)
@@ -51,69 +49,6 @@ def extract_email_and_password_from_request(data):
         raise InvalidSchemaException('Email or password were missing')
     except TypeError:
         raise InvalidSchemaException('Request payload was not received')
-
-
-def feet_to_meters(feet, inches):
-    """
-    Converts feet + inches into meters
-    :param feet:
-    :param inches:
-    :return:
-    """
-    if feet:
-        if inches:
-            return (feet + inches/12)*0.3048
-        else:
-            return feet*0.3048
-    elif inches:
-        return (inches/12)*0.3048
-
-
-def lb_to_kg(weight_lbs):
-    """
-    Converts pounds to kilograms.
-    Handles the case where the weight is None
-    :param weight_lbs:
-    :return:
-    """
-    if weight_lbs:
-        return weight_lbs * 0.453592
-
-
-def format_datetime(date_input):
-    """
-    Formats a date in ISO8601 short format.
-    Handles the case where the input is None
-    :param date_input:
-    :return:
-    """
-    if date_input is None:
-        return None
-    if not isinstance(date_input, datetime.datetime):
-        date_input = datetime.datetime.strptime(date_input, "%Y-%m-%dT%H:%M:%S.%f")
-    return date_input.strftime("%Y-%m-%dT%H:%M:%SZ")
-
-
-def format_date(date_input):
-    """
-    Formats a date in ISO8601 short format.
-    Handles the case where the input is None
-    :param date_input:
-    :return:
-    """
-    if date_input is None:
-        return None
-    if isinstance(date_input, datetime.datetime):
-        return date_input.strftime("%Y-%m-%d")
-    else:
-        for format_string in ('%Y-%m-%d', '%m/%d/%y', '%Y-%m'):
-            try:
-                date_input = datetime.datetime.strptime(date_input, format_string)
-                return date_input.strftime("%Y-%m-%d")
-            except ValueError:
-                pass
-        return None
-        # raise ValueError('no valid date format found')
 
 
 def create_user_dictionary(user):
@@ -369,9 +304,71 @@ def create_user_object(user_data):
                 status=None,
                 # onboarded
                 birthday=user_data['personal_data']['birth_date'],
-                zip_code=user_data['personal_data']['zip_code']
+                zip_code=user_data['personal_data']['zip_code'],
+                account_type=user_data['account_type'],
+                account_status = user_data['account_status'],
+                system_type = user_data['system_type'],
+                injury_status = user_data['injury_status']
                )
     return user
+
+
+def save_sports_history(user_data, user_id):
+    """
+    Create Sport and SportHistory ORM Objects and save data to database
+    Expected dictionary format:
+    {
+        "sports": [{"name": "Lacrosse",
+                    "positions": ["Goalie"],
+                    "competition_level": "NCAA Division II",
+                    "start_date": "1/1/2015",
+                    "end_date": "3/1/2018",
+                    "season_start_month": "January",
+                    "season_end_month": "May"
+                   },
+                   ...
+                  ]
+    }
+    :param user_data:
+    :param user_id:
+    :return:
+    """
+    if not user_id:
+        raise InvalidSchemaException("save_sports_history: Missing User Profile")
+    if 'sports' not in user_data.keys():
+        raise InvalidSchemaException("save_sports_history: Missing Sports from data payload.")
+
+    sports_info = user_data['sports']
+    columns = ['name', 'positions', 'competition_level']
+    sports_history = []
+    for sport_info in sports_info:
+        valid_values = dict((col_name, validate_value(session, Sport, col_name, sport_info[col_name])) for col_name in columns)
+        print(valid_values)
+        # TODO: What does validation look like for positions and DateTimes?
+        
+        name = validate_value(session, Sport, 'name', sport_info['name'])
+        #positions = validate_positions(sport_info['positions'])
+        #competition_level = validate_competition_level(sport_info['competition_level'])
+        sport_history_obj = SportHistory(name=name,
+                                         positions=positions,
+                                         competition_level=competition_level,
+                                         start_date=sports_info['start_date'],
+                                         end_date=sports_info['end_date']
+                                         # season_start_month
+                                         # season_end_month
+                                         )
+        sports_history.append(sport_history_obj)
+    return sports_history
+
+
+def save_training_schedule(user_data, user_id):
+    """
+    Create the TrainingSchedule ORMs and save to the database
+    :param user_data:
+    :param user_id:
+    :return:
+    """
+    pass
 
 
 def validate_user_inputs(user_data):
@@ -399,87 +396,21 @@ def create_user():
         user = create_user_object(user_data)
     except Exception as e:
         raise ApplicationException(400, 'InvalidSchema', str(e))
+    if not user:
+        raise ApplicationException(400, 'CreationError', 'Failed to create user')
 
-    # training_groups = TrainingGroups()
-    # sports = Sports()
-    # injuries = Injuries()
-    # training_schedule = TrainingSchedule()
-    # training_strength_conditioning = StrengthConditioning()
+    #save_training_groups(user_data, user.id)
+    save_sports_history(user_data, user.id)
+    save_training_schedule(user_data, user.id)
+    # save_injuries(user_data, user.id)
+
+    # If all objects persist save data to database
+    session.add(user)
+
+    session.commit()
     return {"authorization": create_authorization_resp(user_id=user.id, sign_in_method='json', role=user.role)}
 
 
-@user_app.route('/<user_id>', methods=['GET'])
-def create_user_object(user_data):
-    """
-
-    :param user_data: dictionary with user data
-    :return: User ORM object ready to save
-    """
-    height_feet, height_inches = convert_to_ft_inches(user_data['biometric_data']['height'])
-    weight = convert_to_pounds(user_data['biometric_data']['mass'])
-    password_hash = bcrypt.generate_password_hash(user_data['password'])
-    user = Users(email=user_data['email'],
-                first_name=user_data['personal_data']['first_name'],
-                last_name=user_data['personal_data']['last_name'],
-                phone_number=user_data['personal_data']['phone_number'],
-                password_digest=password_hash,
-                created_at=datetime.datetime.now(),
-                updated_at=datetime.datetime.now(),
-                # avatar_file_name
-                # avatar_content_type
-                # avatar_file_size
-                # avatar_updated_at
-                # position
-                role=user_data['role'],
-                # active
-                # in_training
-                height_feet=height_feet,
-                height_inches=height_inches,
-                weight=weight,
-                gender=user_data['biometric_data']['gender'],
-                status=None,
-                # onboarded
-                birthday=user_data['personal_data']['birth_date'],
-                zip_code=user_data['personal_data']['zip_code']
-               )
-    return user
-
-
-def validate_user_inputs(user_data):
-    """
-    Reviews each item in the payload to verify it is the correct type
-    :param user_data:
-    :return:
-    """
-    return user_data
-
-
-@user_app.route('/', methods=['POST'])
-#@xray_recorder.capture('routes.user.post')
-def create_user():
-    """
-    Creates a new user given the data and validates the input parameters
-    :param user_id:
-    :return:
-    """
-    if not request.json:
-        raise InvalidSchemaException("No data received. Verify headers include Content-Type: application/json")
-
-    user_data = validate_user_inputs(request.json)
-    try:
-        user = create_user_object(user_data)
-    except Exception as e:
-        raise ApplicationException(400, 'InvalidSchema', str(e))
-
-    # training_groups = TrainingGroups()
-    # sports = Sports()
-    # injuries = Injuries()
-    # training_schedule = TrainingSchedule()
-    # training_strength_conditioning = StrengthConditioning()
-    return {"authorization": create_authorization_resp(user_id=user.id, sign_in_method='json', role=user.role)}
-
-
-@user_app.route('/<uuid:user_id>/authorise', methods=['POST'])
 @user_app.route('/<uuid:user_id>/authorize', methods=['POST'])
 @xray_recorder.capture('routes.user.authorise')
 def handle_user_authorise(user_id):

@@ -1,5 +1,6 @@
 import datetime
 import uuid
+from exceptions import ValueNotFoundInDatabase
 
 
 def convert_to_ft_inches(distance_dictionary):
@@ -92,3 +93,19 @@ def validate_uuid4(uuid_string):
     except ValueError:
         # If it's a value error, then the string is not a valid hex code for a UUID.
         return False
+
+
+def validate_value(session, TableObject, col_name, value):
+    """
+    Match the inputted value to the interest option available in the database
+    :param name:
+    :return: validated value matching an option in the database
+    """
+    valid_options = session.query(TableObject).distinct(col_name).all()
+    #valid_options_list = [ for option in valid_options] # Pull the column name
+    print(getattr(valid_options[0], col_name))
+    for option in valid_options:
+        table_value = getattr(option, col_name)
+        if value.lower() == table_value.lower():
+            return table_value
+    raise ValueNotFoundInDatabase()

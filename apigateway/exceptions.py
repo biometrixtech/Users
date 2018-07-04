@@ -36,3 +36,8 @@ class UnauthorizedException(ApplicationException):
 class NoSuchEntityException(ApplicationException):
     def __init__(self, message=''):
         super().__init__(404, 'NoSuchEntity', message)
+
+
+class ValueNotFoundInDatabase(ApplicationException):
+    def __init__(self, message=''):
+        super().__init__(404, 'ValueNotFoundInDatabase', message)

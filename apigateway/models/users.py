@@ -1,27 +1,7 @@
 import enum
 from sqlalchemy import Column, String, Float, Integer, DateTime, Boolean, ForeignKey, Enum, text
 from db_connection import Base
-from sqlalchemy import types
-
-
-# TODO: Refactor Enums to use mixins
-
-class EnumTypeBase(types.TypeDecorator):
-    impl = types.Integer
-    name_values = {}
-    reverse_look_up = dict(zip(name_values.values(), name_values.keys()))
-
-    def process_bind_param(self, value, dialect):
-        try:
-            return self.name_values[value]    # Convert name to an integer
-        except KeyError:
-            return
-
-    def process_result_value(self, value, dialect):
-        try:
-            return self.reverse_look_up[value]    # Convert an integer to a name
-        except KeyError:
-            return
+from models._types import EnumTypeBase
 
 
 class InjuryStatusEnumtype(EnumTypeBase):
@@ -47,81 +27,48 @@ class AccountStatusEnumType(EnumTypeBase):
                   }
 
 
-class RoleEnum(enum.Enum):
-    athlete = 1
-    manager = 2
-    admin = 3
-    super_admin = 4
-    biometrix_admin = 5
-    subject = 6
-    consumer = 7
+class SystemTypeEnumType(EnumTypeBase):
+    name_values = {
+                   '1-sensor': 1,
+                   '3-sensor': 3
+                  }
 
 
-class RoleEnumType(types.TypeDecorator):
-    impl = types.Integer
-
-    def process_bind_param(self, value, dialect):
-        if value: # Handle Null case
-            return RoleEnum[value].value    # Convert name to an integer
-
-    def process_result_value(self, value, dialect):
-        if value:
-            return RoleEnum(value).name    # Convert an integer to a name
-
-
-class GenderEnum(enum.Enum):
-    male = 1
-    female = 2
-    mixed = 3
-    other = 4
+class RoleEnumType(EnumTypeBase):
+    name_values = {
+                    'athlete': 1,
+                    'manager': 2,
+                    'admin': 3,
+                    'super_admin': 4,
+                    'biometrix_admin': 5,
+                    'subject': 6,
+                    'consumer': 7
+                  }
 
 
-class GenderEnumType(types.TypeDecorator):
-    impl = types.Integer
-
-    def process_bind_param(self, value, dialect):
-        if value:
-            return GenderEnum[value].value    # Convert name to an integer
-
-    def process_result_value(self, value, dialect):
-        if value:
-            return GenderEnum(value).name    # Convert an integer to a name
+class GenderEnumType(EnumTypeBase):
+    name_values = {
+                    'male': 1,
+                    'female': 2,
+                    'mixed': 3,
+                    'other': 4
+                  }
 
 
-class AthleteStatus(enum.Enum):
-    competing = 1
-    training = 2
-    returning = 3
-    injured = 4
+class AthleteStatusEnumType(EnumTypeBase):
+    name_values = {
+                    'competing':1,
+                    'training': 2,
+                    'returning': 3,
+                    'injured': 4
+                  }
 
 
-class AthleteStatusEnumType(types.TypeDecorator):
-    impl = types.Integer
-
-    def process_bind_param(self, value, dialect):
-        if value:
-            return AthleteStatus[value].value    # Convert name to an integer
-
-    def process_result_value(self, value, dialect):
-        if value:
-            return AthleteStatus(value).name    # Convert an integer to a name
-
-
-class PushType(enum.Enum):
-    ios = 1
-    android = 2
-
-
-class PushTypeEnumType(types.TypeDecorator):
-    impl = types.Integer
-
-    def process_bind_param(self, value, dialect):
-        if value:
-            return PushType[value].value    # Convert name to an integer
-
-    def process_result_value(self, value, dialect):
-        if value:
-            return PushType(value).name    # Convert an integer to a name
+class PushTypeEnumType(EnumTypeBase):
+    name_values = {
+                   'ios': 1,
+                   'android': 2
+                  }
 
 
 class Users(Base):
@@ -161,7 +108,7 @@ class Users(Base):
     zip_code = Column(String)
     account_type = Column(AccountEnumType)
     account_status = Column(AccountStatusEnumType)
-    system_type = Column(Integer)
+    system_type = Column(SystemTypeEnumType)
     injury_status = Column(InjuryStatusEnumtype)
 
 """
