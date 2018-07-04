@@ -53,6 +53,69 @@ def extract_email_and_password_from_request(data):
         raise InvalidSchemaException('Request payload was not received')
 
 
+def feet_to_meters(feet, inches):
+    """
+    Converts feet + inches into meters
+    :param feet:
+    :param inches:
+    :return:
+    """
+    if feet:
+        if inches:
+            return (feet + inches/12)*0.3048
+        else:
+            return feet*0.3048
+    elif inches:
+        return (inches/12)*0.3048
+
+
+def lb_to_kg(weight_lbs):
+    """
+    Converts pounds to kilograms.
+    Handles the case where the weight is None
+    :param weight_lbs:
+    :return:
+    """
+    if weight_lbs:
+        return weight_lbs * 0.453592
+
+
+def format_datetime(date_input):
+    """
+    Formats a date in ISO8601 short format.
+    Handles the case where the input is None
+    :param date_input:
+    :return:
+    """
+    if date_input is None:
+        return None
+    if not isinstance(date_input, datetime.datetime):
+        date_input = datetime.datetime.strptime(date_input, "%Y-%m-%dT%H:%M:%S.%f")
+    return date_input.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def format_date(date_input):
+    """
+    Formats a date in ISO8601 short format.
+    Handles the case where the input is None
+    :param date_input:
+    :return:
+    """
+    if date_input is None:
+        return None
+    if isinstance(date_input, datetime.datetime):
+        return date_input.strftime("%Y-%m-%d")
+    else:
+        for format_string in ('%Y-%m-%d', '%m/%d/%y', '%Y-%m'):
+            try:
+                date_input = datetime.datetime.strptime(date_input, format_string)
+                return date_input.strftime("%Y-%m-%d")
+            except ValueError:
+                pass
+        return None
+        # raise ValueError('no valid date format found')
+
+
 def create_user_dictionary(user):
     """
     Convert the user ORM to the desired output format
@@ -277,8 +340,8 @@ def user_sign_in():
 
 def create_user_object(user_data):
     """
-    
-    :param user_data: dictionary with user data 
+
+    :param user_data: dictionary with user data
     :return: User ORM object ready to save
     """
     height_feet, height_inches = convert_to_ft_inches(user_data['biometric_data']['height'])
@@ -336,7 +399,78 @@ def create_user():
         user = create_user_object(user_data)
     except Exception as e:
         raise ApplicationException(400, 'InvalidSchema', str(e))
-    
+
+    # training_groups = TrainingGroups()
+    # sports = Sports()
+    # injuries = Injuries()
+    # training_schedule = TrainingSchedule()
+    # training_strength_conditioning = StrengthConditioning()
+    return {"authorization": create_authorization_resp(user_id=user.id, sign_in_method='json', role=user.role)}
+
+
+@user_app.route('/<user_id>', methods=['GET'])
+def create_user_object(user_data):
+    """
+
+    :param user_data: dictionary with user data
+    :return: User ORM object ready to save
+    """
+    height_feet, height_inches = convert_to_ft_inches(user_data['biometric_data']['height'])
+    weight = convert_to_pounds(user_data['biometric_data']['mass'])
+    password_hash = bcrypt.generate_password_hash(user_data['password'])
+    user = Users(email=user_data['email'],
+                first_name=user_data['personal_data']['first_name'],
+                last_name=user_data['personal_data']['last_name'],
+                phone_number=user_data['personal_data']['phone_number'],
+                password_digest=password_hash,
+                created_at=datetime.datetime.now(),
+                updated_at=datetime.datetime.now(),
+                # avatar_file_name
+                # avatar_content_type
+                # avatar_file_size
+                # avatar_updated_at
+                # position
+                role=user_data['role'],
+                # active
+                # in_training
+                height_feet=height_feet,
+                height_inches=height_inches,
+                weight=weight,
+                gender=user_data['biometric_data']['gender'],
+                status=None,
+                # onboarded
+                birthday=user_data['personal_data']['birth_date'],
+                zip_code=user_data['personal_data']['zip_code']
+               )
+    return user
+
+
+def validate_user_inputs(user_data):
+    """
+    Reviews each item in the payload to verify it is the correct type
+    :param user_data:
+    :return:
+    """
+    return user_data
+
+
+@user_app.route('/', methods=['POST'])
+#@xray_recorder.capture('routes.user.post')
+def create_user():
+    """
+    Creates a new user given the data and validates the input parameters
+    :param user_id:
+    :return:
+    """
+    if not request.json:
+        raise InvalidSchemaException("No data received. Verify headers include Content-Type: application/json")
+
+    user_data = validate_user_inputs(request.json)
+    try:
+        user = create_user_object(user_data)
+    except Exception as e:
+        raise ApplicationException(400, 'InvalidSchema', str(e))
+
     # training_groups = TrainingGroups()
     # sports = Sports()
     # injuries = Injuries()
