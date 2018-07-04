@@ -47,6 +47,7 @@ example_user_data = {"email": "susie@smith.com",
                      "training_schedule": [{"practice": {"days_of_week": "Mon,Tue,Wed,Thu,Fri,Sat",
                                                         "duration_minutes": 90},
                                             "competition": {"days_of_week": "Sun",
+                                                            "duration_minutes": 90
                                                             }
                                            }],
                      "training_strength_conditioning": [{"activity": "weight_lifting",

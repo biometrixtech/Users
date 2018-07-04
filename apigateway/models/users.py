@@ -4,6 +4,40 @@ from db_connection import Base
 from sqlalchemy import types
 
 
+# TODO: Refactor Enums to use mixins
+
+class AccountEnum(enum.Enum):
+    paid = 0
+    free = 1
+
+
+class AccountEnumType(types.TypeDecorator):
+    impl = types.Integer
+
+    def process_bind_param(self, value, dialect):
+        return AccountEnum[value].value    # Convert name to an integer
+
+    def process_result_value(self, value, dialect):
+        return AccountEnum(value).name    # Convert an integer to a name
+
+
+class AccountStatusEnum(enum.Enum):
+    active = 0
+    pending = 1
+    past_due = 2
+    expired = 3
+
+
+class AccountStatusEnumType(types.TypeDecorator):
+    impl = types.Integer
+
+    def process_bind_param(self, value, dialect):
+        return AccountStatusEnum[value].value  # Convert name to an integer
+
+    def process_result_value(self, value, dialect):
+        return AccountStatusEnum(value).name  # Convert an integer to a name
+
+
 class RoleEnum(enum.Enum):
     athlete = 1
     manager = 2
@@ -12,6 +46,7 @@ class RoleEnum(enum.Enum):
     biometrix_admin = 5
     subject = 6
     consumer = 7
+
 
 class RoleEnumType(types.TypeDecorator):
     impl = types.Integer
