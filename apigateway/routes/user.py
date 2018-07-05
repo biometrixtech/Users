@@ -15,7 +15,7 @@ from exceptions import InvalidSchemaException, NoSuchEntityException, Unauthoriz
 from flask_app import bcrypt
 
 from db_connection import engine
-from models import Users, Teams, TeamsUsers, TrainingGroups, TrainingGroupsUsers, Sport #SportHistory, Sport
+from models import Users, Teams, TeamsUsers, TrainingGroups, TrainingGroupsUsers, Sport, SportHistory, Sport
 from utils import *
 
 user_app = Blueprint('user', __name__)
@@ -305,12 +305,21 @@ def create_user_object(user_data):
                 # onboarded
                 birthday=user_data['personal_data']['birth_date'],
                 zip_code=user_data['personal_data']['zip_code'],
-                account_type=user_data['account_type'],
-                account_status = user_data['account_status'],
+                account_type=user_data['personal_data']['account_type'],
+                account_status = user_data['personal_data']['account_status'],
                 system_type = user_data['system_type'],
                 injury_status = user_data['injury_status']
                )
     return user
+
+
+def validate_date(_date):
+    """
+
+    :param _date:
+    :return:
+    """
+    return datetime.datetime.strptime(_date, '%m/%d/%Y')
 
 
 def save_sports_history(user_data, user_id):
@@ -342,22 +351,25 @@ def save_sports_history(user_data, user_id):
     columns = ['name', 'positions', 'competition_level']
     sports_history = []
     for sport_info in sports_info:
-        valid_values = dict((col_name, validate_value(session, Sport, col_name, sport_info[col_name])) for col_name in columns)
-        print(valid_values)
+        # valid_values = dict((col_name, validate_value(session, Sport, col_name, sport_info[col_name])) for col_name in columns)
         # TODO: What does validation look like for positions and DateTimes?
-        
+
         name = validate_value(session, Sport, 'name', sport_info['name'])
-        #positions = validate_positions(sport_info['positions'])
-        #competition_level = validate_competition_level(sport_info['competition_level'])
-        sport_history_obj = SportHistory(name=name,
-                                         positions=positions,
-                                         competition_level=competition_level,
-                                         start_date=sports_info['start_date'],
-                                         end_date=sports_info['end_date']
-                                         # season_start_month
-                                         # season_end_month
+        # positions = validate_positions(sport_info['positions'])
+        competition_level = validate_value(session, Sport, 'competition_level', sport_info['competition_level'])
+        start_date = validate_date(sport_info['start_date'])
+        end_date = validate_date(sport_info['end_date'])
+        for position in sport_info['positions']:
+            position = validate_value(session, Sport, 'position', position)
+            sport_history_obj = SportHistory(name=name,
+                                             position=position,
+                                             competition_level=competition_level,
+                                             start_date=start_date,
+                                             end_date=end_date
+                                             # season_start_month
+                                             # season_end
                                          )
-        sports_history.append(sport_history_obj)
+            sports_history.append(sport_history_obj)
     return sports_history
 
 
@@ -399,9 +411,11 @@ def create_user():
     if not user:
         raise ApplicationException(400, 'CreationError', 'Failed to create user')
 
-    #save_training_groups(user_data, user.id)
-    save_sports_history(user_data, user.id)
-    save_training_schedule(user_data, user.id)
+    # save_training_groups(user_data, user.id)
+
+    # save_sports_history(user_data, user.id)
+    # save_training_schedule(user_data, user.id)
+
     # save_injuries(user_data, user.id)
 
     # If all objects persist save data to database
