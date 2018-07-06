@@ -22,8 +22,10 @@ def test_user_id_get():
 
 
 def test_create_user():
-
-    res = requests.post("{}/users/user".format(API_URL), headers=headers,
-                        data=json.dumps(example_user_data))
+    headers['content-type'] = 'application/json'
+    res = requests.post("{}/users/user/".format(API_URL),
+                        headers=headers,
+                        data=json.dumps(example_user_data)
+                        )
     print(res.text)
-    assert res.status_code == 200
+    assert 200 == res.status_code
