@@ -3,8 +3,16 @@ from apigateway import app
 import json
 from .sample_data import sample_logins
 from .test_fixtures import example_user_data
+import os
 
 LOGIN_URL = "/v1/user/sign_in"
+
+# Headers:
+headers = {
+    "Authorization": os.getenv('JWT_TOKEN'),
+    "content-type": "application/json"
+  }
+
 @pytest.fixture
 def client():
 
@@ -16,6 +24,7 @@ def test_create_user(client):
     res = client.post('/v1/user/',
                       headers={'content-type': 'application/json'},
                       data=json.dumps(example_user_data))
+    print(res.data)
     assert res.status_code == 200
     res_data = json.loads(res.data.decode())
     assert type(res_data) == dict
@@ -62,3 +71,18 @@ def test_incorrect_password(client):
                       data=json.dumps(user_login))
     print(res.data)
     assert res.status_code == 401
+
+
+def test_update_user(client):
+    user_id = "3a07c79a-2e9f-487f-aef7-555954537e29"
+    updated_user_data = {'biometric_data': {'phone_number': '23412302'},
+                         'personal_data': {
+                             'height': {'ft': 1.5}
+                         },
+                         }
+    res = client.post('/v1/user/{}'.format(user_id),
+                      headers=headers,
+                      data=json.dumps(updated_user_data)
+                      )
+    print(res.data)
+    assert res.status_code == 200

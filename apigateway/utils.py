@@ -28,13 +28,16 @@ def feet_to_meters(feet, inches):
     :param inches:
     :return:
     """
+    meters = None
     if feet:
         if inches:
-            return (feet + inches / 12) * 0.3048
+            meters = (feet + inches / 12) * 0.3048
         else:
-            return feet * 0.3048
+            meters = feet * 0.3048
     elif inches:
-        return (inches / 12) * 0.3048
+        meters = (inches / 12) * 0.3048
+    if meters:
+        return round(meters, 3)
 
 
 def lb_to_kg(weight_lbs):
@@ -45,7 +48,7 @@ def lb_to_kg(weight_lbs):
     :return:
     """
     if weight_lbs:
-        return weight_lbs * 0.453592
+        return round(weight_lbs * 0.453592, 3)
 
 
 def format_date(date_input):

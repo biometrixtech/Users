@@ -1,5 +1,5 @@
 import enum
-from sqlalchemy import Column, String, Float, Integer, DateTime, Boolean, ForeignKey, Enum, text
+from sqlalchemy import Column, String, Float, Integer, DateTime, Boolean, ForeignKey, Enum, text, ARRAY
 from db_connection import Base
 from models._types import EnumTypeBase
 
@@ -110,7 +110,8 @@ class Users(Base):
     account_status = Column(AccountStatusEnumType)
     system_type = Column(SystemTypeEnumType)
     injury_status = Column(InjuryStatusEnumtype)
-
+    onboarding_status = Column(ARRAY(String))
+    
 """
 ﻿-- Table: public.users
 

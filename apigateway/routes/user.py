@@ -65,11 +65,11 @@ def create_user_dictionary(user):
             "sex": user.gender,
             "height": {
                 "ft_in": [user.height_feet, user.height_inches or 0],
-                "m": round(feet_to_meters(user.height_feet, user.height_inches), 2)
+                "m": feet_to_meters(user.height_feet, user.height_inches)
             },
             "mass": {
-                "lb": round(user.weight, 1),
-                "kg": round(lb_to_kg(user.weight), 1)
+                "lb": user.weight,
+                "kg": lb_to_kg(user.weight)
             }
         },
         "created_date": format_datetime(user.created_at),
@@ -308,8 +308,51 @@ def create_user_object(user_data):
                 account_type=user_data['personal_data']['account_type'],
                 account_status = user_data['personal_data']['account_status'],
                 system_type = user_data['system_type'],
-                injury_status = user_data['injury_status']
+                injury_status = user_data['injury_status'],
+                onboarding_status = user_data['onboarding_status']
                )
+    return user
+
+
+def save_user_data(user, user_data):
+    """
+    Extracts the user_data from the dictionary and updates the orm. Essential the save as create_user_object
+    :param user:
+    :param user_data:
+    :return:
+    """
+    user.role = user_data['role']
+    user.system_type = user_data['system_type'],
+    user.injury_status = user_data['injury_status'],
+    user.onboarding_status = user_data['onboarding_status']
+
+    if 'email' in user_data.keys():
+        user.email = user_data['email']
+    if 'personal_data' in user_data.keys():
+        if 'first_name' in user_data['personal_data'].keys():
+            user.first_name=user_data['personal_data']['first_name']
+        if 'last_name' in user_data['personal_data'].keys():
+            user.last_name=user_data['personal_data']['last_name']
+        if 'phone_number' in user_data['personal_data'].keys():
+            user.phone_number=user_data['personal_data']['phone_number']
+        user.birthday = user_data['personal_data']['birth_date'],
+        user.zip_code = user_data['personal_data']['zip_code'],
+        user.account_type = user_data['personal_data']['account_type'],
+        user.account_status = user_data['personal_data']['account_status'],
+
+    if 'password' in user_data.keys(): # TODO: Provide new JWT, verify new password
+        password_hash = bcrypt.generate_password_hash(user_data['password'])
+        user.password_digest=password_hash
+
+    height_feet, height_inches = convert_to_ft_inches(user_data['biometric_data']['height'])
+    weight = convert_to_pounds(user_data['biometric_data']['mass'])
+    user.height_feet=height_feet
+    user.height_inches=height_inches
+    user.weight=weight
+    user.gender=user_data['biometric_data']['gender']
+
+
+    user.updated_at = datetime.datetime.now()
     return user
 
 
@@ -405,6 +448,13 @@ def create_user():
 
     user_data = validate_user_inputs(request.json)
     try:
+        existing_user = session.query(Users).filter(Users.email == user_data['email']).all()
+    except Exception as e:
+        raise ApplicationException(400, 'EmailLookupError', str(e))
+    if existing_user:
+        raise DuplicateEntityException("User Email {} already exists.".format(user_data['email']))
+
+    try:
         user = create_user_object(user_data)
     except Exception as e:
         raise ApplicationException(400, 'InvalidSchema', str(e))
@@ -457,6 +507,34 @@ def handle_user_logout(user_id):
         raise UnauthorizedException('Session token is not valid for this user')
 
     return {'authorization': create_authorization_resp(user_id=user_ddb_res['id'], sign_in_method='json', role=None)}
+
+
+@user_app.route('/<uuid:user_id>', methods=['PUT'])
+@authentication_required
+def update_user(user_id):
+    """
+    Update the user information for any fields provided
+    :param user_id:
+    :return: 200 or 400 status code
+    """
+    if not validate_uuid4(user_id):
+        raise InvalidSchemaException("user_id was not a valid UUID4")
+
+    user_data = validate_user_inputs(request.json)
+    try:
+        user = session.query(Users).filter_by(Users.id == user_id).one()
+    except Exception as e:
+        raise ValueNotFoundInDatabase("user_id: {} not found.".format(user_id))
+
+    if not user:
+        raise NoSuchEntityException()
+
+
+    save_user_data(user, user_data)
+
+    session.commit()
+
+    return {'message': 'Success!'}
 
 
 @user_app.route('/<uuid:user_id>', methods=['GET'])
