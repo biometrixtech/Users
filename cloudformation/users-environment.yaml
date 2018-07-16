@@ -73,16 +73,18 @@ Resources:
                   - { "Fn::Sub": "arn:aws:iot:${AWS::Region}:${AWS::AccountId}:topic/users/${Environment}/device/${!iot:Connection.Thing.ThingName}/*" }
                   - { "Fn::Sub": "arn:aws:iot:${AWS::Region}:${AWS::AccountId}:topic/users/${Environment}/user/${!iot:Connection.Thing.Attributes[owner_id]}" }
                   - { "Fn::Sub": "arn:aws:iot:${AWS::Region}:${AWS::AccountId}:topic/users/${Environment}/user/${!iot:Connection.Thing.Attributes[owner_id]}/*" }
+                  - { "Fn::Sub": "arn:aws:iot:${AWS::Region}:${AWS::AccountId}:topic/plans/${Environment}/athlete/${!iot:Connection.Thing.Attributes[owner_id]}" }
+                  - { "Fn::Sub": "arn:aws:iot:${AWS::Region}:${AWS::AccountId}:topic/plans/${Environment}/athlete/${!iot:Connection.Thing.Attributes[owner_id]}/*" }
 
     DeviceTopicRule:
         Type: "AWS::IoT::TopicRule"
-        Properties: 
+        Properties:
             RuleName: { "Fn::Sub": "users_${Environment}_device" }
             TopicRulePayload:
                 RuleDisabled: "false"
                 AwsIotSqlVersion: '2016-03-23'
                 Sql: { "Fn::Sub": "SELECT * AS payload, topic() AS topic, principal() AS principal FROM 'users/${Environment}/device/#'" }
-                Actions: 
+                Actions:
                   - Lambda:
                         FunctionArn: { "Fn::GetAtt": [ "DeviceTopicLambda", "Arn" ] }
 
