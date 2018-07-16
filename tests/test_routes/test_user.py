@@ -66,7 +66,7 @@ def test_add_missing_keys():
         "role": str,
         "system_type": str,
         "injury_status": str,
-        "onboarding_status": str
+        "onboarding_status": list
     }
     data = {"personal_data": {"Hello": "123"}}
     data = add_missing_keys(data, expected_user_keys)

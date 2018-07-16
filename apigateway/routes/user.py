@@ -299,7 +299,7 @@ expected_user_keys = {
         "role": str,
         "system_type": str,
         "injury_status": str,
-        "onboarding_status": str
+        "onboarding_status": list
         }
 
 def add_missing_keys(dictionary, expected_format):
