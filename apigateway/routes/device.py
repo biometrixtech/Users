@@ -30,7 +30,7 @@ def handle_device_register(device_id):
     try:
         iot_client.describe_thing(thingName=device_id)
     except ClientError as e:
-        if 'ResourceNotFound' not in str(e):
+        if 'ResourceNotFound' in str(e):
             iot_client.create_thing(
                 thingName=device_id,
                 thingTypeName='users-{ENVIRONMENT}-device'.format(**os.environ),
