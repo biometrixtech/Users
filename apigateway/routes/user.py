@@ -31,6 +31,12 @@ MAX_SESSIONS = 3
 users_table = boto3.resource('dynamodb').Table('users-{ENVIRONMENT}-users'.format(**os.environ))
 
 
+class DictionaryAttr(dict):
+    def __init__(self, *args, **kwargs):
+        super(DictionaryAttr, self).__init__(*args, **kwargs)
+        self.__dict__ = self
+
+
 def extract_email_and_password_from_request(data):
     """
     Check params, headers and json data for email and password
@@ -273,6 +279,41 @@ def user_sign_in():
     raise NoSuchEntityException('User not found')
 
 
+expected_user_keys = {
+        "email": str,
+        "password": str,
+        "biometric_data": {
+            "gender": str,
+            "height": {"m": float},
+            "mass": {"kg": float}
+        },
+        "personal_data": {
+            "birth_date": str,
+            "first_name": str,
+            "last_name": str,
+            "phone_number": str,
+            "account_type": str,
+            "account_status": str,
+            "zip_code": str
+        },
+        "role": str,
+        "system_type": str,
+        "injury_status": str,
+        "onboarding_status": str
+        }
+
+def add_missing_keys(dictionary, expected_format):
+    for key, value in expected_format.items():
+        try:
+            if isinstance(dictionary[key], dict) or isinstance(value, dict):
+                dictionary[key] = add_missing_keys(dictionary[key], value)
+            elif not isinstance(value(dictionary[key]), value):
+                raise InvalidSchemaException("{}:{} is of the wrong type.".format(key, dictionary[key]))
+        except KeyError:
+            dictionary[key] = None
+    return dictionary
+
+
 def create_user_object(user_data):
     """
 
@@ -282,6 +323,8 @@ def create_user_object(user_data):
     height_feet, height_inches = convert_to_ft_inches(user_data['biometric_data']['height'])
     weight = convert_to_pounds(user_data['biometric_data']['mass'])
     password_hash = bcrypt.generate_password_hash(user_data['password']).decode('utf-8')
+    user_data = add_missing_keys(user_data, expected_user_keys)
+
     user = Users(email=user_data['email'],
                 first_name=user_data['personal_data']['first_name'],
                 last_name=user_data['personal_data']['last_name'],

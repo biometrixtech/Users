@@ -1,7 +1,7 @@
 import pytest
 from sqlalchemy.orm import Session
 
-from routes.user import jwt_make_payload, create_user_object
+from routes.user import jwt_make_payload, create_user_object, add_missing_keys
 from db_connection import engine, Base
 from models import Users, Teams, TeamsUsers #, SportsHistory  # , TrainingGroups, TrainingGroupsUsers
 from routes.user import create_user_dictionary, save_sports_history, save_training_schedule
@@ -20,7 +20,7 @@ def setup_module(session):
 
 
 def teardown_module(session):
-    session.rollback()
+    # session.rollback()
     # session.close()  # Closes the transaction and commits all the changes.
     pass
 
@@ -43,6 +43,35 @@ def test_create_user_dictionary(session):
     # training_groups = session.query(TrainingGroups).join(TrainingGroupsUsers).filter(TrainingGroupsUsers.user_id == user.id).all()
     user_dictionary = create_user_dictionary(user)
     assert type(user_dictionary) == dict
+
+
+def test_add_missing_keys():
+    expected_user_keys = {
+        "email": str,
+        "password": str,
+        "biometric_data": {
+            "gender": str,
+            "height": {"m": float},
+            "mass": {"kg": float}
+        },
+        "personal_data": {
+            "birth_date": str,
+            "first_name": str,
+            "last_name": str,
+            "phone_number": str,
+            "account_type": str,
+            "account_status": str,
+            "zip_code": str
+        },
+        "role": str,
+        "system_type": str,
+        "injury_status": str,
+        "onboarding_status": str
+    }
+    data = {"personal_data": {"Hello": "123"}}
+    data = add_missing_keys(data, expected_user_keys)
+    print(data)
+    assert dict == type(data)
 
 
 def test_create_user_object(session):
