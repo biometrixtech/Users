@@ -281,7 +281,7 @@ def create_user_object(user_data):
     """
     height_feet, height_inches = convert_to_ft_inches(user_data['biometric_data']['height'])
     weight = convert_to_pounds(user_data['biometric_data']['mass'])
-    password_hash = bcrypt.generate_password_hash(user_data['password'])
+    password_hash = bcrypt.generate_password_hash(user_data['password']).decode('utf-8')
     user = Users(email=user_data['email'],
                 first_name=user_data['personal_data']['first_name'],
                 last_name=user_data['personal_data']['last_name'],
@@ -470,9 +470,16 @@ def create_user():
 
     # If all objects persist save data to database
     session.add(user)
-
     session.commit()
-    return {"authorization": create_authorization_resp(user_id=user.id, sign_in_method='json', role=user.role)}
+    # Create User Session
+    user_ddb = {'sessions': [], 'updated_date': '1970-01-01T00:00:00Z'}
+    res = {'authorization': create_authorization_resp(user_id=user.id, sign_in_method='json', role=user.role)}
+    res['authorization']['session_token'] = create_session_for_user(
+        str(user.id),
+        user_ddb['sessions'],
+        user_ddb['updated_date'],
+    )
+    return res
 
 
 @user_app.route('/<uuid:user_id>/authorize', methods=['POST'])
