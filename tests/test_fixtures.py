@@ -46,10 +46,10 @@ example_user_data = {"email": "steve1234@gmail.com",
 
 
 example_user_data_2 = {
-    "email": "tests000005@biometrixtech.com",
+    "email": "tests000006@biometrixtech.com",
     "password": "Fathom123!",
     "biometric_data": {
-        "gender": "male",
+        "sex": "male",
         "height": {"m": 1.5},
         "mass": {"kg": 98}
     },

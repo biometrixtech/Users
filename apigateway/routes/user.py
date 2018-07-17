@@ -326,7 +326,14 @@ def create_user_object(user_data):
     # user_data = add_missing_keys(user_data, expected_user_keys)
     if not 'onboarding_status' in user_data.keys():
         user_data['onboarding_status'] = []
-        
+
+    if 'gender' in user_data['biometric_data'].keys():
+        gender = user_data['biometric_data']['gender']
+    elif 'sex' in user_data['biometric_data'].keys():
+        gender = user_data['biometric_data']['sex']
+    else:
+        gender = None
+
     user = Users(email=user_data['email'],
                 first_name=user_data['personal_data']['first_name'],
                 last_name=user_data['personal_data']['last_name'],
@@ -345,7 +352,7 @@ def create_user_object(user_data):
                 height_feet=height_feet,
                 height_inches=height_inches,
                 weight=weight,
-                gender=user_data['biometric_data']['gender'],
+                gender=gender,
                 status=None,
                 # onboarded
                 birthday=user_data['personal_data']['birth_date'],
