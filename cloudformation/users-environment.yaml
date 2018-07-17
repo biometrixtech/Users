@@ -84,7 +84,7 @@ Resources:
     PinpointRepublishRule:
         Type: "AWS::IoT::TopicRule"
         Properties:
-            RuleName: { "Fn::Sub": "users_${Environment}_device" }
+            RuleName: { "Fn::Sub": "users_${Environment}_device_pinpointrepublish" }
             TopicRulePayload:
                 RuleDisabled: "false"
                 AwsIotSqlVersion: '2016-03-23'
