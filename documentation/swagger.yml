@@ -210,11 +210,25 @@ paths:
                               - android
                             example: 'ios'
                             description: 'The hardware type of the device'
+                        push_notifications:
+                            type: object
+                            properties:
+                                token:
+                                    type: string
+                                enabled:
+                                    type: boolean
+                            required:
+                              - token
+                              - enabled
                     required:
                         - device_type
                     example: >-
                         {
-                            "device_type": "android"
+                            "device_type": "android",
+                            "push_notifications": {
+                                "token": "ABCDEF",
+                                "enabled" true
+                            }
                         }
             responses:
                 200:

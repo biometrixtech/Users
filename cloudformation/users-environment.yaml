@@ -25,6 +25,11 @@ Parameters:
         MinValue: 1
         Type: "Number"
 
+    PinpointAppId:
+        Default: ""
+        Description: "The ID of the Pinpoint application for mobile pushes"
+        Type: "String"
+
 Mappings:
     TemplateVersion:
         Self: { Commit: "da39a3ee5e6b4b0d3255bfef95601890afd80709" }
@@ -350,6 +355,8 @@ Resources:
                           - "iot:DescribeThing"
                           - "iot:UpdateThing"
                           - "iot:Publish"
+                          - "mobiletargeting:UpdateEndpoint"
+                          - "mobiletargeting:DeleteEndpoint"
                         Effect: "Allow"
                         Resource: "*"
             RoleName: { "Fn::Sub": "users-${Environment}-apigateway-execute-${AWS::Region}" }
@@ -367,6 +374,7 @@ Resources:
                     ENVIRONMENT: { Ref: 'Environment' }
                     AWS_ACCOUNT_ID: { Ref: "AWS::AccountId" }
                     IOT_POLICY_NAME: { Ref: "DevicePolicy" }
+                    PINPOINT_APP_ID: { Ref: "PinpointAppId" }
             Handler: "apigateway.handler"
             Runtime: "python3.6"
             Timeout: "30"

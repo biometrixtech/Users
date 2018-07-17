@@ -383,11 +383,16 @@ The client __must__ submit a request body containing a JSON object with the foll
 
 ```
 {
-	"device_type": String
+	"device_type": String,
+	"push_notifications": {
+		"token": String,
+		"enabled" Boolean
+	}
 }
 ```
 
 * `device_type` __must__ be either `ios` or `android`.
+* `push_notifications` is optional.
 
 ```
 POST /users/device/e8514489-8de9-47e0-b3d5-b15da244783f HTTP/1.1
@@ -396,9 +401,12 @@ Content-Type: application/json
 Authorization: eyJraWQ...ajBc4VQ
 
 {
-	"device_type": "ios"
+	"device_type": "ios",
+	"push_notifications": {
+		"token": "ABCDEF",
+		"enabled" true
+	}
 }
-
 ```
 
 
