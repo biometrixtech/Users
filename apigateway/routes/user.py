@@ -340,9 +340,8 @@ def save_user_data(user, user_data):
         user.account_type = user_data['personal_data']['account_type'],
         user.account_status = user_data['personal_data']['account_status'],
 
-    if 'password' in user_data.keys(): # TODO: Provide new JWT, verify new password
-        password_hash = bcrypt.generate_password_hash(user_data['password'])
-        user.password_digest=password_hash
+    if 'password' in user_data.keys():  # TODO: Provide new JWT, verify new password
+        user.password_digest = bcrypt.generate_password_hash(user_data['password'].decode('utf-8'))
 
     height_feet, height_inches = convert_to_ft_inches(user_data['biometric_data']['height'])
     weight = convert_to_pounds(user_data['biometric_data']['mass'])
