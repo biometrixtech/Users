@@ -154,6 +154,7 @@ def update_push_notification_settings(device_id, token, enabled=True, device_typ
         enabled = bool(enabled)
         endpoint_request = {
             'Address': token,
+            'ChannelType': 'APNS_SANDBOX' if os.environ['ENVIRONMENT'] == 'dev' else 'APNS',
             'OptOut': 'ALL' if not enabled else 'NONE'
         }
         if device_type is not None:
