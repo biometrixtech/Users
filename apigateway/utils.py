@@ -15,7 +15,7 @@ def convert_to_ft_inches(distance_dictionary):
     elif 'm' in distance_dictionary.keys():
         meters = distance_dictionary['m']
         feet = math.floor(meters/0.3048)
-        inches = ((meters - feet*3.048) / 0.3048) * 12
+        inches = round(((meters - feet*0.3048) / 0.3048) * 12, 3)
         return feet, inches
 
 

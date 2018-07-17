@@ -31,7 +31,7 @@ def test_user_sign_in():
     #         "password": "Fathom123!"
     # }
     data = {
-             "email": "tests000007@biometrixtech.com",
+             "email": "tests000008@biometrixtech.com",
              "password": "Fathom123!"
            }
     rv = requests.post("{}/users/user/sign_in".format(API_URL),
