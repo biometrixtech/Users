@@ -125,7 +125,7 @@ Resources:
             Runtime: "python3.6"
             Timeout: "60"
             Role: { "Fn::GetAtt" : [ "ApiGatewayLambdaExecutionRole", "Arn" ] }
-            FunctionName: { "Fn::Sub": "users-${Environment}-device-topicstream" }
+            FunctionName: { "Fn::Sub": "users-${Environment}-device-pinpointrepublish" }
             Tags:
               - { Key: "Name", Value: { "Fn::Sub": "users-${Environment}-device-pinpointrepublish" } }
               - { Key: "Management", Value: "managed" }
