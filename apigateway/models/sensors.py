@@ -3,6 +3,7 @@ from db_connection import Base
 from .teams import Teams
 from .users import Users
 
+
 class Sensors(Base):
     __tablename__ = "sensors"
 

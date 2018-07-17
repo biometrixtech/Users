@@ -1,5 +1,6 @@
 import datetime
 import uuid
+from exceptions import ValueNotFoundInDatabase
 
 
 def convert_to_ft_inches(distance_dictionary):
@@ -27,13 +28,16 @@ def feet_to_meters(feet, inches):
     :param inches:
     :return:
     """
+    meters = None
     if feet:
         if inches:
-            return (feet + inches / 12) * 0.3048
+            meters = (feet + inches / 12) * 0.3048
         else:
-            return feet * 0.3048
+            meters = feet * 0.3048
     elif inches:
-        return (inches / 12) * 0.3048
+        meters = (inches / 12) * 0.3048
+    if meters:
+        return round(meters, 3)
 
 
 def lb_to_kg(weight_lbs):
@@ -44,7 +48,7 @@ def lb_to_kg(weight_lbs):
     :return:
     """
     if weight_lbs:
-        return weight_lbs * 0.453592
+        return round(weight_lbs * 0.453592, 3)
 
 
 def format_date(date_input):
@@ -92,3 +96,19 @@ def validate_uuid4(uuid_string):
     except ValueError:
         # If it's a value error, then the string is not a valid hex code for a UUID.
         return False
+
+
+def validate_value(session, TableObject, col_name, value):
+    """
+    Match the inputted value to the interest option available in the database
+    :param name:
+    :return: validated value matching an option in the database
+    """
+    valid_options = session.query(TableObject).distinct(col_name).all()
+    #valid_options_list = [ for option in valid_options] # Pull the column name
+    print(getattr(valid_options[0], col_name))
+    for option in valid_options:
+        table_value = getattr(option, col_name)
+        if value.lower() == table_value.lower():
+            return table_value
+    raise ValueNotFoundInDatabase()

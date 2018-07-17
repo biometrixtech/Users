@@ -1,81 +1,74 @@
 import enum
-from sqlalchemy import Column, String, Float, Integer, DateTime, Boolean, ForeignKey, Enum, text
+from sqlalchemy import Column, String, Float, Integer, DateTime, Boolean, ForeignKey, Enum, text, ARRAY
 from db_connection import Base
-from sqlalchemy import types
+from models._types import EnumTypeBase
 
 
-class RoleEnum(enum.Enum):
-    athlete = 1
-    manager = 2
-    admin = 3
-    super_admin = 4
-    biometrix_admin = 5
-    subject = 6
-    consumer = 7
-
-class RoleEnumType(types.TypeDecorator):
-    impl = types.Integer
-
-    def process_bind_param(self, value, dialect):
-        return RoleEnum[value].value    # Convert name to an integer
-
-    def process_result_value(self, value, dialect):
-        return RoleEnum(value).name    # Convert an integer to a name
+class InjuryStatusEnumtype(EnumTypeBase):
+    name_values = {
+                'healthy': 0,
+                'healthy_chronically_injured': 1,
+                'injured': 2
+            }
 
 
-class GenderEnum(enum.Enum):
-    male = 1
-    female = 2
-    mixed = 3
-    other = 4
+class AccountEnumType(EnumTypeBase):
+    name_values = { 'paid': 0,
+                    'free': 1
+                  }
 
 
-class GenderEnumType(types.TypeDecorator):
-    impl = types.Integer
-
-    def process_bind_param(self, value, dialect):
-        if value:
-            return GenderEnum[value].value    # Convert name to an integer
-
-    def process_result_value(self, value, dialect):
-        if value:
-            return GenderEnum(value).name    # Convert an integer to a name
+class AccountStatusEnumType(EnumTypeBase):
+    name_values = {
+                  'active': 0,
+                  'pending': 1,
+                  'past_due': 2,
+                  'expired': 3
+                  }
 
 
-class AthleteStatus(enum.Enum):
-    competing = 1
-    training = 2
-    returning = 3
-    injured = 4
+class SystemTypeEnumType(EnumTypeBase):
+    name_values = {
+                   '1-sensor': 1,
+                   '3-sensor': 3
+                  }
 
 
-class AthleteStatusEnumType(types.TypeDecorator):
-    impl = types.Integer
-
-    def process_bind_param(self, value, dialect):
-        if value:
-            return AthleteStatus[value].value    # Convert name to an integer
-
-    def process_result_value(self, value, dialect):
-        if value:
-            return AthleteStatus(value).name    # Convert an integer to a name
-
-
-class PushType(enum.Enum):
-    ios = 1
-    android = 2
+class RoleEnumType(EnumTypeBase):
+    name_values = {
+                    'athlete': 1,
+                    'manager': 2,
+                    'admin': 3,
+                    'super_admin': 4,
+                    'biometrix_admin': 5,
+                    'subject': 6,
+                    'consumer': 7
+                  }
 
 
-class PushTypeEnumType(types.TypeDecorator):
-    impl = types.Integer
+class GenderEnumType(EnumTypeBase):
+    name_values = {
+                    'male': 1,
+                    'female': 2,
+                    'mixed': 3,
+                    'other': 4
+                  }
 
-    def process_bind_param(self, value, dialect):
-        if value:
-            return PushType[value].value    # Convert name to an integer
 
-    def process_result_value(self, value, dialect):
-        if value:
-            return PushType(value).name    # Convert an integer to a name
+class AthleteStatusEnumType(EnumTypeBase):
+    name_values = {
+                    'competing':1,
+                    'training': 2,
+                    'returning': 3,
+                    'injured': 4
+                  }
+
+
+class PushTypeEnumType(EnumTypeBase):
+    name_values = {
+                   'ios': 1,
+                   'android': 2
+                  }
 
 
 class Users(Base):
@@ -113,8 +106,12 @@ class Users(Base):
     primary_training_group_id = Column(String) # uuid,
     year_in_school = Column(Integer) #  integer
     zip_code = Column(String)
-
-
+    account_type = Column(AccountEnumType)
+    account_status = Column(AccountStatusEnumType)
+    system_type = Column(SystemTypeEnumType)
+    injury_status = Column(InjuryStatusEnumtype)
+    onboarding_status = Column(ARRAY(String))
+    
 """
 ﻿-- Table: public.users
 

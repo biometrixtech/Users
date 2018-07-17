@@ -4,10 +4,8 @@ from boto3.dynamodb.conditions import Attr, Key
 from collections import namedtuple
 import boto3
 import binascii
-import datetime
 import json
 import os
-import uuid
 from sqlalchemy.orm import Session
 import jwt
 
@@ -17,7 +15,7 @@ from exceptions import InvalidSchemaException, NoSuchEntityException, Unauthoriz
 from flask_app import bcrypt
 
 from db_connection import engine
-from models import Users, Teams, TeamsUsers, TrainingGroups, TrainingGroupsUsers
+from models import Users, Teams, TeamsUsers, TrainingGroups, TrainingGroupsUsers, Sport, SportHistory, Sport
 from utils import *
 
 user_app = Blueprint('user', __name__)
@@ -67,11 +65,11 @@ def create_user_dictionary(user):
             "sex": user.gender,
             "height": {
                 "ft_in": [user.height_feet, user.height_inches or 0],
-                "m": round(feet_to_meters(user.height_feet, user.height_inches), 2)
+                "m": feet_to_meters(user.height_feet, user.height_inches)
             },
             "mass": {
-                "lb": round(user.weight, 1),
-                "kg": round(lb_to_kg(user.weight), 1)
+                "lb": user.weight,
+                "kg": lb_to_kg(user.weight)
             }
         },
         "created_date": format_datetime(user.created_at),
@@ -277,8 +275,8 @@ def user_sign_in():
 
 def create_user_object(user_data):
     """
-    
-    :param user_data: dictionary with user data 
+
+    :param user_data: dictionary with user data
     :return: User ORM object ready to save
     """
     height_feet, height_inches = convert_to_ft_inches(user_data['biometric_data']['height'])
@@ -306,9 +304,126 @@ def create_user_object(user_data):
                 status=None,
                 # onboarded
                 birthday=user_data['personal_data']['birth_date'],
-                zip_code=user_data['personal_data']['zip_code']
+                zip_code=user_data['personal_data']['zip_code'],
+                account_type=user_data['personal_data']['account_type'],
+                account_status = user_data['personal_data']['account_status'],
+                system_type = user_data['system_type'],
+                injury_status = user_data['injury_status'],
+                onboarding_status = user_data['onboarding_status']
                )
     return user
+
+
+def save_user_data(user, user_data):
+    """
+    Extracts the user_data from the dictionary and updates the orm. Essential the save as create_user_object
+    :param user:
+    :param user_data:
+    :return:
+    """
+    user.role = user_data['role']
+    user.system_type = user_data['system_type'],
+    user.injury_status = user_data['injury_status'],
+    user.onboarding_status = user_data['onboarding_status']
+
+    if 'email' in user_data.keys():
+        user.email = user_data['email']
+    if 'personal_data' in user_data.keys():
+        if 'first_name' in user_data['personal_data'].keys():
+            user.first_name=user_data['personal_data']['first_name']
+        if 'last_name' in user_data['personal_data'].keys():
+            user.last_name=user_data['personal_data']['last_name']
+        if 'phone_number' in user_data['personal_data'].keys():
+            user.phone_number=user_data['personal_data']['phone_number']
+        user.birthday = user_data['personal_data']['birth_date'],
+        user.zip_code = user_data['personal_data']['zip_code'],
+        user.account_type = user_data['personal_data']['account_type'],
+        user.account_status = user_data['personal_data']['account_status'],
+
+    if 'password' in user_data.keys(): # TODO: Provide new JWT, verify new password
+        password_hash = bcrypt.generate_password_hash(user_data['password'])
+        user.password_digest=password_hash
+
+    height_feet, height_inches = convert_to_ft_inches(user_data['biometric_data']['height'])
+    weight = convert_to_pounds(user_data['biometric_data']['mass'])
+    user.height_feet=height_feet
+    user.height_inches=height_inches
+    user.weight=weight
+    user.gender=user_data['biometric_data']['gender']
+
+
+    user.updated_at = datetime.datetime.now()
+    return user
+
+
+def validate_date(_date):
+    """
+
+    :param _date:
+    :return:
+    """
+    return datetime.datetime.strptime(_date, '%m/%d/%Y')
+
+
+def save_sports_history(user_data, user_id):
+    """
+    Create Sport and SportHistory ORM Objects and save data to database
+    Expected dictionary format:
+    {
+        "sports": [{"name": "Lacrosse",
+                    "positions": ["Goalie"],
+                    "competition_level": "NCAA Division II",
+                    "start_date": "1/1/2015",
+                    "end_date": "3/1/2018",
+                    "season_start_month": "January",
+                    "season_end_month": "May"
+                   },
+                   ...
+                  ]
+    }
+    :param user_data:
+    :param user_id:
+    :return:
+    """
+    if not user_id:
+        raise InvalidSchemaException("save_sports_history: Missing User Profile")
+    if 'sports' not in user_data.keys():
+        raise InvalidSchemaException("save_sports_history: Missing Sports from data payload.")
+
+    sports_info = user_data['sports']
+    columns = ['name', 'positions', 'competition_level']
+    sports_history = []
+    for sport_info in sports_info:
+        # valid_values = dict((col_name, validate_value(session, Sport, col_name, sport_info[col_name])) for col_name in columns)
+        # TODO: What does validation look like for positions and DateTimes?
+
+        name = validate_value(session, Sport, 'name', sport_info['name'])
+        # positions = validate_positions(sport_info['positions'])
+        competition_level = validate_value(session, Sport, 'competition_level', sport_info['competition_level'])
+        start_date = validate_date(sport_info['start_date'])
+        end_date = validate_date(sport_info['end_date'])
+        for position in sport_info['positions']:
+            position = validate_value(session, Sport, 'position', position)
+            sport_history_obj = SportHistory(name=name,
+                                             position=position,
+                                             competition_level=competition_level,
+                                             start_date=start_date,
+                                             end_date=end_date
+                                             # season_start_month
+                                             # season_end
+                                         )
+            sports_history.append(sport_history_obj)
+    return sports_history
+
+
+def save_training_schedule(user_data, user_id):
+    """
+    Create the TrainingSchedule ORMs and save to the database
+    :param user_data:
+    :param user_id:
+    :return:
+    """
+    pass
 
 
 def validate_user_inputs(user_data):
@@ -333,19 +448,33 @@ def create_user():
 
     user_data = validate_user_inputs(request.json)
     try:
+        existing_user = session.query(Users).filter(Users.email == user_data['email']).all()
+    except Exception as e:
+        raise ApplicationException(400, 'EmailLookupError', str(e))
+    if existing_user:
+        raise DuplicateEntityException("User Email {} already exists.".format(user_data['email']))
+
+    try:
         user = create_user_object(user_data)
     except Exception as e:
         raise ApplicationException(400, 'InvalidSchema', str(e))
-    
-    # training_groups = TrainingGroups()
-    # sports = Sports()
-    # injuries = Injuries()
-    # training_schedule = TrainingSchedule()
-    # training_strength_conditioning = StrengthConditioning()
+    if not user:
+        raise ApplicationException(400, 'CreationError', 'Failed to create user')
+
+    # save_training_groups(user_data, user.id)
+
+    # save_sports_history(user_data, user.id)
+    # save_training_schedule(user_data, user.id)
+
+    # save_injuries(user_data, user.id)
+
+    # If all objects persist save data to database
+    session.add(user)
+
+    session.commit()
     return {"authorization": create_authorization_resp(user_id=user.id, sign_in_method='json', role=user.role)}
 
 
-@user_app.route('/<uuid:user_id>/authorise', methods=['POST'])
 @user_app.route('/<uuid:user_id>/authorize', methods=['POST'])
 @xray_recorder.capture('routes.user.authorise')
 def handle_user_authorise(user_id):
@@ -378,6 +507,34 @@ def handle_user_logout(user_id):
         raise UnauthorizedException('Session token is not valid for this user')
 
     return {'authorization': create_authorization_resp(user_id=user_ddb_res['id'], sign_in_method='json', role=None)}
+
+
+@user_app.route('/<uuid:user_id>', methods=['PUT'])
+@authentication_required
+def update_user(user_id):
+    """
+    Update the user information for any fields provided
+    :param user_id:
+    :return: 200 or 400 status code
+    """
+    if not validate_uuid4(user_id):
+        raise InvalidSchemaException("user_id was not a valid UUID4")
+
+    user_data = validate_user_inputs(request.json)
+    try:
+        user = session.query(Users).filter_by(Users.id == user_id).one()
+    except Exception as e:
+        raise ValueNotFoundInDatabase("user_id: {} not found.".format(user_id))
+
+    if not user:
+        raise NoSuchEntityException()
+
+
+    save_user_data(user, user_data)
+
+    session.commit()
+
+    return {'message': 'Success!'}
 
 
 @user_app.route('/<uuid:user_id>', methods=['GET'])
