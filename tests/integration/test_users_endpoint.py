@@ -27,8 +27,8 @@ def test_user_sign_in():
         "password": "muffins1"
     }
     data = {
-            "email": "susie123@smith.com",
-            "password": "ABC123456"
+            "email": "amina@biometrixtech.com",
+            "password": "Fathom123!"
     }
     rv = requests.post("{}/users/user/sign_in".format(API_URL),
                        headers={'content-type': 'application/json'},

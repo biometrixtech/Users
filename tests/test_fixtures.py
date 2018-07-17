@@ -46,7 +46,7 @@ example_user_data = {"email": "steve1234@gmail.com",
 
 
 example_user_data_2 = {
-    "email": "testsdfasdf@biometrixtech.com",
+    "email": "tests000002@biometrixtech.com",
     "password": "Fathom123!",
     "biometric_data": {
         "gender": "male",
@@ -64,6 +64,6 @@ example_user_data_2 = {
     },
     "role": "athlete",
     "system_type": "1-sensor",
-    "injury_status": "healthy_chronically_injured",
-    "onboarding_status": "account_setup"
+    "injury_status": "healthy_chronically_injured" #,
+    # "onboarding_status": "account_setup"
 }
