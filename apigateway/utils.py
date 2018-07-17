@@ -1,7 +1,7 @@
 import datetime
 import uuid
 from exceptions import ValueNotFoundInDatabase
-
+import math
 
 # TODO: Verify math is correct.
 def convert_to_ft_inches(distance_dictionary):
@@ -14,7 +14,7 @@ def convert_to_ft_inches(distance_dictionary):
         return distance_dictionary['ft_in'][0], distance_dictionary['ft_in'][1]
     elif 'm' in distance_dictionary.keys():
         meters = distance_dictionary['m']
-        feet = round(meters/0.3048, 0)
+        feet = math.floor(meters/0.3048)
         inches = ((meters - feet*3.048) / 0.3048) * 12
         return feet, inches
 
