@@ -355,6 +355,8 @@ Resources:
                           - "iot:DescribeThing"
                           - "iot:UpdateThing"
                           - "iot:Publish"
+                          - "mobiletargeting:UpdateEndpoint"
+                          - "mobiletargeting:DeleteEndpoint"
                         Effect: "Allow"
                         Resource: "*"
             RoleName: { "Fn::Sub": "users-${Environment}-apigateway-execute-${AWS::Region}" }
