@@ -26,10 +26,14 @@ def test_user_sign_in():
         "email": "glitch0@gmail.com",
         "password": "muffins1"
     }
+    # data = {
+    #         "email": "amina@biometrixtech.com",
+    #         "password": "Fathom123!"
+    # }
     data = {
-            "email": "amina@biometrixtech.com",
-            "password": "Fathom123!"
-    }
+             "email": "tests000003@biometrixtech.com",
+             "password": "Fathom123!"
+           }
     rv = requests.post("{}/users/user/sign_in".format(API_URL),
                        headers={'content-type': 'application/json'},
                        data=json.dumps(data))

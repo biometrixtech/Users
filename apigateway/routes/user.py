@@ -323,8 +323,10 @@ def create_user_object(user_data):
     height_feet, height_inches = convert_to_ft_inches(user_data['biometric_data']['height'])
     weight = convert_to_pounds(user_data['biometric_data']['mass'])
     password_hash = bcrypt.generate_password_hash(user_data['password']).decode('utf-8')
-    user_data = add_missing_keys(user_data, expected_user_keys)
-
+    # user_data = add_missing_keys(user_data, expected_user_keys)
+    if not 'onboarding_status' in user_data.keys():
+        user_data['onboarding_status'] = []
+        
     user = Users(email=user_data['email'],
                 first_name=user_data['personal_data']['first_name'],
                 last_name=user_data['personal_data']['last_name'],

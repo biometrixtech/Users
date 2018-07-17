@@ -5,7 +5,7 @@ from routes.user import jwt_make_payload, create_user_object, add_missing_keys
 from db_connection import engine, Base
 from models import Users, Teams, TeamsUsers #, SportsHistory  # , TrainingGroups, TrainingGroupsUsers
 from routes.user import create_user_dictionary, save_sports_history, save_training_schedule
-from tests.test_fixtures import example_user_data
+from tests.test_fixtures import example_user_data, example_user_data_2
 
 
 @pytest.fixture
@@ -76,7 +76,7 @@ def test_add_missing_keys():
 
 def test_create_user_object(session):
 
-    user_object = create_user_object(example_user_data)
+    user_object = create_user_object(example_user_data_2)
     print(type(user_object))
     assert type(user_object) == Users
     assert hasattr(user_object, 'first_name')
