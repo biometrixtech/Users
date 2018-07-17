@@ -6,7 +6,7 @@ import os
 from botocore.exceptions import ClientError
 
 from decorators import authentication_required, authenticate_user_jwt
-from exceptions import InvalidSchemaException, NoSuchEntityException, UnauthorizedException, DuplicateEntityException
+from exceptions import InvalidSchemaException, NoSuchEntityException
 from utils import validate_uuid4
 
 
@@ -23,7 +23,7 @@ def handle_device_register(device_id):
         raise InvalidSchemaException('Body must be JSON formatted')
 
     if 'device_type' not in request.json:
-        raise InvalidSchemaException(f'Missing required field device-type')
+        raise InvalidSchemaException('Missing required field device-type')
     device_type = request.json['device_type']
 
     if 'push_notification' in request.json:
