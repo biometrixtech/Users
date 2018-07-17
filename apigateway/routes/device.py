@@ -170,6 +170,6 @@ def update_push_notification_settings(device_id, token, enabled=True, device_typ
 
     iot_client.update_thing(
         thingName=device_id,
-        attributePayload={'attributes': {'push_notifications': enabled}}
+        attributePayload={'attributes': {'push_notifications': '1' if enabled else '0'}}
     )
 
