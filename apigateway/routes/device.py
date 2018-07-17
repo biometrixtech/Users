@@ -12,6 +12,7 @@ from utils import validate_uuid4
 
 device_app = Blueprint('device', __name__)
 iot_client = boto3.client('iot')
+pinpoint_client = boto3.client('pinpoint', region_name='us-east-1')
 
 
 @device_app.route('/<uuid:device_id>', methods=['POST'])
@@ -20,9 +21,14 @@ iot_client = boto3.client('iot')
 def handle_device_register(device_id):
     if not request.json:
         raise InvalidSchemaException('Body must be JSON formatted')
-    for key in ['device_type']:
-        if key not in request.json:
-            raise InvalidSchemaException(f'Missing required field {key}')
+
+    if 'device_type' not in request.json:
+        raise InvalidSchemaException(f'Missing required field device-type')
+    device_type = request.json['device_type']
+
+    if 'push_notification' in request.json:
+        if 'token' not in request.json['push_notification'] or 'enabled' not in request.json['push_notification']:
+            raise InvalidSchemaException('push_notification config must have `token` and `enabled` keys')
 
     owner_id = authenticate_user_jwt(request.headers['Authorization'])
 
@@ -36,28 +42,22 @@ def handle_device_register(device_id):
                 thingTypeName='users-{ENVIRONMENT}-device'.format(**os.environ),
                 attributePayload={
                     'attributes': {
-                        'device_type': request.json['device_type'],
+                        'device_type': device_type,
                         'owner_id': owner_id,
                     },
                 }
             )
 
-    certificate_response = iot_client.create_keys_and_certificate(setAsActive=True)
+    cert_id, cert_pem, cert_pub, cert_priv = create_iot_keys(device_id)
 
-    iot_client.attach_thing_principal(
-        thingName=device_id,
-        principal=certificate_response['certificateArn']
-    )
-
-    iot_client.add_thing_to_thing_group(
-        thingGroupName='users-{ENVIRONMENT}-device'.format(**os.environ),
-        thingName=device_id,
-    )
-
-    iot_client.attach_principal_policy(
-        policyName=os.environ['IOT_POLICY_NAME'],
-        principal=certificate_response['certificateArn']
-    )
+    if 'push_notifications' in request.json:
+        update_push_notification_settings(
+            device_id,
+            request.json['push_notifications']['token'],
+            request.json['push_notifications']['enabled'],
+            device_type=device_type,
+            owner_id=owner_id
+        )
 
     return {
         'device': {
@@ -65,10 +65,10 @@ def handle_device_register(device_id):
             'type': request.json['device_type'],
         },
         'certificate': {
-            'id': certificate_response['certificateId'],
-            'pem': certificate_response['certificatePem'],
-            'public_key': certificate_response['keyPair']['PublicKey'],
-            'private_key': certificate_response['keyPair']['PrivateKey'],
+            'id': cert_id,
+            'pem': cert_pem,
+            'public_key': cert_pub,
+            'private_key': cert_priv,
         }
     }, 201
 
@@ -95,10 +95,80 @@ def handle_device_patch(device_id):
                     raise NoSuchEntityException('No device with that id')
                 else:
                     raise
+            # FIXME need to update Pinpoint user record
         else:
             raise InvalidSchemaException('owner_id must be uuid or none')
+
+    if 'push_notification' in request.json:
+        update_push_notification_settings(
+            device_id,
+            request.json['push_notifications']['token'],
+            request.json['push_notifications']['enabled'],
+        )
+
 
     if modified:
         return {"message": "Update successful"}, 200
     else:
         return {"message": "No updates"}, 204
+
+
+def create_iot_keys(device_id):
+    certificate_response = iot_client.create_keys_and_certificate(setAsActive=True)
+
+    iot_client.attach_thing_principal(
+        thingName=device_id,
+        principal=certificate_response['certificateArn']
+    )
+
+    iot_client.add_thing_to_thing_group(
+        thingGroupName='users-{ENVIRONMENT}-device'.format(**os.environ),
+        thingName=device_id,
+    )
+
+    iot_client.attach_principal_policy(
+        policyName=os.environ['IOT_POLICY_NAME'],
+        principal=certificate_response['certificateArn']
+    )
+
+    return (
+        certificate_response['certificateId'],
+        certificate_response['certificatePem'],
+        certificate_response['keyPair']['PublicKey'],
+        certificate_response['keyPair']['PrivateKey']
+    )
+
+
+def update_push_notification_settings(device_id, token, enabled=True, device_type=None, owner_id=None):
+
+    if token is None:
+        # Delete endpoint
+        enabled = None
+        pinpoint_client.delete_endpoint(
+            ApplicationId=os.environ['PINPOINT_APP_ID'],
+            EndpointId=device_id,
+        )
+
+    else:
+        # Add/update endpoint
+        enabled = bool(enabled)
+        endpoint_request = {
+            'Address': token,
+            'OptOut': 'ALL' if not enabled else 'NONE'
+        }
+        if device_type is not None:
+            endpoint_request['Demographic'] = {'Platform': device_type}
+        if owner_id is not None:
+            endpoint_request['User'] = {'UserId': owner_id}
+
+        pinpoint_client.update_endpoint(
+            ApplicationId=os.environ['PINPOINT_APP_ID'],
+            EndpointId=device_id,
+            EndpointRequest=endpoint_request
+        )
+
+    iot_client.update_thing(
+        thingName=device_id,
+        attributePayload={'attributes': {'push_notifications': enabled}}
+    )
+
