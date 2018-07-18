@@ -357,7 +357,7 @@ Resources:
                           - "iot:UpdateThing"
                           - "iot:Publish"
                           - "sns:CreatePlatformEndpoint"
-                          - "sns:DeletePlatformEndpoint"
+                          - "sns:DeleteEndpoint"
                         Effect: "Allow"
                         Resource: "*"
             RoleName: { "Fn::Sub": "users-${Environment}-apigateway-execute-${AWS::Region}" }

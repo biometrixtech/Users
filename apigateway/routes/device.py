@@ -24,7 +24,7 @@ def handle_device_register(device_id):
     device_type = request.json['device_type']
     owner_id = authenticate_user_jwt(request.headers['Authorization'])
 
-    get_or_create_thing(device_id, device_type, owner_id)
+    thing_attributes = get_or_create_thing(device_id, device_type, owner_id)
 
     cert_id, cert_pem, cert_pub, cert_priv = create_iot_keys(device_id)
 
@@ -32,9 +32,10 @@ def handle_device_register(device_id):
         update_push_notification_settings(
             device_id,
             request.json['push_notifications']['token'],
-            request.json['push_notifications']['enabled'],
+            old_endpoint_arn=thing_attributes.get('push_notifications_endpoint', None),
+            enabled=request.json['push_notifications']['enabled'],
             device_type=device_type,
-            owner_id=owner_id
+            owner_id=owner_id,
         )
 
     return {
@@ -56,6 +57,11 @@ def handle_device_register(device_id):
 @body_required({'owner_id': [None, UuidConverter], 'push_notifications': [None, {'token': str, 'enabled': bool}]})
 @xray_recorder.capture('routes.device.affiliate')
 def handle_device_patch(device_id):
+    existing_attributes = get_or_create_thing(
+        device_id,
+        request.json.get('device_type', None),
+        request.json.get('owner_id', None)
+    )
 
     modified = False
     if 'owner_id' in request.json:
@@ -63,7 +69,10 @@ def handle_device_patch(device_id):
         try:
             iot_client.update_thing(
                 thingName=device_id,
-                attributePayload={'attributes': {'owner_id': '' if owner_id is None else owner_id}}
+                attributePayload={
+                    'attributes': {'owner_id': '' if owner_id is None else owner_id},
+                    'merge': True
+                }
             )
             modified = True
         except ClientError as e:
@@ -71,17 +80,20 @@ def handle_device_patch(device_id):
                 raise NoSuchEntityException('No device with that id')
             else:
                 raise
+    else:
+        owner_id = existing_attributes.get('owner_id', None)
 
     if 'push_notifications' in request.json:
         if request.json['push_notifications']['token'] is not None:
             update_push_notification_settings(
                 device_id,
                 request.json['push_notifications']['token'],
+                old_endpoint_arn=existing_attributes.get('push_notifications_endpoint', None),
                 enabled=request.json['push_notifications']['enabled'],
+                owner_id=owner_id
             )
         else:
-            # TODO
-            pass
+            delete_push_notification_settings(device_id)
 
     if modified:
         return {"message": "Update successful"}, 200
@@ -91,19 +103,22 @@ def handle_device_patch(device_id):
 
 def get_or_create_thing(device_id, device_type, owner_id):
     try:
-        iot_client.describe_thing(thingName=device_id)
+        return iot_client.describe_thing(thingName=device_id)['attributes']
     except ClientError as e:
         if 'ResourceNotFound' in str(e):
+            print(f'Creating thing {device_id} with device_type={device_type}, owner_id={owner_id}')
+            attributes = {
+                'device_type': device_type,
+                'owner_id': owner_id,
+            }
             iot_client.create_thing(
                 thingName=device_id,
                 thingTypeName='users-{ENVIRONMENT}-device'.format(**os.environ),
-                attributePayload={
-                    'attributes': {
-                        'device_type': device_type,
-                        'owner_id': owner_id,
-                    },
-                }
+                attributePayload={'attributes': attributes}
             )
+            return attributes
+        else:
+            raise
 
 
 def create_iot_keys(device_id):
@@ -135,17 +150,20 @@ def create_iot_keys(device_id):
 def delete_push_notification_settings(device_id):
     device_attributes = iot_client.describe_thing(thingName=device_id)['attributes']
     if 'push_notifications_endpoint' in device_attributes:
-        sns_client.delete_platform_endpoint(endpointArn=device_attributes['push_notifications_endpoint'])
+        sns_client.delete_endpoint(EndpointArn=device_attributes['push_notifications_endpoint'])
         iot_client.update_thing(
             thingName=device_id,
-            attributePayload={'attributes': {
-                'push_notifications_enabled': None,
-                'push_notifications_endpoint': None
-            }}
+            attributePayload={
+                'attributes': {
+                    'push_notifications_enabled': None,
+                    'push_notifications_endpoint': None
+                },
+                'merge': True
+            }
         )
 
 
-def update_push_notification_settings(device_id, token, enabled=True, device_type=None, owner_id=None):
+def update_push_notification_settings(device_id, token, old_endpoint_arn=None, enabled=True, device_type=None, owner_id=None):
     # Add/update endpoint
     enabled = bool(enabled)
     attributes = {'Enabled': 'true' if enabled else 'false'}
@@ -154,6 +172,9 @@ def update_push_notification_settings(device_id, token, enabled=True, device_typ
         custom_user_data['Platform'] = device_type
     if owner_id is not None:
         custom_user_data['UserId'] = owner_id
+
+    if old_endpoint_arn is not None:
+        sns_client.delete_endpoint(EndpointArn=old_endpoint_arn)
 
     res = sns_client.create_platform_endpoint(
         PlatformApplicationArn=os.environ['SNS_APPLICATION_ARN'],
@@ -164,9 +185,12 @@ def update_push_notification_settings(device_id, token, enabled=True, device_typ
 
     iot_client.update_thing(
         thingName=device_id,
-        attributePayload={'attributes': {
-            'push_notifications_enabled': '1' if enabled else '0',
-            'push_notifications_endpoint': res['EndpointArn']
-        }}
+        attributePayload={
+            'attributes': {
+                'push_notifications_enabled': '1' if enabled else '0',
+                'push_notifications_endpoint': res['EndpointArn']
+            },
+            'merge': True
+        }
     )
 
