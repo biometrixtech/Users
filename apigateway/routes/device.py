@@ -32,21 +32,7 @@ def handle_device_register(device_id):
 
     owner_id = authenticate_user_jwt(request.headers['Authorization'])
 
-    # Make sure the device isn't already registered
-    try:
-        iot_client.describe_thing(thingName=device_id)
-    except ClientError as e:
-        if 'ResourceNotFound' in str(e):
-            iot_client.create_thing(
-                thingName=device_id,
-                thingTypeName='users-{ENVIRONMENT}-device'.format(**os.environ),
-                attributePayload={
-                    'attributes': {
-                        'device_type': device_type,
-                        'owner_id': owner_id,
-                    },
-                }
-            )
+    get_or_create_thing(device_id, device_type, owner_id)
 
     cert_id, cert_pem, cert_pub, cert_priv = create_iot_keys(device_id)
 
@@ -62,7 +48,7 @@ def handle_device_register(device_id):
     return {
         'device': {
             'id': device_id,
-            'type': request.json['device_type'],
+            'type': device_type,
         },
         'certificate': {
             'id': cert_id,
@@ -99,16 +85,37 @@ def handle_device_patch(device_id):
             raise InvalidSchemaException('owner_id must be uuid or none')
 
     if 'push_notifications' in request.json:
-        update_push_notification_settings(
-            device_id,
-            request.json['push_notifications']['token'],
-            enabled=request.json['push_notifications']['enabled'],
-        )
+        if request.json['push_notifications']['token'] is not None:
+            update_push_notification_settings(
+                device_id,
+                request.json['push_notifications']['token'],
+                enabled=request.json['push_notifications']['enabled'],
+            )
+        else:
+            # TODO
+            pass
 
     if modified:
         return {"message": "Update successful"}, 200
     else:
         return {"message": "No updates"}, 204
+
+
+def get_or_create_thing(device_id, device_type, owner_id):
+    try:
+        iot_client.describe_thing(thingName=device_id)['']
+    except ClientError as e:
+        if 'ResourceNotFound' in str(e):
+            iot_client.create_thing(
+                thingName=device_id,
+                thingTypeName='users-{ENVIRONMENT}-device'.format(**os.environ),
+                attributePayload={
+                    'attributes': {
+                        'device_type': device_type,
+                        'owner_id': owner_id,
+                    },
+                }
+            )
 
 
 def create_iot_keys(device_id):
