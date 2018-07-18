@@ -51,14 +51,6 @@ def handle_device_register(device_id):
     }, 201
 
 
-# @device_app.route('/<uuid:device_id>/test', methods=['PATCH'])
-# @authentication_required
-# @body_required({'device_type': str, 'push_notifications': [None, {'token': str, 'enabled': bool}]})
-# @xray_recorder.capture('routes.device.affiliate')
-# def handle_device_patch(device_id):
-#     return 'Ok!', 200
-
-
 @device_app.route('/<uuid:device_id>', methods=['PATCH'])
 @authentication_required
 @body_required({'owner_id': [None, UuidConverter], 'push_notifications': [None, {'token': str, 'enabled': bool}]})
