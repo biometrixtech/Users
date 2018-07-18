@@ -84,11 +84,10 @@ def body_required(required_body):
                 pass
 
     def wrap(original_function):
+        @wraps(original_function)
         def wrapped_function(*args, **kwargs):
             validate_request()
             return original_function(*args, **kwargs)
 
-        # Renaming the function name to avoid Flask view registration errors
-        wrapped_function.func_name = original_function.func_name
         return wrapped_function
     return wrap
