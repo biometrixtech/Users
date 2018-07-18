@@ -87,6 +87,7 @@ def handle_device_patch(device_id):
         if request.json['push_notifications']['token'] is not None:
             update_push_notification_settings(
                 device_id,
+                device_type,
                 request.json['push_notifications']['token'],
                 old_endpoint_arn=existing_attributes.get('push_notifications_endpoint', None),
                 enabled=request.json['push_notifications']['enabled'],
@@ -163,21 +164,27 @@ def delete_push_notification_settings(device_id):
         )
 
 
-def update_push_notification_settings(device_id, token, old_endpoint_arn=None, enabled=True, device_type=None, owner_id=None):
+def update_push_notification_settings(device_id, device_type, token, old_endpoint_arn=None, enabled=True, owner_id=None):
     # Add/update endpoint
     enabled = bool(enabled)
     attributes = {'Enabled': 'true' if enabled else 'false'}
-    custom_user_data = {}
-    if device_type is not None:
-        custom_user_data['Platform'] = device_type
+    custom_user_data = {'Platform': device_type}
+
     if owner_id is not None:
         custom_user_data['UserId'] = owner_id
+
+    if device_type == 'ios':
+        application_arn = os.environ['SNS_APPLICATION_ARN_IOS']
+    elif device_type == 'android':
+        application_arn = os.environ['SNS_APPLICATION_ARN_ANDROID']
+    else:
+        raise InvalidSchemaException('device_type must be either ios or android')
 
     if old_endpoint_arn is not None:
         sns_client.delete_endpoint(EndpointArn=old_endpoint_arn)
 
     res = sns_client.create_platform_endpoint(
-        PlatformApplicationArn=os.environ['SNS_APPLICATION_ARN'],
+        PlatformApplicationArn=application_arn,
         Token=token,
         Attributes=attributes,
         CustomUserData=json.dumps(custom_user_data)

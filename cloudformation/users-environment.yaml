@@ -25,9 +25,14 @@ Parameters:
         MinValue: 1
         Type: "Number"
 
-    SnsApplicationArn:
+    SnsApplicationArnIos:
         Default: ""
-        Description: "The ARN of the SNS application for mobile pushes"
+        Description: "The ARN of the SNS application for mobile pushes via APN"
+        Type: "String"
+
+    SnsApplicationArnAndroid:
+        Default: ""
+        Description: "The ARN of the SNS application for mobile pushes via GCM"
         Type: "String"
 
 Mappings:
@@ -375,7 +380,8 @@ Resources:
                     ENVIRONMENT: { Ref: 'Environment' }
                     AWS_ACCOUNT_ID: { Ref: "AWS::AccountId" }
                     IOT_POLICY_NAME: { Ref: "DevicePolicy" }
-                    SNS_APPLICATION_ARN: { Ref: "SnsApplicationArn" }
+                    SNS_APPLICATION_ARN_IOS: { Ref: "SnsApplicationArnIos" }
+                    SNS_APPLICATION_ARN_ANDROID: { Ref: "SnsApplicationArnAndroid" }
             Handler: "apigateway.handler"
             Runtime: "python3.6"
             Timeout: "30"
