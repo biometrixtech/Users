@@ -1,7 +1,7 @@
 from aws_xray_sdk.core import xray_recorder
 from flask import Blueprint, request
 import boto3
-import datetime
+import json
 import os
 from botocore.exceptions import ClientError
 
@@ -12,7 +12,7 @@ from utils import validate_uuid4
 
 device_app = Blueprint('device', __name__)
 iot_client = boto3.client('iot')
-pinpoint_client = boto3.client('pinpoint', region_name='us-east-1')
+sns_client = boto3.client('sns')
 
 
 @device_app.route('/<uuid:device_id>', methods=['POST'])
@@ -26,9 +26,9 @@ def handle_device_register(device_id):
         raise InvalidSchemaException('Missing required field device-type')
     device_type = request.json['device_type']
 
-    if 'push_notification' in request.json:
-        if 'token' not in request.json['push_notification'] or 'enabled' not in request.json['push_notification']:
-            raise InvalidSchemaException('push_notification config must have `token` and `enabled` keys')
+    if 'push_notifications' in request.json:
+        if 'token' not in request.json['push_notifications'] or 'enabled' not in request.json['push_notification']:
+            raise InvalidSchemaException('push_notifications config must have `token` and `enabled` keys')
 
     owner_id = authenticate_user_jwt(request.headers['Authorization'])
 
@@ -95,17 +95,15 @@ def handle_device_patch(device_id):
                     raise NoSuchEntityException('No device with that id')
                 else:
                     raise
-            # FIXME need to update Pinpoint user record
         else:
             raise InvalidSchemaException('owner_id must be uuid or none')
 
-    if 'push_notification' in request.json:
+    if 'push_notifications' in request.json:
         update_push_notification_settings(
             device_id,
             request.json['push_notifications']['token'],
-            request.json['push_notifications']['enabled'],
+            enabled=request.json['push_notifications']['enabled'],
         )
-
 
     if modified:
         return {"message": "Update successful"}, 200
@@ -139,37 +137,33 @@ def create_iot_keys(device_id):
     )
 
 
+def delete_push_notification_settings(endpoint_arn):
+    # TODO
+    pass
+
+
 def update_push_notification_settings(device_id, token, enabled=True, device_type=None, owner_id=None):
+    # Add/update endpoint
+    enabled = bool(enabled)
+    attributes = {'Enabled': enabled}
+    custom_user_data = {}
+    if device_type is not None:
+        custom_user_data['Platform'] = device_type
+    if owner_id is not None:
+        custom_user_data['UserId'] = owner_id
 
-    if token is None:
-        # Delete endpoint
-        enabled = None
-        pinpoint_client.delete_endpoint(
-            ApplicationId=os.environ['PINPOINT_APP_ID'],
-            EndpointId=device_id,
-        )
-
-    else:
-        # Add/update endpoint
-        enabled = bool(enabled)
-        endpoint_request = {
-            'Address': token,
-            'ChannelType': 'APNS_SANDBOX' if os.environ['ENVIRONMENT'] == 'dev' else 'APNS',
-            'OptOut': 'ALL' if not enabled else 'NONE'
-        }
-        if device_type is not None:
-            endpoint_request['Demographic'] = {'Platform': device_type}
-        if owner_id is not None:
-            endpoint_request['User'] = {'UserId': owner_id}
-
-        pinpoint_client.update_endpoint(
-            ApplicationId=os.environ['PINPOINT_APP_ID'],
-            EndpointId=device_id,
-            EndpointRequest=endpoint_request
-        )
+    res = sns_client.create_platform_endpoint(
+        PlatformApplicationArn=os.environ['SNS_APPLICATION_ARN'],
+        Token=token,
+        Attributes=attributes,
+        CustomUserData=json.dumps(custom_user_data)
+    )
 
     iot_client.update_thing(
         thingName=device_id,
-        attributePayload={'attributes': {'push_notifications': '1' if enabled else '0'}}
+        attributePayload={'attributes': {
+            'push_notifications_enabled': '1' if enabled else '0',
+            'push_notifications_endpoint': res['EndpointArn']
+        }}
     )
 
