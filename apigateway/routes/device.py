@@ -26,8 +26,8 @@ def handle_device_register(device_id):
         raise InvalidSchemaException('Missing required field device-type')
     device_type = request.json['device_type']
 
-    if 'push_notifications' in request.json:
-        if 'token' not in request.json['push_notifications'] or 'enabled' not in request.json['push_notification']:
+    if 'push_notifications' in request.json and isinstance(request.json['push_notifications'], dict):
+        if 'token' not in request.json['push_notifications'] or 'enabled' not in request.json['push_notifications']:
             raise InvalidSchemaException('push_notifications config must have `token` and `enabled` keys')
 
     owner_id = authenticate_user_jwt(request.headers['Authorization'])
@@ -103,7 +103,7 @@ def handle_device_patch(device_id):
 
 def get_or_create_thing(device_id, device_type, owner_id):
     try:
-        iot_client.describe_thing(thingName=device_id)['']
+        iot_client.describe_thing(thingName=device_id)
     except ClientError as e:
         if 'ResourceNotFound' in str(e):
             iot_client.create_thing(
@@ -152,7 +152,7 @@ def delete_push_notification_settings(endpoint_arn):
 def update_push_notification_settings(device_id, token, enabled=True, device_type=None, owner_id=None):
     # Add/update endpoint
     enabled = bool(enabled)
-    attributes = {'Enabled': enabled}
+    attributes = {'Enabled': 'true' if enabled else 'false'}
     custom_user_data = {}
     if device_type is not None:
         custom_user_data['Platform'] = device_type
