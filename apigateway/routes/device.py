@@ -5,8 +5,9 @@ import json
 import os
 from botocore.exceptions import ClientError
 
-from decorators import authentication_required, authenticate_user_jwt
+from decorators import authentication_required, authenticate_user_jwt, body_required
 from exceptions import InvalidSchemaException, NoSuchEntityException
+from flask_app import UuidConverter
 from utils import validate_uuid4
 
 
@@ -17,19 +18,10 @@ sns_client = boto3.client('sns')
 
 @device_app.route('/<uuid:device_id>', methods=['POST'])
 @authentication_required
+@body_required({'device_type': str, 'push_notifications': [None, {'token': str, 'enabled': bool}]})
 @xray_recorder.capture('routes.device.register')
 def handle_device_register(device_id):
-    if not request.json:
-        raise InvalidSchemaException('Body must be JSON formatted')
-
-    if 'device_type' not in request.json:
-        raise InvalidSchemaException('Missing required field device-type')
     device_type = request.json['device_type']
-
-    if 'push_notifications' in request.json and isinstance(request.json['push_notifications'], dict):
-        if 'token' not in request.json['push_notifications'] or 'enabled' not in request.json['push_notifications']:
-            raise InvalidSchemaException('push_notifications config must have `token` and `enabled` keys')
-
     owner_id = authenticate_user_jwt(request.headers['Authorization'])
 
     get_or_create_thing(device_id, device_type, owner_id)
@@ -59,30 +51,34 @@ def handle_device_register(device_id):
     }, 201
 
 
+# @device_app.route('/<uuid:device_id>/test', methods=['PATCH'])
+# @authentication_required
+# @body_required({'device_type': str, 'push_notifications': [None, {'token': str, 'enabled': bool}]})
+# @xray_recorder.capture('routes.device.affiliate')
+# def handle_device_patch(device_id):
+#     return 'Ok!', 200
+
+
 @device_app.route('/<uuid:device_id>', methods=['PATCH'])
 @authentication_required
+@body_required({'owner_id': [None, UuidConverter], 'push_notifications': [None, {'token': str, 'enabled': bool}]})
 @xray_recorder.capture('routes.device.affiliate')
 def handle_device_patch(device_id):
-    if not request.json:
-        raise InvalidSchemaException('Body must be JSON formatted')
 
     modified = False
     if 'owner_id' in request.json:
         owner_id = request.json['owner_id']
-        if owner_id is None or validate_uuid4(owner_id):
-            try:
-                iot_client.update_thing(
-                    thingName=device_id,
-                    attributePayload={'attributes': {'owner_id': '' if owner_id is None else owner_id}}
-                )
-                modified = True
-            except ClientError as e:
-                if 'ResourceNotFound' in str(e):
-                    raise NoSuchEntityException('No device with that id')
-                else:
-                    raise
-        else:
-            raise InvalidSchemaException('owner_id must be uuid or none')
+        try:
+            iot_client.update_thing(
+                thingName=device_id,
+                attributePayload={'attributes': {'owner_id': '' if owner_id is None else owner_id}}
+            )
+            modified = True
+        except ClientError as e:
+            if 'ResourceNotFound' in str(e):
+                raise NoSuchEntityException('No device with that id')
+            else:
+                raise
 
     if 'push_notifications' in request.json:
         if request.json['push_notifications']['token'] is not None:
@@ -144,9 +140,17 @@ def create_iot_keys(device_id):
     )
 
 
-def delete_push_notification_settings(endpoint_arn):
-    # TODO
-    pass
+def delete_push_notification_settings(device_id):
+    device_attributes = iot_client.describe_thing(thingName=device_id)['attributes']
+    if 'push_notifications_endpoint' in device_attributes:
+        sns_client.delete_platform_endpoint(endpointArn=device_attributes['push_notifications_endpoint'])
+        iot_client.update_thing(
+            thingName=device_id,
+            attributePayload={'attributes': {
+                'push_notifications_enabled': None,
+                'push_notifications_endpoint': None
+            }}
+        )
 
 
 def update_push_notification_settings(device_id, token, enabled=True, device_type=None, owner_id=None):
