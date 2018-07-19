@@ -28,9 +28,6 @@ app.register_blueprint(user_routes, url_prefix='/users/user')
 from routes.device import device_app as device_routes
 app.register_blueprint(device_routes, url_prefix='/v1/device')
 app.register_blueprint(device_routes, url_prefix='/users/device')
-from routes.config import config_app as config_routes
-app.register_blueprint(config_routes, url_prefix='/v1/config')
-app.register_blueprint(config_routes, url_prefix='/users/config')
 
 
 @app.errorhandler(500)
