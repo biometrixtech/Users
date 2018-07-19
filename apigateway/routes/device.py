@@ -31,10 +31,10 @@ def handle_device_register(device_id):
     if 'push_notifications' in request.json:
         update_push_notification_settings(
             device_id,
+            device_type,
             request.json['push_notifications']['token'],
             old_endpoint_arn=thing_attributes.get('push_notifications_endpoint', None),
             enabled=request.json['push_notifications']['enabled'],
-            device_type=device_type,
             owner_id=owner_id,
         )
 
