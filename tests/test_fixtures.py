@@ -1,4 +1,4 @@
-example_user_data = {"email": "susie123@smith.com",
+example_user_data = {"email": "steve1234@gmail.com",
                      "password": "ABC123456",
                      "role": "athlete",
                      "system_type": "1-sensor",
@@ -43,3 +43,27 @@ example_user_data = {"email": "susie123@smith.com",
                                         ]
                                     }
                      }
+
+
+example_user_data_2 = {
+    "email": "tests000008@biometrixtech.com",
+    "password": "Fathom123!",
+    "biometric_data": {
+        "sex": "male",
+        "height": {"m": 1.5},
+        "mass": {"kg": 98}
+    },
+    "personal_data": {
+      "birth_date": "01/01/1990",
+      "first_name": "Vir",
+      "last_name": "Desai",
+      "phone_number": "1234567890",
+      "account_type": "free",
+      "account_status": "active",
+      "zip_code": "27701"
+    },
+    "role": "athlete",
+    "system_type": "1-sensor",
+    "injury_status": "healthy_chronically_injured" #,
+    # "onboarding_status": "account_setup"
+}

@@ -31,6 +31,12 @@ MAX_SESSIONS = 3
 users_table = boto3.resource('dynamodb').Table('users-{ENVIRONMENT}-users'.format(**os.environ))
 
 
+class DictionaryAttr(dict):
+    def __init__(self, *args, **kwargs):
+        super(DictionaryAttr, self).__init__(*args, **kwargs)
+        self.__dict__ = self
+
+
 def extract_email_and_password_from_request(data):
     """
     Check params, headers and json data for email and password
@@ -273,6 +279,41 @@ def user_sign_in():
     raise NoSuchEntityException('User not found')
 
 
+expected_user_keys = {
+        "email": str,
+        "password": str,
+        "biometric_data": {
+            "gender": str,
+            "height": {"m": float},
+            "mass": {"kg": float}
+        },
+        "personal_data": {
+            "birth_date": str,
+            "first_name": str,
+            "last_name": str,
+            "phone_number": str,
+            "account_type": str,
+            "account_status": str,
+            "zip_code": str
+        },
+        "role": str,
+        "system_type": str,
+        "injury_status": str,
+        "onboarding_status": list
+        }
+
+def add_missing_keys(dictionary, expected_format):
+    for key, value in expected_format.items():
+        try:
+            if isinstance(dictionary[key], dict) or isinstance(value, dict):
+                dictionary[key] = add_missing_keys(dictionary[key], value)
+            elif not isinstance(value(dictionary[key]), value):
+                raise InvalidSchemaException("{}:{} is of the wrong type.".format(key, dictionary[key]))
+        except KeyError:
+            dictionary[key] = None
+    return dictionary
+
+
 def create_user_object(user_data):
     """
 
@@ -281,7 +322,18 @@ def create_user_object(user_data):
     """
     height_feet, height_inches = convert_to_ft_inches(user_data['biometric_data']['height'])
     weight = convert_to_pounds(user_data['biometric_data']['mass'])
-    password_hash = bcrypt.generate_password_hash(user_data['password'].decode('utf-8'))
+    password_hash = bcrypt.generate_password_hash(user_data['password']).decode('utf-8')
+    # user_data = add_missing_keys(user_data, expected_user_keys)
+    if not 'onboarding_status' in user_data.keys():
+        user_data['onboarding_status'] = []
+
+    if 'gender' in user_data['biometric_data'].keys():
+        gender = user_data['biometric_data']['gender']
+    elif 'sex' in user_data['biometric_data'].keys():
+        gender = user_data['biometric_data']['sex']
+    else:
+        gender = None
+
     user = Users(email=user_data['email'],
                 first_name=user_data['personal_data']['first_name'],
                 last_name=user_data['personal_data']['last_name'],
@@ -300,7 +352,7 @@ def create_user_object(user_data):
                 height_feet=height_feet,
                 height_inches=height_inches,
                 weight=weight,
-                gender=user_data['biometric_data']['gender'],
+                gender=gender,
                 status=None,
                 # onboarded
                 birthday=user_data['personal_data']['birth_date'],
@@ -341,7 +393,7 @@ def save_user_data(user, user_data):
         user.account_status = user_data['personal_data']['account_status'],
 
     if 'password' in user_data.keys():  # TODO: Provide new JWT, verify new password
-        user.password_digest = bcrypt.generate_password_hash(user_data['password'].decode('utf-8'))
+        user.password_digest = bcrypt.generate_password_hash(user_data['password']).decode('utf-8')
 
     height_feet, height_inches = convert_to_ft_inches(user_data['biometric_data']['height'])
     weight = convert_to_pounds(user_data['biometric_data']['mass'])
@@ -469,9 +521,16 @@ def create_user():
 
     # If all objects persist save data to database
     session.add(user)
-
     session.commit()
-    return {"authorization": create_authorization_resp(user_id=user.id, sign_in_method='json', role=user.role)}
+    # Create User Session
+    user_ddb = {'sessions': [], 'updated_date': '1970-01-01T00:00:00Z'}
+    res = {'authorization': create_authorization_resp(user_id=user.id, sign_in_method='json', role=user.role)}
+    res['authorization']['session_token'] = create_session_for_user(
+        str(user.id),
+        user_ddb['sessions'],
+        user_ddb['updated_date'],
+    )
+    return res
 
 
 @user_app.route('/<uuid:user_id>/authorize', methods=['POST'])

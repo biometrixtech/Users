@@ -1,6 +1,6 @@
 import requests, os
 import json
-from tests.test_fixtures import example_user_data
+from tests.test_fixtures import example_user_data, example_user_data_2
 
 API_URL = os.getenv("API_URL", "https://apis.dev.fathomai.com")
 
@@ -26,6 +26,14 @@ def test_user_sign_in():
         "email": "glitch0@gmail.com",
         "password": "muffins1"
     }
+    # data = {
+    #         "email": "amina@biometrixtech.com",
+    #         "password": "Fathom123!"
+    # }
+    data = {
+             "email": "tests000008@biometrixtech.com",
+             "password": "Fathom123!"
+           }
     rv = requests.post("{}/users/user/sign_in".format(API_URL),
                        headers={'content-type': 'application/json'},
                        data=json.dumps(data))
@@ -38,7 +46,7 @@ def test_create_user():
     headers = {'content-type': 'application/json'}
     res = requests.post("{}/users/user/".format(API_URL),
                         headers=headers,
-                        data=json.dumps(example_user_data)
+                        data=json.dumps(example_user_data_2)
                         )
     print(res.text)
     assert 200 == res.status_code

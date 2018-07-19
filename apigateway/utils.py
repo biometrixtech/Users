@@ -1,15 +1,22 @@
 import datetime
 import uuid
 from exceptions import ValueNotFoundInDatabase
+import math
 
-
+# TODO: Verify math is correct.
 def convert_to_ft_inches(distance_dictionary):
     """
     Determines which metric was provided and converts it to the height in ft and inches
     :param distance_dictionary:
     :return:
     """
-    return 0, 0
+    if 'ft_in' in distance_dictionary.keys():
+        return distance_dictionary['ft_in'][0], distance_dictionary['ft_in'][1]
+    elif 'm' in distance_dictionary.keys():
+        meters = distance_dictionary['m']
+        feet = math.floor(meters/0.3048)
+        inches = round(((meters - feet*0.3048) / 0.3048) * 12, 3)
+        return feet, inches
 
 
 def convert_to_pounds(weight_dictionary):
@@ -18,7 +25,10 @@ def convert_to_pounds(weight_dictionary):
     :param weight_dictionary:
     :return:
     """
-    pass
+    if 'kg' in weight_dictionary.keys():
+        return round(weight_dictionary['kg'] / 0.453592, 6)
+    elif 'lb' in weight_dictionary.keys():
+        return weight_dictionary['lb']
 
 
 def feet_to_meters(feet, inches):

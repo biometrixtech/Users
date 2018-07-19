@@ -2,7 +2,7 @@ import pytest
 from apigateway import app
 import json
 from .sample_data import sample_logins
-from .test_fixtures import example_user_data
+from .test_fixtures import example_user_data, example_user_data_2
 import os
 
 LOGIN_URL = "/v1/user/sign_in"
@@ -23,23 +23,27 @@ def client():
 def test_create_user(client):
     res = client.post('/v1/user/',
                       headers={'content-type': 'application/json'},
-                      data=json.dumps(example_user_data))
+                      data=json.dumps(example_user_data_2))
     print(res.data)
-    assert res.status_code == 200
+    assert 200 == res.status_code
     res_data = json.loads(res.data.decode())
     assert type(res_data) == dict
 
 
 def test_sign_in(client):
     dev_login, expected_ouptut = sample_logins[0]['input'], sample_logins[0]['expected_output']
-
+    dev_login = {
+                 "email": "steve1234@gmail.com",
+                 "password": "ABC123456"
+                }
     res = client.post(LOGIN_URL,
                       headers={'content-type': 'application/json'},
                       data=json.dumps(dev_login)
                       )
     if res.status_code != 200:
         print(res.status_code)
-    assert res.status_code == 200
+        print(res.data)
+    assert 200 == res.status_code
     res_data = json.loads(res.data.decode())
     assert type(res_data) == dict
     print(res_data)
