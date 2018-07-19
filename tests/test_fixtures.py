@@ -67,3 +67,5 @@ example_user_data_2 = {
     "injury_status": "healthy_chronically_injured" #,
     # "onboarding_status": "account_setup"
 }
+
+example_user_data_3 = {}
