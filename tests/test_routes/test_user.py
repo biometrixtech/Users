@@ -98,3 +98,8 @@ def test_save_sports_history(session):
     assert type(sports_history_list) == list
     print(type(sports_history_list[0]))
     # assert type(sports_history_list[0]) == SportsHistory
+
+def test_create_user_sensor_mobile_ids(session):
+    user = session.query(Users).first()
+    user_sensor_mobile_obj = create_user_sensor_mobile_ids(sensor_uuid, mobile_uuid, user.id)
+    assert type(user_sensor_mobile_obj) == UserSensorMobile
