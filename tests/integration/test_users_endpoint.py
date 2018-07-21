@@ -3,6 +3,7 @@ import json
 from tests.test_fixtures import example_user_data, example_user_data_2
 
 API_URL = os.getenv("API_URL", "https://apis.dev.fathomai.com")
+# API_URL = os.getenv("API_URL", "https://apis.production.fathomai.com")
 
 # Headers:
 headers = {
@@ -30,10 +31,14 @@ def test_user_sign_in():
     #         "email": "amina@biometrixtech.com",
     #         "password": "Fathom123!"
     # }
-    data = {
-             "email": "tests000008@biometrixtech.com",
-             "password": "Fathom123!"
-           }
+    # data = {
+    #          "email": "tests000008@biometrixtech.com",
+    #          "password": "Fathom123!"
+    #        }
+    # data = {
+    #          "email": "chrisp+athlete@biometrixtech.com",
+    #          "password": ""
+    # }
     rv = requests.post("{}/users/user/sign_in".format(API_URL),
                        headers={'content-type': 'application/json'},
                        data=json.dumps(data))
