@@ -1,7 +1,7 @@
 import pytest
 from sqlalchemy.orm import Session
 
-from routes.user import jwt_make_payload, create_user_object, add_missing_keys
+from routes.user import jwt_make_payload, create_user_object, add_missing_keys, create_sensor_mobile_pair
 from db_connection import engine, Base
 from models import Users, Teams, TeamsUsers #, SportsHistory  # , TrainingGroups, TrainingGroupsUsers
 from routes.user import create_user_dictionary, save_sports_history, save_training_schedule
@@ -11,7 +11,7 @@ from tests.test_fixtures import example_user_data, example_user_data_2
 @pytest.fixture
 def session():
     session = Session(bind=engine)
-    session.begin_nested()   # TODO Figure out why data is not being saved when this is turned on even when session.close is used
+    # session.begin_nested()   # TODO Figure out why data is not being saved when this is turned on even when session.close is used
     return session
 
 
@@ -19,10 +19,11 @@ def setup_module(session):
     Base.metadata.create_all(engine.connect())
 
 
-def teardown_module(session):
+def teardown_module():
     # session.rollback()
     # session.close()  # Closes the transaction and commits all the changes.
     pass
+
 
 def test_jwt_make_payload():
     user_id = "00e1a1c9-f81e-476c-a4dc-29fabe715043"
@@ -99,7 +100,15 @@ def test_save_sports_history(session):
     print(type(sports_history_list[0]))
     # assert type(sports_history_list[0]) == SportsHistory
 
-def test_create_user_sensor_mobile_ids(session):
+
+def test_create_user_sensor_mobile_pair(session):
     user = session.query(Users).first()
-    user_sensor_mobile_obj = create_user_sensor_mobile_ids(sensor_uuid, mobile_uuid, user.id)
-    assert type(user_sensor_mobile_obj) == UserSensorMobile
+    sensor_uid = "ADFN@#L)FA)FDFNKSDF12"
+    mobile_uid = "3NVAODR@)JASDFK@#KASFNSF3923nfa3"
+    res = create_sensor_mobile_pair(user_id=user.id, sensor_uid=sensor_uid, mobile_uid=mobile_uid)
+    print(res)
+    assert type(res) == dict
+    assert res['message'] == 'Success!'
+    assert res['user_id'] == user.id
+    assert res['sensor_uid'] == sensor_uid
+    assert res['mobile_uid'] == mobile_uid

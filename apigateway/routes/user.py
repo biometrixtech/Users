@@ -7,6 +7,7 @@ import binascii
 import json
 import os
 from sqlalchemy.orm import Session
+from sqlalchemy.orm.exc import NoResultFound
 import jwt
 
 from decorators import authentication_required
@@ -580,7 +581,7 @@ def update_user(user_id):
 
     user_data = validate_user_inputs(request.json)
     try:
-        user = session.query(Users).filter_by(Users.id == user_id).one()
+        user = session.query(Users).filter(Users.id == user_id).one()
     except Exception as e:
         raise ValueNotFoundInDatabase("user_id: {} not found.".format(user_id))
 
@@ -647,3 +648,51 @@ def query_postgres(queries):
         raise Exception(list(filter(None, res['Errors'])))
     else:
         return res['Results']
+
+
+@user_app.route('/<uuid:user_id>/sensor_mobile_pair', methods=['POST', 'GET', 'PUT', 'DELETE'])
+@authentication_required
+def sensor_mobile_pair_routing(user_id):
+    """
+    Handle each method for CRUD operations
+    :param user_id:
+    :return:
+    """
+    route_handlers = {'POST': create_sensor_mobile_pair,
+                      'GET': None,
+                      'PUT': None,
+                      'DELETE': None
+                      }
+    # TODO: Verify the user in the JWT Token matches the user_id provided
+    # data = request.json
+    # sensor_uid = data['sensor_uid']
+    # mobile_uid = data['mobile_uid']
+    return route_handlers[request.method](user_id=user_id, **request.json)
+
+
+def create_sensor_mobile_pair(user_id=None, sensor_uid=None, mobile_uid=None):
+    """
+    Adds the sensor and mobile info to a given user
+    :param user_id:
+    :return:
+    """
+    if user_id is None or sensor_uid is None or mobile_uid is None:
+        raise InvalidSchemaException('Missing user_id, or sensor_uid, or mobile_uid')
+    try:
+        user = session.query(Users).filter(Users.id == user_id).one()
+    except NoResultFound as e:
+        raise InvalidSchemaException('User {} was not found.'.format(user_id))
+    # if not user:
+    #     raise ApplicationException(400, 'UserNotFoundError', 'User {} not found.'.format(user_id))
+
+
+    user.sensor_uid = str(sensor_uid)
+    user.mobile_uid = str(mobile_uid)
+
+    session.commit()
+
+    return {'message': 'Success!',
+            'user_id': user.id,
+            'sensor_uid': user.sensor_uid,
+            'mobile_uid': user.mobile_uid
+            }

@@ -90,3 +90,16 @@ def test_update_user(client):
                       )
     print(res.data)
     assert res.status_code == 200
+
+
+def test_create_sensor_mobile_pair(client):
+    headers['content-type'] = 'application/json'
+    user_id = '3a07c79a-2e9f-487f-aef7-555954537e29'  # Needs to match JWT token above
+    sensor_mobile_info = {'sensor_uid': "ERAFASDFVASHKVIAS",
+                          'mobile_uid': "F3423nVA324afVJKs"
+                          }
+    res = client.post("/users/user/{}/sensor_mobile_pair".format(user_id), headers=headers,
+                        data=json.dumps(sensor_mobile_info))
+    print(res.data)
+    assert 200 == res.status_code
+    # TODO: Add verification that the entry is in the database
