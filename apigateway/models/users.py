@@ -1,87 +1,80 @@
 import enum
-from sqlalchemy import Column, String, Float, Integer, DateTime, Boolean, ForeignKey, Enum
+from sqlalchemy import Column, String, Float, Integer, DateTime, Boolean, ForeignKey, Enum, text, ARRAY
 from db_connection import Base
-from sqlalchemy import types
+from models._types import EnumTypeBase
 
 
-class RoleEnum(enum.Enum):
-    athlete = 1
-    manager = 2
-    admin = 3
-    super_admin = 4
-    biometrix_admin = 5
-    subject = 6
-    consumer = 7
-
-class RoleEnumType(types.TypeDecorator):
-    impl = types.Integer
-
-    def process_bind_param(self, value, dialect):
-        return RoleEnum[value].value    # Convert name to an integer
-
-    def process_result_value(self, value, dialect):
-        return RoleEnum(value).name    # Convert an integer to a name
+class InjuryStatusEnumtype(EnumTypeBase):
+    name_values = {
+                'healthy': 0,
+                'healthy_chronically_injured': 1,
+                'injured': 2
+            }
 
 
-class GenderEnum(enum.Enum):
-    male = 1
-    female = 2
-    mixed = 3
-    other = 4
+class AccountEnumType(EnumTypeBase):
+    name_values = { 'paid': 0,
+                    'free': 1
+                  }
 
 
-class GenderEnumType(types.TypeDecorator):
-    impl = types.Integer
-
-    def process_bind_param(self, value, dialect):
-        if value:
-            return GenderEnum[value].value    # Convert name to an integer
-
-    def process_result_value(self, value, dialect):
-        if value:
-            return GenderEnum(value).name    # Convert an integer to a name
+class AccountStatusEnumType(EnumTypeBase):
+    name_values = {
+                  'active': 0,
+                  'pending': 1,
+                  'past_due': 2,
+                  'expired': 3
+                  }
 
 
-class AthleteStatus(enum.Enum):
-    competing = 1
-    training = 2
-    returning = 3
-    injured = 4
+class SystemTypeEnumType(EnumTypeBase):
+    name_values = {
+                   '1-sensor': 1,
+                   '3-sensor': 3
+                  }
 
 
-class AthleteStatusEnumType(types.TypeDecorator):
-    impl = types.Integer
-
-    def process_bind_param(self, value, dialect):
-        if value:
-            return AthleteStatus[value].value    # Convert name to an integer
-
-    def process_result_value(self, value, dialect):
-        if value:
-            return AthleteStatus(value).name    # Convert an integer to a name
-
-
-class PushType(enum.Enum):
-    ios = 1
-    android = 2
+class RoleEnumType(EnumTypeBase):
+    name_values = {
+                    'athlete': 1,
+                    'manager': 2,
+                    'admin': 3,
+                    'super_admin': 4,
+                    'biometrix_admin': 5,
+                    'subject': 6,
+                    'consumer': 7
+                  }
 
 
-class PushTypeEnumType(types.TypeDecorator):
-    impl = types.Integer
+class GenderEnumType(EnumTypeBase):
+    name_values = {
+                    'male': 1,
+                    'female': 2,
+                    'mixed': 3,
+                    'other': 4
+                  }
 
-    def process_bind_param(self, value, dialect):
-        if value:
-            return PushType[value].value    # Convert name to an integer
 
-    def process_result_value(self, value, dialect):
-        if value:
-            return PushType(value).name    # Convert an integer to a name
+class AthleteStatusEnumType(EnumTypeBase):
+    name_values = {
+                    'competing':1,
+                    'training': 2,
+                    'returning': 3,
+                    'injured': 4
+                  }
+
+
+class PushTypeEnumType(EnumTypeBase):
+    name_values = {
+                   'ios': 1,
+                   'android': 2
+                  }
 
 
 class Users(Base):
     __tablename__ = "users"
 
-    id = Column(String, primary_key=True) # uuid NOT NULL DEFAULT uuid_generate_v4(),
+    id = Column(String, server_default=text("uuid_generate_v4()"), primary_key=True) # uuid NOT NULL DEFAULT uuid_generate_v4(),
     email = Column(String) # character varying COLLATE pg_catalog."default",
     facebook_id = Column(String)  # character varying COLLATE pg_catalog."default",
     auth_token = Column(String) # character varying COLLATE pg_catalog."default",
@@ -112,10 +105,21 @@ class Users(Base):
     organization_id = Column(String) # uuid,
     primary_training_group_id = Column(String) # uuid,
     year_in_school = Column(Integer) #  integer
-    # zip_code = Column(Integer)
-
+    zip_code = Column(String)
+    account_type = Column(AccountEnumType)
+    account_status = Column(AccountStatusEnumType)
+    system_type = Column(SystemTypeEnumType)
+    injury_status = Column(InjuryStatusEnumtype)
+    onboarding_status = Column(ARRAY(String))
+    
 """
-﻿   id uuid NOT NULL DEFAULT uuid_generate_v4(),
+﻿-- Table: public.users
+
+-- DROP TABLE public.users;
+
+CREATE TABLE public.users
+(
+    id uuid NOT NULL DEFAULT uuid_generate_v4(),
     email character varying COLLATE pg_catalog."default",
     facebook_id character varying COLLATE pg_catalog."default",
     auth_token character varying COLLATE pg_catalog."default",
@@ -146,5 +150,36 @@ class Users(Base):
     organization_id uuid,
     primary_training_group_id uuid,
     year_in_school integer,
+    zip_code character varying COLLATE pg_catalog."default",
+    CONSTRAINT users_pkey PRIMARY KEY (id)
+)
+WITH (
+    OIDS = FALSE
+)
+TABLESPACE pg_default;
 
+ALTER TABLE public.users
+    OWNER to biometrix_admin;
+
+GRANT ALL ON TABLE public.users TO biometrix_admin;
+
+GRANT SELECT ON TABLE public.users TO users_dev;
+
+-- Index: index_users_on_deleted_at
+
+-- DROP INDEX public.index_users_on_deleted_at;
+
+CREATE INDEX index_users_on_deleted_at
+    ON public.users USING btree
+    (deleted_at)
+    TABLESPACE pg_default;
+
+-- Index: index_users_on_email
+
+-- DROP INDEX public.index_users_on_email;
+
+CREATE INDEX index_users_on_email
+    ON public.users USING btree
+    (email COLLATE pg_catalog."default")
+    TABLESPACE pg_default;
 """

@@ -1,8 +1,10 @@
 # coding: utf-8
+import os
 from sqlalchemy import ARRAY, Boolean, Column, Date, DateTime, Float, ForeignKey, Index, Integer, JSON, String, Table, Text, text
 from sqlalchemy.dialects.postgresql.base import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.engine import create_engine
 
 
 Base = declarative_base()
@@ -31,11 +33,11 @@ t_accessories = Table(
 class ActiveAdminComment(Base):
     __tablename__ = 'active_admin_comments'
     __table_args__ = (
-        Index('index_active_admin_comments_on_author_type_and_author_id', 'author_type', 'author_id'),
-        Index('index_active_admin_comments_on_resource_type_and_resource_id', 'resource_type', 'resource_id')
+        Index('index_active_admin_comments_on_resource_type_and_resource_id', 'resource_type', 'resource_id'),
+        Index('index_active_admin_comments_on_author_type_and_author_id', 'author_type', 'author_id')
     )
 
-    id = Column(Integer, primary_key=True, server_default=text("nextval('active_admin_comments_id_seq'::regclass)"))
+    id = Column(Integer, primary_key=True) # , server_default=text("nextval('active_admin_comments_id_seq'::regclass)"))
     namespace = Column(String, index=True)
     body = Column(Text)
     resource_id = Column(String, nullable=False)
@@ -157,43 +159,10 @@ t_movement = Table(
 )
 
 
-class OauthAccessGrant(Base):
-    __tablename__ = 'oauth_access_grants'
-
-    id = Column(Integer, primary_key=True, server_default=text("nextval('oauth_access_grants_id_seq'::regclass)"))
-    application_id = Column(ForeignKey('oauth_applications.id'), nullable=False)
-    token = Column(String, nullable=False, unique=True)
-    expires_in = Column(Integer, nullable=False)
-    redirect_uri = Column(Text, nullable=False)
-    created_at = Column(DateTime, nullable=False)
-    revoked_at = Column(DateTime)
-    scopes = Column(String)
-    resource_owner_id = Column(UUID)
-
-    application = relationship('OauthApplication')
-
-
-class OauthAccessToken(Base):
-    __tablename__ = 'oauth_access_tokens'
-
-    id = Column(Integer, primary_key=True, server_default=text("nextval('oauth_access_tokens_id_seq'::regclass)"))
-    application_id = Column(ForeignKey('oauth_applications.id'))
-    token = Column(String, nullable=False, unique=True)
-    refresh_token = Column(String, unique=True)
-    expires_in = Column(Integer)
-    revoked_at = Column(DateTime)
-    created_at = Column(DateTime, nullable=False)
-    scopes = Column(String)
-    previous_refresh_token = Column(String, nullable=False, server_default=text("''::character varying"))
-    resource_owner_id = Column(UUID)
-
-    application = relationship('OauthApplication')
-
-
 class OauthApplication(Base):
     __tablename__ = 'oauth_applications'
 
-    id = Column(Integer, primary_key=True, server_default=text("nextval('oauth_applications_id_seq'::regclass)"))
+    id = Column(Integer, primary_key=True) # , server_default=text("nextval('oauth_applications_id_seq'::regclass)"))
     name = Column(String, nullable=False)
     uid = Column(String, nullable=False, unique=True)
     secret = Column(String, nullable=False)
@@ -238,7 +207,7 @@ class ReadMark(Base):
         Index('read_marks_reader_readable_index', 'reader_id', 'reader_type', 'readable_type', 'readable_id', unique=True),
     )
 
-    id = Column(Integer, primary_key=True, server_default=text("nextval('read_marks_id_seq'::regclass)"))
+    id = Column(Integer, primary_key=True) # , server_default=text("nextval('read_marks_id_seq'::regclass)"))
     readable_id = Column(UUID)
     readable_type = Column(String)
     reader_id = Column(UUID)
@@ -249,7 +218,7 @@ class ReadMark(Base):
 class RpushApp(Base):
     __tablename__ = 'rpush_apps'
 
-    id = Column(Integer, primary_key=True, server_default=text("nextval('rpush_apps_id_seq'::regclass)"))
+    id = Column(Integer, primary_key=True) # , server_default=text("nextval('rpush_apps_id_seq'::regclass)"))
     name = Column(String, nullable=False)
     environment = Column(String)
     certificate = Column(Text)
@@ -268,7 +237,7 @@ class RpushApp(Base):
 class RpushFeedback(Base):
     __tablename__ = 'rpush_feedback'
 
-    id = Column(Integer, primary_key=True, server_default=text("nextval('rpush_feedback_id_seq'::regclass)"))
+    id = Column(Integer, primary_key=True) # , server_default=text("nextval('rpush_feedback_id_seq'::regclass)"))
     device_token = Column(String(64), nullable=False, index=True)
     failed_at = Column(DateTime, nullable=False)
     created_at = Column(DateTime, nullable=False)
@@ -282,7 +251,7 @@ class RpushNotification(Base):
         Index('index_rpush_notifications_multi', 'delivered', 'failed'),
     )
 
-    id = Column(Integer, primary_key=True, server_default=text("nextval('rpush_notifications_id_seq'::regclass)"))
+    id = Column(Integer, primary_key=True) # , server_default=text("nextval('rpush_notifications_id_seq'::regclass)"))
     badge = Column(Integer)
     device_token = Column(String(64))
     sound = Column(String, server_default=text("'default'::character varying"))
@@ -391,7 +360,7 @@ class SessionAnatomicalCalibrationEvent(Base):
     updated_at = Column(DateTime, nullable=False)
     user_id = Column(UUID)
     session_ac_success = Column(Boolean)
-    rf_n_transform = Column(ARRAY(DOUBLE_PRECISION(precision=53)), server_default=text("'{}'::double precision[]"))
+    rf_n_transform = Column(ARRAY(Float(precision=53)), server_default=text("'{}'::double precision[]"))
     failure_type = Column(Integer)
     placement_lf = Column(String)
     placement_rf = Column(String)
@@ -411,20 +380,20 @@ class SessionEvent(Base):
     session_anatomical_calibration_event_id = Column(UUID)
     session_success = Column(Boolean)
     session_rpe = Column(Integer)
-    hip_n_transform = Column(ARRAY(DOUBLE_PRECISION(precision=53)), server_default=text("'{}'::double precision[]"))
+    hip_n_transform = Column(ARRAY(Float(precision=53)), server_default=text("'{}'::double precision[]"))
     session_type = Column(Integer)
     training_group_ids = Column(ARRAY(UUID()), server_default=text("'{}'::uuid[]"))
     upload_completed = Column(Boolean, server_default=text("false"))
-    part_numbers = Column(ARRAY(INTEGER()), server_default=text("'{}'::integer[]"))
+    part_numbers = Column(ARRAY(Integer()), server_default=text("'{}'::integer[]"))
     ended_at = Column(DateTime)
     sensor1_id = Column(String)
-    sensor1_gyro_offset = Column(ARRAY(DOUBLE_PRECISION(precision=53)), server_default=text("'{}'::double precision[]"))
+    sensor1_gyro_offset = Column(ARRAY(Float(precision=53)), server_default=text("'{}'::double precision[]"))
     sensor1_clock_set_happened_at = Column(DateTime)
     sensor2_id = Column(String)
-    sensor2_gyro_offset = Column(ARRAY(DOUBLE_PRECISION(precision=53)), server_default=text("'{}'::double precision[]"))
+    sensor2_gyro_offset = Column(ARRAY(Float(precision=53)), server_default=text("'{}'::double precision[]"))
     sensor2_clock_set_happened_at = Column(DateTime)
     sensor3_id = Column(String)
-    sensor3_gyro_offset = Column(ARRAY(DOUBLE_PRECISION(precision=53)), server_default=text("'{}'::double precision[]"))
+    sensor3_gyro_offset = Column(ARRAY(Float(precision=53)), server_default=text("'{}'::double precision[]"))
     sensor3_clock_set_happened_at = Column(DateTime)
 
 
@@ -444,7 +413,7 @@ class Sport(Base):
 
     id = Column(UUID, primary_key=True, server_default=text("uuid_generate_v4()"))
     name = Column(String)
-    positions = Column(ARRAY(VARCHAR()), server_default=text("'{}'::character varying[]"))
+    positions = Column(ARRAY(String()), server_default=text("'{}'::character varying[]"))
     active = Column(Boolean)
     created_at = Column(DateTime, nullable=False)
     updated_at = Column(DateTime, nullable=False)
@@ -540,13 +509,13 @@ class TrainingSessionLog(Base):
 class UserQuestion(Base):
     __tablename__ = 'user_questions'
 
-    id = Column(Integer, primary_key=True, server_default=text("nextval('user_questions_id_seq'::regclass)"))
+    id = Column(Integer, primary_key=True) #, server_default=text("nextval('user_questions_id_seq'::regclass)"))
     question = Column(String)
     question_id = Column(UUID)
     created_at = Column(DateTime, nullable=False)
     updated_at = Column(DateTime, nullable=False)
-    keywords = Column(ARRAY(VARCHAR()), server_default=text("'{}'::character varying[]"))
-    interested_parties = Column(ARRAY(VARCHAR()), server_default=text("'{}'::character varying[]"))
+    keywords = Column(ARRAY(String()), server_default=text("'{}'::character varying[]"))
+    interested_parties = Column(ARRAY(String()), server_default=text("'{}'::character varying[]"))
 
 
 class User(Base):
@@ -583,3 +552,42 @@ class User(Base):
     organization_id = Column(UUID)
     primary_training_group_id = Column(UUID)
     year_in_school = Column(Integer)
+    zip_code = Column(String)
+
+
+class OauthAccessGrant(Base):
+    __tablename__ = 'oauth_access_grants'
+
+    id = Column(Integer, primary_key=True) #, server_default=text("nextval('oauth_access_grants_id_seq'::regclass)"))
+    application_id = Column(ForeignKey('oauth_applications.id'), nullable=False)
+    token = Column(String, nullable=False, unique=True)
+    expires_in = Column(Integer, nullable=False)
+    redirect_uri = Column(Text, nullable=False)
+    created_at = Column(DateTime, nullable=False)
+    revoked_at = Column(DateTime)
+    scopes = Column(String)
+    resource_owner_id = Column(UUID)
+
+    application = relationship('OauthApplication')
+
+
+class OauthAccessToken(Base):
+    __tablename__ = 'oauth_access_tokens'
+
+    id = Column(Integer, primary_key=True) #, server_default=text("nextval('oauth_access_tokens_id_seq'::regclass)"))
+    application_id = Column(ForeignKey('oauth_applications.id'))
+    token = Column(String, nullable=False, unique=True)
+    refresh_token = Column(String, unique=True)
+    expires_in = Column(Integer)
+    revoked_at = Column(DateTime)
+    created_at = Column(DateTime, nullable=False)
+    scopes = Column(String)
+    previous_refresh_token = Column(String, nullable=False, server_default=text("''::character varying"))
+    resource_owner_id = Column(UUID)
+
+    application = relationship('OauthApplication')
+
+
+if __name__ == '__main__':
+    engine = create_engine(os.environ['POSTGRES_DB_URI_TEST'], connect_args={'connect_timeout': 10})
+    metadata.create_all(engine.connect())

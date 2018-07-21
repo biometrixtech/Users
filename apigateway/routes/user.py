@@ -1,21 +1,22 @@
 from aws_xray_sdk.core import xray_recorder
 from flask import Blueprint, request
+from boto3.dynamodb.conditions import Attr, Key
 from collections import namedtuple
 import boto3
-import datetime
+import binascii
 import json
 import os
-import uuid
 from sqlalchemy.orm import Session
 import jwt
 
 from decorators import authentication_required
-from exceptions import InvalidSchemaException, NoSuchEntityException, UnauthorizedException
+from exceptions import InvalidSchemaException, NoSuchEntityException, UnauthorizedException, DuplicateEntityException, \
+                       ApplicationException
 from flask_app import bcrypt
 
 from db_connection import engine
-from models import Users, Teams, TeamsUsers, TrainingGroups, TrainingGroupsUsers
-
+from models import Users, Teams, TeamsUsers, TrainingGroups, TrainingGroupsUsers, Sport, SportHistory, Sport
+from utils import *
 
 user_app = Blueprint('user', __name__)
 
@@ -24,6 +25,16 @@ session = Session(bind=engine)
 sign_in_methods = ['json-subject-creation',
                    'json',
                    'json-accessory']
+
+MAX_SESSIONS = 3
+
+users_table = boto3.resource('dynamodb').Table('users-{ENVIRONMENT}-users'.format(**os.environ))
+
+
+class DictionaryAttr(dict):
+    def __init__(self, *args, **kwargs):
+        super(DictionaryAttr, self).__init__(*args, **kwargs)
+        self.__dict__ = self
 
 
 def extract_email_and_password_from_request(data):
@@ -46,69 +57,6 @@ def extract_email_and_password_from_request(data):
         raise InvalidSchemaException('Request payload was not received')
 
 
-def feet_to_meters(feet, inches):
-    """
-    Converts feet + inches into meters
-    :param feet:
-    :param inches:
-    :return:
-    """
-    if feet:
-        if inches:
-            return (feet + inches/12)*0.3048
-        else:
-            return feet*0.3048
-    elif inches:
-        return (inches/12)*0.3048
-
-
-def lb_to_kg(weight_lbs):
-    """
-    Converts pounds to kilograms.
-    Handles the case where the weight is None
-    :param weight_lbs:
-    :return:
-    """
-    if weight_lbs:
-        return weight_lbs * 0.453592
-
-
-def format_datetime(date_input):
-    """
-    Formats a date in ISO8601 short format.
-    Handles the case where the input is None
-    :param date_input:
-    :return:
-    """
-    if date_input is None:
-        return None
-    if not isinstance(date_input, datetime.datetime):
-        date_input = datetime.datetime.strptime(date_input, "%Y-%m-%dT%H:%M:%S.%f")
-    return date_input.strftime("%Y-%m-%dT%H:%M:%SZ")
-
-
-def format_date(date_input):
-    """
-    Formats a date in ISO8601 short format.
-    Handles the case where the input is None
-    :param date_input:
-    :return:
-    """
-    if date_input is None:
-        return None
-    if isinstance(date_input, datetime.datetime):
-        return date_input.strftime("%Y-%m-%d")
-    else:
-        for format_string in ('%Y-%m-%d', '%m/%d/%y', '%Y-%m'):
-            try:
-                date_input = datetime.datetime.strptime(date_input, format_string)
-                return date_input.strftime("%Y-%m-%d")
-            except ValueError:
-                pass
-        return None
-        # raise ValueError('no valid date format found')
-
-
 def create_user_dictionary(user):
     """
     Convert the user ORM to the desired output format
@@ -123,11 +71,11 @@ def create_user_dictionary(user):
             "sex": user.gender,
             "height": {
                 "ft_in": [user.height_feet, user.height_inches or 0],
-                "m": round(feet_to_meters(user.height_feet, user.height_inches), 2)
+                "m": feet_to_meters(user.height_feet, user.height_inches)
             },
             "mass": {
-                "lb": round(user.weight, 1),
-                "kg": round(lb_to_kg(user.weight), 1)
+                "lb": user.weight,
+                "kg": lb_to_kg(user.weight)
             }
         },
         "created_date": format_datetime(user.created_at),
@@ -216,9 +164,42 @@ def create_authorization_resp(**kwargs):
     expiration_time = datetime.datetime.utcnow() + datetime.timedelta(minutes=60)
     token = jwt_make_payload(expires_at=expiration_time, **kwargs)
     return {
-        "expires": expiration_time.isoformat(),
+        "expires": expiration_time.strftime("%Y-%m-%dT%H:%M:%SZ"),
         "jwt": token
     }
+
+
+def create_session_for_user(user_id, sessions, atomic_date):
+    """
+    Expire old sessions for the user, and create a new session token
+    :param user_id: String uuid
+    :param atomic_date: String ISO8601 datetime
+    :param sessions: List of objects
+    :return: string new session token
+    """
+    now = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    # Remove old sessions to get down below the limit
+    sessions.sort(key=lambda s: s['created_date'])
+    sessions = sessions[min(1-MAX_SESSIONS, 0):]
+
+    new_session_id = binascii.hexlify(os.urandom(32)).decode()
+    sessions.append({
+        'created_date': now,
+        'id': new_session_id,
+    })
+    users_table.update_item(
+        Key={'id': user_id},
+        UpdateExpression='SET sessions = :sessions, updated_date = :updated_date',
+        ExpressionAttributeValues={':sessions': sessions, ':updated_date': now},
+        ConditionExpression=Attr('updated_date').eq(atomic_date) | Attr('updated_date').not_exists(),
+    )
+    return new_session_id
+
+
+def get_user_from_ddb(user_id):
+    res = users_table.query(KeyConditionExpression=Key('id').eq(user_id))
+    return res['Items'][0] if len(res['Items']) else None
 
 
 @user_app.route('/sign_in', methods=['POST'])
@@ -281,22 +262,343 @@ def user_sign_in():
                 user_resp = create_user_dictionary(user)
                 user_resp['teams'] = [create_team_dictionary(team) for team in teams]
                 user_resp['training_groups'] = [create_training_group_dictionary(training_group) for training_group in training_groups]
-                return {
+
+                user_ddb_res = get_user_from_ddb(str(user_resp['id'])) or {'sessions': [], 'updated_date': '1970-01-01T00:00:00Z'}
+                ret = {
                     "authorization": create_authorization_resp(user_id=user_resp['id'], sign_in_method='json', role=user_resp['role']),
                     "user": user_resp
                 }
+                ret['authorization']['session_token'] = create_session_for_user(
+                    str(user_resp['id']),
+                    user_ddb_res['sessions'],
+                    user_ddb_res['updated_date'],
+                )
+                return ret
             else:
                 raise UnauthorizedException("Password was not correct.")
     raise NoSuchEntityException('User not found')
 
 
-@user_app.route('/<user_id>', methods=['GET'])
+expected_user_keys = {
+        "email": str,
+        "password": str,
+        "biometric_data": {
+            "gender": str,
+            "height": {"m": float},
+            "mass": {"kg": float}
+        },
+        "personal_data": {
+            "birth_date": str,
+            "first_name": str,
+            "last_name": str,
+            "phone_number": str,
+            "account_type": str,
+            "account_status": str,
+            "zip_code": str
+        },
+        "role": str,
+        "system_type": str,
+        "injury_status": str,
+        "onboarding_status": list
+        }
+
+def add_missing_keys(dictionary, expected_format):
+    for key, value in expected_format.items():
+        try:
+            if isinstance(dictionary[key], dict) or isinstance(value, dict):
+                dictionary[key] = add_missing_keys(dictionary[key], value)
+            elif not isinstance(value(dictionary[key]), value):
+                raise InvalidSchemaException("{}:{} is of the wrong type.".format(key, dictionary[key]))
+        except KeyError:
+            dictionary[key] = None
+    return dictionary
+
+
+def create_user_object(user_data):
+    """
+
+    :param user_data: dictionary with user data
+    :return: User ORM object ready to save
+    """
+    height_feet, height_inches = convert_to_ft_inches(user_data['biometric_data']['height'])
+    weight = convert_to_pounds(user_data['biometric_data']['mass'])
+    password_hash = bcrypt.generate_password_hash(user_data['password']).decode('utf-8')
+    # user_data = add_missing_keys(user_data, expected_user_keys)
+    if not 'onboarding_status' in user_data.keys():
+        user_data['onboarding_status'] = []
+
+    if 'gender' in user_data['biometric_data'].keys():
+        gender = user_data['biometric_data']['gender']
+    elif 'sex' in user_data['biometric_data'].keys():
+        gender = user_data['biometric_data']['sex']
+    else:
+        gender = None
+
+    user = Users(email=user_data['email'],
+                first_name=user_data['personal_data']['first_name'],
+                last_name=user_data['personal_data']['last_name'],
+                phone_number=user_data['personal_data']['phone_number'],
+                password_digest=password_hash,
+                created_at=datetime.datetime.now(),
+                updated_at=datetime.datetime.now(),
+                # avatar_file_name
+                # avatar_content_type
+                # avatar_file_size
+                # avatar_updated_at
+                # position
+                role=user_data['role'],
+                # active
+                # in_training
+                height_feet=height_feet,
+                height_inches=height_inches,
+                weight=weight,
+                gender=gender,
+                status=None,
+                # onboarded
+                birthday=user_data['personal_data']['birth_date'],
+                zip_code=user_data['personal_data']['zip_code'],
+                account_type=user_data['personal_data']['account_type'],
+                account_status = user_data['personal_data']['account_status'],
+                system_type = user_data['system_type'],
+                injury_status = user_data['injury_status'],
+                onboarding_status = user_data['onboarding_status']
+               )
+    return user
+
+
+def save_user_data(user, user_data):
+    """
+    Extracts the user_data from the dictionary and updates the orm. Essential the save as create_user_object
+    :param user:
+    :param user_data:
+    :return:
+    """
+    user.role = user_data['role']
+    user.system_type = user_data['system_type'],
+    user.injury_status = user_data['injury_status'],
+    user.onboarding_status = user_data['onboarding_status']
+
+    if 'email' in user_data.keys():
+        user.email = user_data['email']
+    if 'personal_data' in user_data.keys():
+        if 'first_name' in user_data['personal_data'].keys():
+            user.first_name=user_data['personal_data']['first_name']
+        if 'last_name' in user_data['personal_data'].keys():
+            user.last_name=user_data['personal_data']['last_name']
+        if 'phone_number' in user_data['personal_data'].keys():
+            user.phone_number=user_data['personal_data']['phone_number']
+        user.birthday = user_data['personal_data']['birth_date'],
+        user.zip_code = user_data['personal_data']['zip_code'],
+        user.account_type = user_data['personal_data']['account_type'],
+        user.account_status = user_data['personal_data']['account_status'],
+
+    if 'password' in user_data.keys():  # TODO: Provide new JWT, verify new password
+        user.password_digest = bcrypt.generate_password_hash(user_data['password']).decode('utf-8')
+
+    height_feet, height_inches = convert_to_ft_inches(user_data['biometric_data']['height'])
+    weight = convert_to_pounds(user_data['biometric_data']['mass'])
+    user.height_feet=height_feet
+    user.height_inches=height_inches
+    user.weight=weight
+    user.gender=user_data['biometric_data']['gender']
+
+
+    user.updated_at = datetime.datetime.now()
+    return user
+
+
+def validate_date(_date):
+    """
+
+    :param _date:
+    :return:
+    """
+    return datetime.datetime.strptime(_date, '%m/%d/%Y')
+
+
+def save_sports_history(user_data, user_id):
+    """
+    Create Sport and SportHistory ORM Objects and save data to database
+    Expected dictionary format:
+    {
+        "sports": [{"name": "Lacrosse",
+                    "positions": ["Goalie"],
+                    "competition_level": "NCAA Division II",
+                    "start_date": "1/1/2015",
+                    "end_date": "3/1/2018",
+                    "season_start_month": "January",
+                    "season_end_month": "May"
+                   },
+                   ...
+                  ]
+    }
+    :param user_data:
+    :param user_id:
+    :return:
+    """
+    if not user_id:
+        raise InvalidSchemaException("save_sports_history: Missing User Profile")
+    if 'sports' not in user_data.keys():
+        raise InvalidSchemaException("save_sports_history: Missing Sports from data payload.")
+
+    sports_info = user_data['sports']
+    columns = ['name', 'positions', 'competition_level']
+    sports_history = []
+    for sport_info in sports_info:
+        # valid_values = dict((col_name, validate_value(session, Sport, col_name, sport_info[col_name])) for col_name in columns)
+        # TODO: What does validation look like for positions and DateTimes?
+
+        name = validate_value(session, Sport, 'name', sport_info['name'])
+        # positions = validate_positions(sport_info['positions'])
+        competition_level = validate_value(session, Sport, 'competition_level', sport_info['competition_level'])
+        start_date = validate_date(sport_info['start_date'])
+        end_date = validate_date(sport_info['end_date'])
+        for position in sport_info['positions']:
+            position = validate_value(session, Sport, 'position', position)
+            sport_history_obj = SportHistory(name=name,
+                                             position=position,
+                                             competition_level=competition_level,
+                                             start_date=start_date,
+                                             end_date=end_date
+                                             # season_start_month
+                                             # season_end
+                                         )
+            sports_history.append(sport_history_obj)
+    return sports_history
+
+
+def save_training_schedule(user_data, user_id):
+    """
+    Create the TrainingSchedule ORMs and save to the database
+    :param user_data:
+    :param user_id:
+    :return:
+    """
+    pass
+
+
+def validate_user_inputs(user_data):
+    """
+    Reviews each item in the payload to verify it is the correct type
+    :param user_data:
+    :return:
+    """
+    return user_data
+
+
+@user_app.route('/', methods=['POST'])
+#@xray_recorder.capture('routes.user.post')
+def create_user():
+    """
+    Creates a new user given the data and validates the input parameters
+    :param user_id:
+    :return:
+    """
+    if not request.json:
+        raise InvalidSchemaException("No data received. Verify headers include Content-Type: application/json")
+
+    user_data = validate_user_inputs(request.json)
+    try:
+        existing_user = session.query(Users).filter(Users.email == user_data['email']).all()
+    except Exception as e:
+        raise ApplicationException(400, 'EmailLookupError', str(e))
+    if existing_user:
+        raise DuplicateEntityException("User Email {} already exists.".format(user_data['email']))
+
+    try:
+        user = create_user_object(user_data)
+    except Exception as e:
+        raise ApplicationException(400, 'InvalidSchema', str(e))
+    if not user:
+        raise ApplicationException(400, 'CreationError', 'Failed to create user')
+
+    # save_training_groups(user_data, user.id)
+
+    # save_sports_history(user_data, user.id)
+    # save_training_schedule(user_data, user.id)
+
+    # save_injuries(user_data, user.id)
+
+    # If all objects persist save data to database
+    session.add(user)
+    session.commit()
+    # Create User Session
+    user_ddb = {'sessions': [], 'updated_date': '1970-01-01T00:00:00Z'}
+    res = {'authorization': create_authorization_resp(user_id=user.id, sign_in_method='json', role=user.role)}
+    res['authorization']['session_token'] = create_session_for_user(
+        str(user.id),
+        user_ddb['sessions'],
+        user_ddb['updated_date'],
+    )
+    return res
+
+
+@user_app.route('/<uuid:user_id>/authorize', methods=['POST'])
+@xray_recorder.capture('routes.user.authorise')
+def handle_user_authorise(user_id):
+    if not request.json or 'session_token' not in request.json:
+        raise InvalidSchemaException('Must supply session_token')
+
+    user_ddb_res = get_user_from_ddb(user_id)
+    if user_ddb_res is None:
+        raise NoSuchEntityException()
+
+    if 'sessions' not in user_ddb_res or request.json['session_token'] not in [s['id'] for s in user_ddb_res['sessions']]:
+        raise UnauthorizedException('Session token is not valid for this user')
+
+    return {'authorization': create_authorization_resp(user_id=user_ddb_res['id'], sign_in_method='json', role=None)}
+
+
+@user_app.route('/<uuid:user_id>/logout', methods=['POST'])
+@authentication_required
+@xray_recorder.capture('routes.user.logout')
+def handle_user_logout(user_id):
+    user_ddb_res = get_user_from_ddb(user_id)
+    now = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+    users_table.update_item(
+        Key={'id': user_id},
+        UpdateExpression='SET sessions = :sessions, updated_date = :updated_date',
+        ExpressionAttributeValues={':sessions': [], ':updated_date': now},
+    )
+
+    if request.json['session_token'] not in [s['id'] for s in user_ddb_res['sessions']]:
+        raise UnauthorizedException('Session token is not valid for this user')
+
+    return {'authorization': create_authorization_resp(user_id=user_ddb_res['id'], sign_in_method='json', role=None)}
+
+
+@user_app.route('/<uuid:user_id>', methods=['PUT'])
+@authentication_required
+def update_user(user_id):
+    """
+    Update the user information for any fields provided
+    :param user_id:
+    :return: 200 or 400 status code
+    """
+    if not validate_uuid4(user_id):
+        raise InvalidSchemaException("user_id was not a valid UUID4")
+
+    user_data = validate_user_inputs(request.json)
+    try:
+        user = session.query(Users).filter_by(Users.id == user_id).one()
+    except Exception as e:
+        raise ValueNotFoundInDatabase("user_id: {} not found.".format(user_id))
+
+    if not user:
+        raise NoSuchEntityException()
+
+
+    save_user_data(user, user_data)
+
+    session.commit()
+
+    return {'message': 'Success!'}
+
+
+@user_app.route('/<uuid:user_id>', methods=['GET'])
 @authentication_required
 @xray_recorder.capture('routes.user.get')
 def handle_user_get(user_id):
-    if not validate_uuid4(user_id):
-        raise InvalidSchemaException('user_id must be a uuid')
-
     user_data, teams, training_groups = query_postgres([
         (
             """SELECT * FROM users WHERE id = %s""",
@@ -345,14 +647,3 @@ def query_postgres(queries):
         raise Exception(list(filter(None, res['Errors'])))
     else:
         return res['Results']
-
-
-def validate_uuid4(uuid_string):
-    try:
-        val = uuid.UUID(uuid_string, version=4)
-        # If the uuid_string is a valid hex code, but an invalid uuid4, the UUID.__init__
-        # will convert it to a valid uuid4. This is bad for validation purposes.
-        return val.hex == uuid_string.replace('-', '')
-    except ValueError:
-        # If it's a value error, then the string is not a valid hex code for a UUID.
-        return False

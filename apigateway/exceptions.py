@@ -19,8 +19,8 @@ class ApplicationException(Exception):
 
 
 class DuplicateEntityException(ApplicationException):
-    def __init__(self):
-        super().__init__(409, 'DuplicateEntity', 'Duplicate Entity')
+    def __init__(self, message='Duplicate Entity'):
+        super().__init__(409, 'DuplicateEntity', message)
 
 
 class InvalidSchemaException(ApplicationException):
@@ -30,7 +30,7 @@ class InvalidSchemaException(ApplicationException):
 
 class UnauthorizedException(ApplicationException):
     def __init__(self, message=''):
-        super().__init__(400, 'Unauthorized', message)
+        super().__init__(401, 'Unauthorized', message)
 
 
 class NoSuchEntityException(ApplicationException):
@@ -38,6 +38,6 @@ class NoSuchEntityException(ApplicationException):
         super().__init__(404, 'NoSuchEntity', message)
 
 
-class UnauthorizedException(ApplicationException):
+class ValueNotFoundInDatabase(ApplicationException):
     def __init__(self, message=''):
-        super().__init__(401, 'Unauthorized', message)
+        super().__init__(404, 'ValueNotFoundInDatabase', message)

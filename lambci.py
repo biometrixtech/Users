@@ -66,11 +66,6 @@ def main():
     os.environ['PROJECT'] = os.environ['LAMBCI_REPO'].split('/')[-1].lower()
     config = read_config()
 
-    print("Deploying CloudFormation templates")
-    for template in config['templates']:
-        local_filename = os.path.realpath(template['src'])
-        upload_cf_template(local_filename, template['s3_filename'])
-
     print("Deploying Lambda functions")
     for lambda_bundle in config['lambdas']:
         upload_lambda_bundle(
@@ -78,6 +73,11 @@ def main():
             lambda_bundle['s3_filename'],
             lambda_bundle['pip']
         )
+
+    print("Deploying CloudFormation templates")
+    for template in config['templates']:
+        local_filename = os.path.realpath(template['src'])
+        upload_cf_template(local_filename, template['s3_filename'])
 
 
 if __name__ == '__main__':
