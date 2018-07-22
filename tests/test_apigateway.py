@@ -4,19 +4,23 @@ import json
 from .sample_data import sample_logins
 from .test_fixtures import example_user_data, example_user_data_2
 import os
+from aws_xray_sdk.core import patch_all, xray_recorder
 
 LOGIN_URL = "/v1/user/sign_in"
 
 # Headers:
 headers = {
     "Authorization": os.getenv('JWT_TOKEN'),
-    "content-type": "application/json"
+    "content-type": "application/json",
+    "Host": None,
+    "User-Agent": None,
   }
 
 @pytest.fixture
 def client():
 
     client = app.test_client()
+    xray_recorder.begin_segment(name='users.{}.fathomai.com'.format('test'))
     return client
 
 
@@ -84,7 +88,7 @@ def test_update_user(client):
                              'height': {'ft': 1.5}
                          },
                          }
-    res = client.post('/v1/user/{}'.format(user_id),
+    res = client.put('/v1/user/{}'.format(user_id),
                       headers=headers,
                       data=json.dumps(updated_user_data)
                       )
@@ -96,8 +100,10 @@ def test_create_sensor_mobile_pair(client):
     headers['content-type'] = 'application/json'
     user_id = '3a07c79a-2e9f-487f-aef7-555954537e29'  # Needs to match JWT token above
     sensor_mobile_info = {'sensor_uid': "ERAFASDFVASHKVIAS",
-                          'mobile_uid': "F3423nVA324afVJKs"
-                          }
+                          'mobile_uid': "F3423nVA324afVJKs",
+                          'path': None,
+                          'httpMethod': 'post'
+                         }
     res = client.post("/users/user/{}/sensor_mobile_pair".format(user_id), headers=headers,
                         data=json.dumps(sensor_mobile_info))
     print(res.data)

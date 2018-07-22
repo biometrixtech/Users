@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 import os
 
 from routes.user import jwt_make_payload, create_user_object, add_missing_keys, \
-                        verify_user_id_matches_jwt, \
+                        verify_user_id_matches_jwt, save_user_data, delete_user, \
                         create_sensor_mobile_pair, update_sensor_mobile_pair, \
                         retrieve_sensor_mobile_pair, delete_sensor_mobile_pair
 from db_connection import engine, Base
@@ -164,3 +164,29 @@ def test_delete_user_sensor_mobile_pair(session):
     user_updated = session.query(Users).filter(Users.id==user_id).one()
     assert user_updated.sensor_uid is None
     assert user_updated.mobile_uid is None
+
+
+def test_save_user_data(session):
+    user_id = 'e562e24e-933a-4de8-a799-44bfed8d7e8d'
+    user = session.query(Users).filter(Users.id == user_id).one()
+    user_data_update = {
+        "biometric_data": {
+            "height": {"m": 1.5},
+            "mass": {"kg": 98}
+        },
+        "personal_data": {
+            "phone_number": "555-123-4508",
+        },
+        "onboarding_status": ["account_setup"]
+    }
+    user_new = save_user_data(user, user_data_update)
+    assert "555-123-4508" == user_new.phone_number
+
+
+def test_delete_user(session):
+    user_to_be_deleted = '6f3ae305-304a-4fca-917e-aace4d5226a6'
+    user = session.query(Users).filter(Users.id == user_to_be_deleted).one()
+    res = delete_user(user.id)
+    assert 'Success' in res['message']
+    user = session.query(Users).filter(Users.id == user_to_be_deleted).first()
+    assert user is None

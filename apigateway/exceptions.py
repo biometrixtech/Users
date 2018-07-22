@@ -41,3 +41,8 @@ class NoSuchEntityException(ApplicationException):
 class ValueNotFoundInDatabase(ApplicationException):
     def __init__(self, message=''):
         super().__init__(404, 'ValueNotFoundInDatabase', message)
+
+
+class InvalidPasswordFormatException(ApplicationException):
+    def __init__(self, message=''):
+        super().__init__(404, 'InvalidPasswordFormat', message)
