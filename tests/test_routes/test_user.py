@@ -1,7 +1,11 @@
 import pytest
 from sqlalchemy.orm import Session
+import os
 
-from routes.user import jwt_make_payload, create_user_object, add_missing_keys, create_sensor_mobile_pair
+from routes.user import jwt_make_payload, create_user_object, add_missing_keys, \
+                        verify_user_id_matches_jwt, \
+                        create_sensor_mobile_pair, update_sensor_mobile_pair, \
+                        retrieve_sensor_mobile_pair, delete_sensor_mobile_pair
 from db_connection import engine, Base
 from models import Users, Teams, TeamsUsers #, SportsHistory  # , TrainingGroups, TrainingGroupsUsers
 from routes.user import create_user_dictionary, save_sports_history, save_training_schedule
@@ -101,6 +105,16 @@ def test_save_sports_history(session):
     # assert type(sports_history_list[0]) == SportsHistory
 
 
+def test_verify_user_id_matches_jwt():
+    user_id = '19bfad75-9d95-4fff-aec9-de4a93da214d'
+    sign_in_method = "json"
+    role = 4
+    # jwt_token = jwt_make_payload(user_id, sign_in_method, role)
+    jwt_token = os.getenv('JWT_TOKEN')
+    matching = verify_user_id_matches_jwt(jwt_token=jwt_token, user_id=user_id)
+    assert matching
+
+
 def test_create_user_sensor_mobile_pair(session):
     user = session.query(Users).first()
     sensor_uid = "ADFN@#L)FA)FDFNKSDF12"
@@ -112,3 +126,41 @@ def test_create_user_sensor_mobile_pair(session):
     assert res['user_id'] == user.id
     assert res['sensor_uid'] == sensor_uid
     assert res['mobile_uid'] == mobile_uid
+
+
+def test_retrieve_user_sensor_mobile_pair(session):
+    user = session.query(Users).first()
+    res = retrieve_sensor_mobile_pair(user_id=user.id)
+    print(res)
+    assert type(res) == dict
+    assert res['message'] == 'Success!'
+    assert res['user_id'] == user.id
+    assert 'sensor_uid' in res
+    assert 'mobile_uid' in res
+
+
+def test_update_user_sensor_mobile_pair(session):
+    user = session.query(Users).first()
+    sensor_uid = "ZZFER11NEW11Bb"
+    mobile_uid = "99DFaff39Vnf9FS44"
+    res = update_sensor_mobile_pair(user_id=user.id, sensor_uid=sensor_uid, mobile_uid=mobile_uid)
+    print(res)
+    assert type(res) == dict
+    assert res['message'] == 'Success!'
+    assert res['user_id'] == user.id
+    assert 'sensor_uid' in res
+    assert 'mobile_uid' in res
+
+
+def test_delete_user_sensor_mobile_pair(session):
+    # user = session.query(Users).first()
+    # user_id = user.id
+    user_id = 'e562e24e-933a-4de8-a799-44bfed8d7e8d'
+    res = delete_sensor_mobile_pair(user_id=user_id)
+    print(res)
+    assert type(res) == dict
+    assert res['message'] == 'Sensor and mobile uid successfully deleted.'
+    assert str(res['user_id']) == user_id
+    user_updated = session.query(Users).filter(Users.id==user_id).one()
+    assert user_updated.sensor_uid is None
+    assert user_updated.mobile_uid is None

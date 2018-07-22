@@ -146,11 +146,11 @@ def jwt_make_payload(expires_at=None, user_id=None, sign_in_method=None, role=No
     Creates the payload for the jwt
     :return:
     """
-    jwt_payload = {"user_id": str(user_id),
+    jwt_payload = {"sign_in_method": sign_in_method,
                    "created_at": datetime.datetime.now().isoformat(),
-                   "sign_in_method": sign_in_method,
                    "role": role,
-                   "exp": expires_at
+                   "exp": expires_at,
+                   "user_id": str(user_id)
                    }
     jwt_payload_encoded = jwt.encode(jwt_payload, os.environ['SECRET_KEY_BASE'], algorithm='HS256')
     return jwt_payload_encoded
@@ -650,6 +650,22 @@ def query_postgres(queries):
         return res['Results']
 
 
+def verify_user_id_matches_jwt(jwt_token=None, user_id=None):
+    """
+    Extracts user_id from the jwt and compares it with the user_id supplied.
+    :param jwt:
+    :param user_id:
+    :return: True/False
+    """
+    if not user_id or not jwt_token:
+        raise ApplicationException(400, 'MissingData', 'Missing jwt or user_id')
+
+    token = jwt.decode(jwt_token, os.getenv('SECRET_KEY_BASE'), algorithms='HS256', verify=False)
+    if 'user_id' in token.keys():
+        return token['user_id'] == user_id
+    raise ApplicationException(400, 'MissingUserIdFromJWT', 'user_id was not found in jwt token.')
+
+
 @user_app.route('/<uuid:user_id>/sensor_mobile_pair', methods=['POST', 'GET', 'PUT', 'DELETE'])
 @authentication_required
 def sensor_mobile_pair_routing(user_id):
@@ -659,15 +675,32 @@ def sensor_mobile_pair_routing(user_id):
     :return:
     """
     route_handlers = {'POST': create_sensor_mobile_pair,
-                      'GET': None,
-                      'PUT': None,
+                      'GET': retrieve_sensor_mobile_pair,
+                      'PUT': create_sensor_mobile_pair,  # Since we're just updating the user object, create and update are the same
                       'DELETE': None
                       }
     # TODO: Verify the user in the JWT Token matches the user_id provided
+    if not verify_user_id_matches_jwt(jwt_token=request.headers['jwt'], user_id=user_id):
+        raise UnauthorizedException('user_id supplied ({}) does not match user_id in jwt'.format(user_id))
+
     # data = request.json
     # sensor_uid = data['sensor_uid']
     # mobile_uid = data['mobile_uid']
     return route_handlers[request.method](user_id=user_id, **request.json)
+
+
+def pull_user_object(user_id):
+    """
+    Retrieves the user id and catches any errors.
+    :param user_id:
+    :return:
+    """
+    try:
+        return session.query(Users).filter(Users.id == user_id).one()
+    except NoResultFound as e:
+        raise InvalidSchemaException('User {} was not found.'.format(user_id))
+    # if not user:
+    #     raise ApplicationException(400, 'UserNotFoundError', 'User {} not found.'.format(user_id))
 
 
 def create_sensor_mobile_pair(user_id=None, sensor_uid=None, mobile_uid=None):
@@ -678,13 +711,8 @@ def create_sensor_mobile_pair(user_id=None, sensor_uid=None, mobile_uid=None):
     """
     if user_id is None or sensor_uid is None or mobile_uid is None:
         raise InvalidSchemaException('Missing user_id, or sensor_uid, or mobile_uid')
-    try:
-        user = session.query(Users).filter(Users.id == user_id).one()
-    except NoResultFound as e:
-        raise InvalidSchemaException('User {} was not found.'.format(user_id))
-    # if not user:
-    #     raise ApplicationException(400, 'UserNotFoundError', 'User {} not found.'.format(user_id))
 
+    user = pull_user_object(user_id)
 
     user.sensor_uid = str(sensor_uid)
     user.mobile_uid = str(mobile_uid)
@@ -692,6 +720,53 @@ def create_sensor_mobile_pair(user_id=None, sensor_uid=None, mobile_uid=None):
     session.commit()
 
     return {'message': 'Success!',
+            'user_id': user.id,
+            'sensor_uid': user.sensor_uid,
+            'mobile_uid': user.mobile_uid
+            }
+
+
+def retrieve_sensor_mobile_pair(user_id=None):
+    """
+    Pull the sensor and mobile info to a given user
+    :param user_id:
+    :return:
+    """
+    if user_id is None:
+        raise InvalidSchemaException('Missing user_id')
+
+    user = pull_user_object(user_id)
+    return {'message': 'Success!',
+            'user_id': user.id,
+            'sensor_uid': user.sensor_uid,
+            'mobile_uid': user.mobile_uid
+            }
+
+
+def update_sensor_mobile_pair(user_id=None, sensor_uid=None, mobile_uid=None):
+    """
+    Adds the sensor and mobile info to a given user
+    :param user_id:
+    :return:
+    """
+    # Not Needed as it matches the create_sensor_mobile_pair function
+    return create_sensor_mobile_pair(user_id=user_id, sensor_uid=sensor_uid, mobile_uid=mobile_uid)
+
+
+def delete_sensor_mobile_pair(user_id=None):
+    """
+    Adds the sensor and mobile info to a given user
+    :param user_id:
+    :return:
+    """
+    if user_id is None:
+        raise InvalidSchemaException('Missing user_id')
+
+    user = pull_user_object(user_id)
+    user.sensor_uid = None
+    user.mobile_uid = None
+    session.commit()
+    return {'message': 'Sensor and mobile uid successfully deleted.',
             'user_id': user.id,
             'sensor_uid': user.sensor_uid,
             'mobile_uid': user.mobile_uid
