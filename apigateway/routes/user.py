@@ -7,11 +7,12 @@ import binascii
 import json
 import os
 from sqlalchemy.orm import Session
+from sqlalchemy.orm.exc import NoResultFound
 import jwt
 
 from decorators import authentication_required
 from exceptions import InvalidSchemaException, NoSuchEntityException, UnauthorizedException, DuplicateEntityException, \
-                       ApplicationException
+                       ApplicationException, InvalidPasswordFormatException
 from flask_app import bcrypt
 
 from db_connection import engine
@@ -35,6 +36,13 @@ class DictionaryAttr(dict):
     def __init__(self, *args, **kwargs):
         super(DictionaryAttr, self).__init__(*args, **kwargs)
         self.__dict__ = self
+
+
+def validate_password_format(password):
+    # TODO: Add regular expression to match strong password
+    if not len(password) > 6:
+        raise InvalidPasswordFormatException('Password must be longer than 6 characters')
+    return True
 
 
 def extract_email_and_password_from_request(data):
@@ -145,11 +153,11 @@ def jwt_make_payload(expires_at=None, user_id=None, sign_in_method=None, role=No
     Creates the payload for the jwt
     :return:
     """
-    jwt_payload = {"user_id": str(user_id),
+    jwt_payload = {"sign_in_method": sign_in_method,
                    "created_at": datetime.datetime.now().isoformat(),
-                   "sign_in_method": sign_in_method,
                    "role": role,
-                   "exp": expires_at
+                   "exp": expires_at,
+                   "user_id": str(user_id)
                    }
     jwt_payload_encoded = jwt.encode(jwt_payload, os.environ['SECRET_KEY_BASE'], algorithm='HS256')
     return jwt_payload_encoded
@@ -198,6 +206,7 @@ def create_session_for_user(user_id, sessions, atomic_date):
 
 
 def get_user_from_ddb(user_id):
+    # TODO: Needs to connect to dynamodb, Figure out how to test locally when offline
     res = users_table.query(KeyConditionExpression=Key('id').eq(user_id))
     return res['Items'][0] if len(res['Items']) else None
 
@@ -373,10 +382,14 @@ def save_user_data(user, user_data):
     :param user_data:
     :return:
     """
-    user.role = user_data['role']
-    user.system_type = user_data['system_type'],
-    user.injury_status = user_data['injury_status'],
-    user.onboarding_status = user_data['onboarding_status']
+    if 'role' in user_data:
+        user.role = user_data['role']
+    if 'system_type' in user_data:
+        user.system_type = user_data['system_type']
+    if 'injury_status' in user_data:
+        user.injury_status = user_data['injury_status']
+    if 'onboarding_status' in user_data:
+        user.onboarding_status = user_data['onboarding_status']
 
     if 'email' in user_data.keys():
         user.email = user_data['email']
@@ -387,21 +400,29 @@ def save_user_data(user, user_data):
             user.last_name=user_data['personal_data']['last_name']
         if 'phone_number' in user_data['personal_data'].keys():
             user.phone_number=user_data['personal_data']['phone_number']
-        user.birthday = user_data['personal_data']['birth_date'],
-        user.zip_code = user_data['personal_data']['zip_code'],
-        user.account_type = user_data['personal_data']['account_type'],
-        user.account_status = user_data['personal_data']['account_status'],
+        if 'birthday' in user_data['personal_data'].keys():
+            user.birthday = user_data['personal_data']['birth_date']
+        if 'zip_code' in user_data['personal_data'].keys():
+            user.zip_code = user_data['personal_data']['zip_code']
+        if 'account_type' in user_data['personal_data'].keys():
+            user.account_type = user_data['personal_data']['account_type']
+        if 'account_status' in user_data['personal_data'].keys():
+            user.account_status = user_data['personal_data']['account_status']
 
-    if 'password' in user_data.keys():  # TODO: Provide new JWT, verify new password
-        user.password_digest = bcrypt.generate_password_hash(user_data['password']).decode('utf-8')
+    if 'password' in user_data.keys():
+        if validate_password_format(user_data['password']):
+            user.password_digest = bcrypt.generate_password_hash(user_data['password']).decode('utf-8')
 
-    height_feet, height_inches = convert_to_ft_inches(user_data['biometric_data']['height'])
-    weight = convert_to_pounds(user_data['biometric_data']['mass'])
-    user.height_feet=height_feet
-    user.height_inches=height_inches
-    user.weight=weight
-    user.gender=user_data['biometric_data']['gender']
-
+    if 'biometric_data' in user_data.keys():
+        if 'height' in user_data['biometric_data'].keys():
+            height_feet, height_inches = convert_to_ft_inches(user_data['biometric_data']['height'])
+            user.height_feet = height_feet
+            user.height_inches = height_inches
+        if 'mass' in user_data['biometric_data'].keys():
+            weight = convert_to_pounds(user_data['biometric_data']['mass'])
+            user.weight=weight
+        if 'gender' in user_data['biometric_data'].keys():
+            user.gender=user_data['biometric_data']['gender']
 
     user.updated_at = datetime.datetime.now()
     return user
@@ -580,7 +601,7 @@ def update_user(user_id):
 
     user_data = validate_user_inputs(request.json)
     try:
-        user = session.query(Users).filter_by(Users.id == user_id).one()
+        user = session.query(Users).filter(Users.id == user_id).one()
     except Exception as e:
         raise ValueNotFoundInDatabase("user_id: {} not found.".format(user_id))
 
@@ -588,11 +609,29 @@ def update_user(user_id):
         raise NoSuchEntityException()
 
 
-    save_user_data(user, user_data)
-
+    user = save_user_data(user, user_data)
     session.commit()
 
-    return {'message': 'Success!'}
+    ret = {'user': create_user_dictionary(user)}
+    ret['message'] = 'Success!'
+    return ret
+
+
+@user_app.route('/<uuid:user_id>', methods=['DELETE'])
+@authentication_required
+def delete_user(user_id):
+    """
+    Verifies the user is authorized to delete this account
+    :param user_id:
+    :return:
+    """
+    if not verify_user_id_matches_jwt(jwt_token=request.headers['jwt'], user_id=user_id):
+        raise UnauthorizedException('user_id supplied ({}) does not match user_id in jwt'.format(user_id))
+    user = pull_user_object(user_id)
+    user_id_found = user.id
+    session.delete(user)
+    session.commit()
+    return {'message': 'Success. user_id={} was deleted'.format(user_id_found)}
 
 
 @user_app.route('/<uuid:user_id>', methods=['GET'])
@@ -647,3 +686,131 @@ def query_postgres(queries):
         raise Exception(list(filter(None, res['Errors'])))
     else:
         return res['Results']
+
+
+def verify_user_id_matches_jwt(jwt_token=None, user_id=None):
+    """
+    Extracts user_id from the jwt and compares it with the user_id supplied.
+    :param jwt:
+    :param user_id:
+    :return: True/False
+    """
+    if not user_id or not jwt_token:
+        raise ApplicationException(400, 'MissingData', 'Missing jwt or user_id')
+
+    token = jwt.decode(jwt_token, os.getenv('SECRET_KEY_BASE'), algorithms='HS256', verify=False)
+    if 'user_id' in token.keys():
+        return token['user_id'] == user_id
+    raise ApplicationException(400, 'MissingUserIdFromJWT', 'user_id was not found in jwt token.')
+
+
+@user_app.route('/<uuid:user_id>/sensor_mobile_pair', methods=['POST', 'GET', 'PUT', 'DELETE'])
+@authentication_required
+def sensor_mobile_pair_routing(user_id):
+    """
+    Handle each method for CRUD operations
+    :param user_id:
+    :return:
+    """
+    route_handlers = {'POST': create_sensor_mobile_pair,
+                      'GET': retrieve_sensor_mobile_pair,
+                      'PUT': create_sensor_mobile_pair,  # Since we're just updating the user object, create and update are the same
+                      'DELETE': delete_sensor_mobile_pair
+                      }
+    if 'Authorization' not in request.headers:
+        raise UnauthorizedException('Requires jwt token to validate user identity')
+    if not verify_user_id_matches_jwt(jwt_token=request.headers['Authorization'], user_id=user_id):
+        raise UnauthorizedException('user_id supplied ({}) does not match user_id in jwt'.format(user_id))
+
+    # data = request.json
+    # sensor_uid = data['sensor_uid']
+    # mobile_uid = data['mobile_uid']
+    if request.data:
+        return route_handlers[request.method](user_id=user_id, **request.json)
+    else:
+        return route_handlers[request.method](user_id=user_id)
+
+
+def pull_user_object(user_id):
+    """
+    Retrieves the user id and catches any errors.
+    :param user_id:
+    :return:
+    """
+    try:
+        return session.query(Users).filter(Users.id == user_id).one()
+    except NoResultFound as e:
+        raise InvalidSchemaException('User {} was not found.'.format(user_id))
+    # if not user:
+    #     raise ApplicationException(400, 'UserNotFoundError', 'User {} not found.'.format(user_id))
+
+
+def create_sensor_mobile_pair(user_id=None, sensor_uid=None, mobile_uid=None):
+    """
+    Adds the sensor and mobile info to a given user
+    :param user_id:
+    :return:
+    """
+    if user_id is None or sensor_uid is None or mobile_uid is None:
+        raise InvalidSchemaException('Missing user_id, or sensor_uid, or mobile_uid')
+
+    user = pull_user_object(user_id)
+
+    user.sensor_uid = str(sensor_uid)
+    user.mobile_uid = str(mobile_uid)
+
+    session.commit()
+
+    return {'message': 'Success!',
+            'user_id': user.id,
+            'sensor_uid': user.sensor_uid,
+            'mobile_uid': user.mobile_uid
+            }
+
+
+def retrieve_sensor_mobile_pair(user_id=None):
+    """
+    Pull the sensor and mobile info to a given user
+    :param user_id:
+    :return:
+    """
+    if user_id is None:
+        raise InvalidSchemaException('Missing user_id')
+
+    user = pull_user_object(user_id)
+    return {'message': 'Success!',
+            'user_id': user.id,
+            'sensor_uid': user.sensor_uid,
+            'mobile_uid': user.mobile_uid
+            }
+
+
+def update_sensor_mobile_pair(user_id=None, sensor_uid=None, mobile_uid=None):
+    """
+    Adds the sensor and mobile info to a given user
+    :param user_id:
+    :return:
+    """
+    # Not Needed as it matches the create_sensor_mobile_pair function
+    return create_sensor_mobile_pair(user_id=user_id, sensor_uid=sensor_uid, mobile_uid=mobile_uid)
+
+
+def delete_sensor_mobile_pair(user_id=None):
+    """
+    Adds the sensor and mobile info to a given user
+    :param user_id:
+    :return:
+    """
+    if user_id is None:
+        raise InvalidSchemaException('Missing user_id')
+
+    user = pull_user_object(user_id)
+    user.sensor_uid = None
+    user.mobile_uid = None
+    session.commit()
+    return {'message': 'Sensor and mobile uid successfully deleted.',
+            'user_id': user.id,
+            'sensor_uid': user.sensor_uid,
+            'mobile_uid': user.mobile_uid
+            }
+

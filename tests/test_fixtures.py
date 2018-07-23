@@ -46,7 +46,7 @@ example_user_data = {"email": "steve1234@gmail.com",
 
 
 example_user_data_2 = {
-    "email": "tests000008@biometrixtech.com",
+    "email": "tests000011@biometrixtech.com",
     "password": "Fathom123!",
     "biometric_data": {
         "sex": "male",

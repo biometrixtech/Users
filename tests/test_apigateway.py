@@ -4,19 +4,23 @@ import json
 from .sample_data import sample_logins
 from .test_fixtures import example_user_data, example_user_data_2
 import os
+from aws_xray_sdk.core import patch_all, xray_recorder
 
 LOGIN_URL = "/v1/user/sign_in"
 
 # Headers:
 headers = {
     "Authorization": os.getenv('JWT_TOKEN'),
-    "content-type": "application/json"
+    "content-type": "application/json",
+    #"Host": None,
+    #"User-Agent": None,
   }
 
 @pytest.fixture
 def client():
 
     client = app.test_client()
+    xray_recorder.begin_segment(name='users.{}.fathomai.com'.format('test'))
     return client
 
 
@@ -67,6 +71,7 @@ def test_no_password(client):
 
 
 def test_incorrect_password(client):
+    # TODO: Password is missing in database for this account in the test database. Need to be added.
     user_login = {
                   "email": "glitch0@gmail.com",
                   "password": "muffins1s"
@@ -84,9 +89,46 @@ def test_update_user(client):
                              'height': {'ft': 1.5}
                          },
                          }
-    res = client.post('/v1/user/{}'.format(user_id),
+    res = client.put('/v1/user/{}'.format(user_id),
                       headers=headers,
                       data=json.dumps(updated_user_data)
                       )
     print(res.data)
     assert res.status_code == 200
+
+
+def test_create_sensor_mobile_pair(client):
+    headers['content-type'] = 'application/json'
+    # TODO: Fix testing strategy and seed a test database with the intial correct values for testing.
+    user_id = '19bfad75-9d95-4fff-aec9-de4a93da214d'  # Needs to match JWT token in environmental variable and be in database
+
+    sensor_mobile_info = {'sensor_uid': "ERAFASDFVASHKVIAS",
+                          'mobile_uid': "F3423nVA324afVJKs",
+                          # 'path': None,
+                          # 'httpMethod': 'post'
+                         }
+    res = client.post("/users/user/{}/sensor_mobile_pair".format(user_id), headers=headers,
+                        data=json.dumps(sensor_mobile_info))
+    print(res.data)
+    assert 200 == res.status_code
+    # TODO: Add verification that the entry is in the database
+
+
+def test_retrieve_sensor_mobile_pair(client):
+    headers['content-type'] = 'application/json'
+    # TODO: Fix testing strategy and seed a test database with the intial correct values for testing.
+    user_id = '19bfad75-9d95-4fff-aec9-de4a93da214d'  # Needs to match JWT token in environmental variable and be in database
+
+    sensor_mobile_info = {'sensor_uid': "ERAFASDFVASHKVIAS",
+                          'mobile_uid': "F3423nVA324afVJKs",
+                          # 'path': None,
+                          # 'httpMethod': 'post'
+                         }
+    res = client.get("/users/user/{}/sensor_mobile_pair".format(user_id), headers=headers)
+    print(res.data)
+    data = json.loads(res.data)
+    assert 200 == res.status_code
+    assert data['sensor_uid'] == sensor_mobile_info['sensor_uid']
+    assert data['mobile_uid'] == sensor_mobile_info['mobile_uid']
+
+    # TODO: Add verification that the entry is in the database
