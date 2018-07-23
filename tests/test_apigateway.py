@@ -99,9 +99,9 @@ def test_update_user(client):
 
 def test_create_sensor_mobile_pair(client):
     headers['content-type'] = 'application/json'
-    # user_id = '3a07c79a-2e9f-487f-aef7-555954537e29'
-    # TODO: Fix testing strategy and seed a test datbase with the intial correct values for testing.
+    # TODO: Fix testing strategy and seed a test database with the intial correct values for testing.
     user_id = '19bfad75-9d95-4fff-aec9-de4a93da214d'  # Needs to match JWT token in environmental variable and be in database
+
     sensor_mobile_info = {'sensor_uid': "ERAFASDFVASHKVIAS",
                           'mobile_uid': "F3423nVA324afVJKs",
                           # 'path': None,

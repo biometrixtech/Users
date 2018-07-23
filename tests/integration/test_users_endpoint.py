@@ -77,10 +77,24 @@ def test_create_sensor_mobile_pair():
     :return:
     """
     headers['content-type'] = 'application/json'
-    user_id = '3a07c79a-2e9f-487f-aef7-555954537e29'  # Needs to match JWT token above
+    # user_id = '3a07c79a-2e9f-487f-aef7-555954537e29'  # Needs to match JWT token above
+    user_id = '19bfad75-9d95-4fff-aec9-de4a93da214d'
     sensor_mobile_info = {'sensor_uid': "ERAFASDFVASHKVIAS",
                           'mobile_uid': "F3423nVA324afVJKs"
                           }
+    # Login First to receive valid jwt
+    # dev_login = {
+    #     "email": "steve1234@gmail.com",
+    #     "password": "ABC123456"
+    # }
+    # res = requests.post(LOGIN_URL,
+    #                   headers={'content-type': 'application/json'},
+    #                   data=json.dumps(dev_login)
+    #                   )
+    # jwt_token = res.data['authorization']['jwt']
+    # user_id = res.data['user']['id']
+    # headers['Authorization'] = jwt_token
+
     res = requests.post("{}/users/user/{}/sensor_mobile_pair".format(API_URL, user_id), headers=headers,
                         data=json.dumps(sensor_mobile_info))
     print(res.text)
