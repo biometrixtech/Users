@@ -112,3 +112,23 @@ def test_create_sensor_mobile_pair(client):
     print(res.data)
     assert 200 == res.status_code
     # TODO: Add verification that the entry is in the database
+
+
+def test_retrieve_sensor_mobile_pair(client):
+    headers['content-type'] = 'application/json'
+    # TODO: Fix testing strategy and seed a test database with the intial correct values for testing.
+    user_id = '19bfad75-9d95-4fff-aec9-de4a93da214d'  # Needs to match JWT token in environmental variable and be in database
+
+    sensor_mobile_info = {'sensor_uid': "ERAFASDFVASHKVIAS",
+                          'mobile_uid': "F3423nVA324afVJKs",
+                          # 'path': None,
+                          # 'httpMethod': 'post'
+                         }
+    res = client.get("/users/user/{}/sensor_mobile_pair".format(user_id), headers=headers)
+    print(res.data)
+    data = json.loads(res.data)
+    assert 200 == res.status_code
+    assert data['sensor_uid'] == sensor_mobile_info['sensor_uid']
+    assert data['mobile_uid'] == sensor_mobile_info['mobile_uid']
+
+    # TODO: Add verification that the entry is in the database

@@ -104,7 +104,7 @@ def test_create_sensor_mobile_pair():
 
 def test_retrieve_sensor_mobile_pair():
     headers['content-type'] = 'application/json'
-    user_id = '3a07c79a-2e9f-487f-aef7-555954537e29'  # Needs to match JWT token above
+    user_id = '19bfad75-9d95-4fff-aec9-de4a93da214d'  # Needs to match JWT token above
     res = requests.get("{}/users/user/{}/sensor_mobile_pair".format(API_URL, user_id), headers=headers)
     print(res.text)
     assert 200 == res.status_code
@@ -114,7 +114,7 @@ def test_retrieve_sensor_mobile_pair():
 
 def test_update_sensor_mobile_pair():
     headers['content-type'] = 'application/json'
-    user_id = '3a07c79a-2e9f-487f-aef7-555954537e29'  # Needs to match JWT token above
+    user_id = '19bfad75-9d95-4fff-aec9-de4a93da214d'  # Needs to match JWT token above
     sensor_mobile_info = {'sensor_uid': "avn30vat0Vas",
                           'mobile_uid': "vaLFJ20Vnv59Da"
                           }
@@ -127,7 +127,7 @@ def test_update_sensor_mobile_pair():
 
 def test_delete_sensor_mobile_pair():
     headers['content-type'] = 'application/json'
-    user_id = '3a07c79a-2e9f-487f-aef7-555954537e29'  # Needs to match JWT token above
+    user_id = '19bfad75-9d95-4fff-aec9-de4a93da214d'  # Needs to match JWT token above
     sensor_mobile_info = {'sensor_mobile_pair_id': "2342nvasdfk324a"  # Needs to be an existing pair id
                           }
     res = requests.delete("{}/users/user/{}/sensor_mobile_pair".format(API_URL, user_id), headers=headers,

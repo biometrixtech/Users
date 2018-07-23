@@ -725,7 +725,10 @@ def sensor_mobile_pair_routing(user_id):
     # data = request.json
     # sensor_uid = data['sensor_uid']
     # mobile_uid = data['mobile_uid']
-    return route_handlers[request.method](user_id=user_id, **request.json)
+    if request.data:
+        return route_handlers[request.method](user_id=user_id, **request.json)
+    else:
+        return route_handlers[request.method](user_id=user_id)
 
 
 def pull_user_object(user_id):
