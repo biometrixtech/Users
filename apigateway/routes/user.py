@@ -413,13 +413,16 @@ def save_user_data(user, user_data):
         if validate_password_format(user_data['password']):
             user.password_digest = bcrypt.generate_password_hash(user_data['password']).decode('utf-8')
 
-    height_feet, height_inches = convert_to_ft_inches(user_data['biometric_data']['height'])
-    weight = convert_to_pounds(user_data['biometric_data']['mass'])
-    user.height_feet=height_feet
-    user.height_inches=height_inches
-    user.weight=weight
-    if 'gender' in user_data['biometric_data'].keys():
-        user.gender=user_data['biometric_data']['gender']
+    if 'biometric_data' in user_data.keys():
+        if 'height' in user_data['biometric_data'].keys():
+            height_feet, height_inches = convert_to_ft_inches(user_data['biometric_data']['height'])
+            user.height_feet = height_feet
+            user.height_inches = height_inches
+        if 'mass' in user_data['biometric_data'].keys():
+            weight = convert_to_pounds(user_data['biometric_data']['mass'])
+            user.weight=weight
+        if 'gender' in user_data['biometric_data'].keys():
+            user.gender=user_data['biometric_data']['gender']
 
     user.updated_at = datetime.datetime.now()
     return user
@@ -609,7 +612,7 @@ def update_user(user_id):
     user = save_user_data(user, user_data)
     session.commit()
 
-    ret = {'user': user}
+    ret = {'user': create_user_dictionary(user)}
     ret['message'] = 'Success!'
     return ret
 
@@ -712,10 +715,11 @@ def sensor_mobile_pair_routing(user_id):
     route_handlers = {'POST': create_sensor_mobile_pair,
                       'GET': retrieve_sensor_mobile_pair,
                       'PUT': create_sensor_mobile_pair,  # Since we're just updating the user object, create and update are the same
-                      'DELETE': None
+                      'DELETE': delete_sensor_mobile_pair
                       }
-    # TODO: Verify the user in the JWT Token matches the user_id provided
-    if not verify_user_id_matches_jwt(jwt_token=request.headers['jwt'], user_id=user_id):
+    if 'Authorization' not in request.headers:
+        raise UnauthorizedException('Requires jwt token to validate user identity')
+    if not verify_user_id_matches_jwt(jwt_token=request.headers['Authorization'], user_id=user_id):
         raise UnauthorizedException('user_id supplied ({}) does not match user_id in jwt'.format(user_id))
 
     # data = request.json
