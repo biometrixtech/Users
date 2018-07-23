@@ -107,6 +107,8 @@ def create_user_dictionary(user):
         "role": user.role,
         "updated_date": format_datetime(user.updated_at),
         "training_status": user.status,
+        "sensor_uid": user.sensor_uid,
+        "mobile_uid": user.mobile_uid
     }
 
 
