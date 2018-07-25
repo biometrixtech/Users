@@ -469,6 +469,7 @@ Resources:
                           - "iot:CreateKeysAndCertificate"
                           - "iot:CreateThing"
                           - "iot:DescribeThing"
+                          - "iot:ListThings"
                           - "iot:UpdateThing"
                           - "iot:Publish"
                           - "sns:CreatePlatformEndpoint"
