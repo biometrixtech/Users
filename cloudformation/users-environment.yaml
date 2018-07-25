@@ -1,4 +1,4 @@
-# A template that creates an environment
+# A template that creates a Users service
 # Version: da39a3ee5e6b4b0d3255bfef95601890afd80709
 #
 # Copyright 2017 Melon Software Ltd (UK), all rights reserved.  Used under license.
@@ -12,6 +12,25 @@ Parameters:
     Environment:
         Type: "String"
         Description: "The name of the environment"
+
+    # The second part of the CIDR block for the VPN (10.xx.0.0/24).
+    VpnCidr:
+        Type: "Number"
+        MinValue: 0
+        MaxValue: 255
+        Default: "2"
+        Description: "The second digit in the IP range (10.xx.0.0/16).  VPNs with overlapping address spaces cannot be peered."
+    PeeringId:
+        Type: "String"
+        Default: ""
+        AllowedPattern: "^(vpc|pcx)-[a-z0-9]+|$"
+        Description: "VPC ID to create a new peering connection to, or Peering Connection ID to add routes to an existing connection"
+    PeeringCidr:
+        Type: "String"
+        Description: "The CIDR range in the peered VPC to route"
+        Default: ""
+        AllowedPattern: "^((\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2}))|$"
+        ConstraintDescription: "Must be a valid IP CIDR range of the form x.x.x.x/x."
 
     DynamodbReadCapacity:
         Default: 1
@@ -38,9 +57,58 @@ Parameters:
 Mappings:
     TemplateVersion:
         Self: { Commit: "da39a3ee5e6b4b0d3255bfef95601890afd80709" }
-        Infrastructure: { Commit: "2d222e78ee364e58b7db1709f89effdf4d1d4c7d" }
-        
+        Infrastructure: { Commit: "e2e3e8ab36088a006efd220f5231bb82f14eef84" }
+
+Metadata:
+    "AWS::CloudFormation::Interface":
+        ParameterGroups:
+          - Label: { default: "Environment" }
+            Parameters:
+              - "Environment"
+          - Label: { default: "Networking" }
+            Parameters:
+              - "VpnCidr"
+              - "PeeringId"
+              - "PeeringCidr"
+
+        ParameterLabels:
+            Environment: { default: "Environment" }
+            VpnCidr: { default: "VPN CIDR block" }
+            PeeringId: { default: "Peering VPC ID" }
+            PeeringCidr: { default: "Peering CIDR" }
+
+Conditions:
+    CreateVpc: { "Fn::Not": [ { "Fn::Equals": [ { Ref: "PeeringCidr" }, "" ] } ] }
+
 Resources:
+
+    ##########################################################################################################
+    ## VPC & NETWORKING
+    ##########################################################################################################
+
+    VpcStack:
+        Type: "AWS::CloudFormation::Stack"
+        Properties:
+            Parameters:
+                Environment: { Ref: "Environment" }
+                SubnetConfiguration: "Public A/B, Private A/B"
+                PeeringCidr: { Ref: "PeeringCidr" }
+                PeeringId: { Ref: "PeeringId" }
+                Project: "plans"
+                Service: "vpc"
+                VpnCidr: { Ref: "VpnCidr" }
+            Tags:
+              - { Key: "Name", Value: { "Fn::Sub": "users-${Environment}-execute" } }
+              - { Key: "Management", Value: "managed" }
+              - { Key: "Project", Value: "users" }
+              - { Key: "Environment", Value: { Ref: "Environment" } }
+              - { Key: "Service", Value: "vpc" }
+            TemplateURL: { "Fn::Sub": [ "https://s3.amazonaws.com/${InfrastructureBucketName}/cloudformation/infrastructure/${TemplateVersion}/vpc.yaml", {
+                InfrastructureBucketName: { "Fn::ImportValue": "InfrastructureBucketName" },
+                TemplateVersion: { "Fn::FindInMap": [ "TemplateVersion", "Infrastructure", "Commit" ] }
+            } ] }
+            TimeoutInMinutes: 10
+        Condition: "CreateVpc"
 
     ##########################################################################################################
     ##  DATABASE
@@ -314,7 +382,7 @@ Resources:
               - { Key: "Service", Value: "apigateway" }
 
     ##########################################################################################################
-    ##  OUTPUTS
+    ##  LAMBDA
     ##########################################################################################################
 
     ApiGatewayLambdaExecutionRole:
@@ -368,6 +436,26 @@ Resources:
                         Resource: "*"
             RoleName: { "Fn::Sub": "users-${Environment}-apigateway-execute-${AWS::Region}" }
 
+    LambdaVpcSecurityGroup:
+        Type: "AWS::EC2::SecurityGroup"
+        Properties:
+            GroupDescription: "Security group which allows access for AWS Lambda"
+            GroupName: { "Fn::Sub": "users-${Environment}-apigateway-execute" }
+            SecurityGroupIngress:
+                # All ports open from internal access
+              - IpProtocol: "tcp"
+                FromPort: "0"
+                ToPort: "65535"
+                CidrIp: "0.0.0.0/0"
+            Tags:
+              - { Key: "Name", Value: { "Fn::Sub": "users-${Environment}-apigateway-execute" } }
+              - { Key: "Management", Value: "managed" }
+              - { Key: "Project", Value: "users" }
+              - { Key: "Environment", Value: { Ref: "Environment" } }
+              - { Key: "Service", Value: "apigateway" }
+            VpcId: { "Fn::GetAtt": [ "VpcStack", "Outputs.VpcId" ] }
+        Condition: "CreateVpc"
+
     ApiGatewayLambda:
         Type: "AWS::Lambda::Function"
         Properties:
@@ -396,6 +484,14 @@ Resources:
               - { Key: "Service", Value: "apigateway" }
             TracingConfig:
                 Mode: "Active"
+            VpcConfig: { "Fn::If": [
+                "CreateVpc",
+                {
+                    SubnetIds: { "Fn::Split": [ ",", { "Fn::GetAtt": [ "VpcStack", "Outputs.PrivateSubnetIds" ] } ] },
+                    SecurityGroupIds: [ { Ref: "LambdaVpcSecurityGroup" } ]
+                },
+                { Ref: "AWS::NoValue" }
+            ]}
 
     ApigatewayStack:
         Type: "AWS::CloudFormation::Stack"
