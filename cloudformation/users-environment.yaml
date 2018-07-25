@@ -94,7 +94,7 @@ Resources:
                 SubnetConfiguration: "Public A/B, Private A/B"
                 PeeringCidr: { Ref: "PeeringCidr" }
                 PeeringId: { Ref: "PeeringId" }
-                Project: "plans"
+                Project: "users"
                 Service: "vpc"
                 VpnCidr: { Ref: "VpnCidr" }
             Tags:
