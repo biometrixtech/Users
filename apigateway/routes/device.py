@@ -87,7 +87,7 @@ def handle_device_patch(device_id):
         if request.json['push_notifications']['token'] is not None:
             update_push_notification_settings(
                 device_id,
-                device_type,
+                existing_attributes['device_type'],
                 request.json['push_notifications']['token'],
                 old_endpoint_arn=existing_attributes.get('push_notifications_endpoint', None),
                 enabled=request.json['push_notifications']['enabled'],
@@ -95,6 +95,7 @@ def handle_device_patch(device_id):
             )
         else:
             delete_push_notification_settings(device_id)
+        modified = True
 
     if modified:
         return {"message": "Update successful"}, 200
