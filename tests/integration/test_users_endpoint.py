@@ -79,8 +79,8 @@ def test_create_sensor_mobile_pair():
     headers['content-type'] = 'application/json'
     # user_id = '3a07c79a-2e9f-487f-aef7-555954537e29'  # Needs to match JWT token above
     user_id = '19bfad75-9d95-4fff-aec9-de4a93da214d'
-    sensor_mobile_info = {'sensor_uid': "ERAFASDFVASHKVIAS",
-                          'mobile_uid': "F3423nVA324afVJKs"
+    sensor_mobile_info = {'sensor_pid': "ERAFASDFVASHKVIAS",
+                          'mobile_uuid': "F3423nVA324afVJKs"
                           }
     # Login First to receive valid jwt
     # dev_login = {
@@ -109,15 +109,15 @@ def test_retrieve_sensor_mobile_pair():
     print(res.text)
     assert 200 == res.status_code
     data = res.json()
-    assert 'sensor_uid' in data.keys()
-    assert 'mobile_uid' in data.keys()
+    assert 'sensor_pid' in data.keys()
+    assert 'mobile_uuid' in data.keys()
 
 
 def test_update_sensor_mobile_pair():
     headers['content-type'] = 'application/json'
     user_id = '19bfad75-9d95-4fff-aec9-de4a93da214d'  # Needs to match JWT token above
-    sensor_mobile_info = {'sensor_uid': "avn30vat0Vas",
-                          'mobile_uid': "vaLFJ20Vnv59Da"
+    sensor_mobile_info = {'sensor_pid': "avn30vat0Vas",
+                          'mobile_uuid': "vaLFJ20Vnv59Da"
                           }
     res = requests.put("{}/users/user/{}/sensor_mobile_pair".format(API_URL, user_id), headers=headers,
                        data=json.dumps(sensor_mobile_info)
