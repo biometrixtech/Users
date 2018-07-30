@@ -107,8 +107,8 @@ def create_user_dictionary(user):
         "role": user.role,
         "updated_date": format_datetime(user.updated_at),
         "training_status": user.status,
-        "sensor_uid": user.sensor_uid,
-        "mobile_uid": user.mobile_uid
+        "sensor_pid": user.sensor_pid,
+        "mobile_udid": user.mobile_udid
     }
 
 
@@ -621,13 +621,23 @@ def update_user(user_id):
 
 @user_app.route('/<uuid:user_id>', methods=['DELETE'])
 @authentication_required
-def delete_user(user_id):
+def call_delete_user(user_id):
+    """
+    Wrapper around delete user to allow for delete_user to be tested without the request context required in the
+      decorators of this function
+    :param user_id:
+    :return:
+    """
+    return delete_user(user_id, jwt_token=request.headers['jwt'])
+
+
+def delete_user(user_id, jwt_token):
     """
     Verifies the user is authorized to delete this account
     :param user_id:
     :return:
     """
-    if not verify_user_id_matches_jwt(jwt_token=request.headers['jwt'], user_id=user_id):
+    if not verify_user_id_matches_jwt(jwt_token=jwt_token, user_id=user_id):
         raise UnauthorizedException('user_id supplied ({}) does not match user_id in jwt'.format(user_id))
     user = pull_user_object(user_id)
     user_id_found = user.id
@@ -702,7 +712,7 @@ def verify_user_id_matches_jwt(jwt_token=None, user_id=None):
 
     token = jwt.decode(jwt_token, os.getenv('SECRET_KEY_BASE'), algorithms='HS256', verify=False)
     if 'user_id' in token.keys():
-        return token['user_id'] == user_id
+        return token['user_id'] == str(user_id)
     raise ApplicationException(400, 'MissingUserIdFromJWT', 'user_id was not found in jwt token.')
 
 
@@ -725,8 +735,8 @@ def sensor_mobile_pair_routing(user_id):
         raise UnauthorizedException('user_id supplied ({}) does not match user_id in jwt'.format(user_id))
 
     # data = request.json
-    # sensor_uid = data['sensor_uid']
-    # mobile_uid = data['mobile_uid']
+    # sensor_pid = data['sensor_pid']
+    # mobile_udid = data['mobile_udid']
     if request.data:
         return route_handlers[request.method](user_id=user_id, **request.json)
     else:
@@ -747,26 +757,26 @@ def pull_user_object(user_id):
     #     raise ApplicationException(400, 'UserNotFoundError', 'User {} not found.'.format(user_id))
 
 
-def create_sensor_mobile_pair(user_id=None, sensor_uid=None, mobile_uid=None):
+def create_sensor_mobile_pair(user_id=None, sensor_pid=None, mobile_udid=None):
     """
     Adds the sensor and mobile info to a given user
     :param user_id:
     :return:
     """
-    if user_id is None or sensor_uid is None or mobile_uid is None:
-        raise InvalidSchemaException('Missing user_id, or sensor_uid, or mobile_uid')
+    if user_id is None or sensor_pid is None or mobile_udid is None:
+        raise InvalidSchemaException('Missing user_id, or sensor_pid, or mobile_udid')
 
     user = pull_user_object(user_id)
 
-    user.sensor_uid = str(sensor_uid)
-    user.mobile_uid = str(mobile_uid)
+    user.sensor_pid = str(sensor_pid)
+    user.mobile_udid = str(mobile_udid)
 
     session.commit()
 
     return {'message': 'Success!',
             'user_id': user.id,
-            'sensor_uid': user.sensor_uid,
-            'mobile_uid': user.mobile_uid
+            'sensor_pid': user.sensor_pid,
+            'mobile_udid': user.mobile_udid
             }
 
 
@@ -782,19 +792,19 @@ def retrieve_sensor_mobile_pair(user_id=None):
     user = pull_user_object(user_id)
     return {'message': 'Success!',
             'user_id': user.id,
-            'sensor_uid': user.sensor_uid,
-            'mobile_uid': user.mobile_uid
+            'sensor_pid': user.sensor_pid,
+            'mobile_udid': user.mobile_udid
             }
 
 
-def update_sensor_mobile_pair(user_id=None, sensor_uid=None, mobile_uid=None):
+def update_sensor_mobile_pair(user_id=None, sensor_pid=None, mobile_udid=None):
     """
     Adds the sensor and mobile info to a given user
     :param user_id:
     :return:
     """
     # Not Needed as it matches the create_sensor_mobile_pair function
-    return create_sensor_mobile_pair(user_id=user_id, sensor_uid=sensor_uid, mobile_uid=mobile_uid)
+    return create_sensor_mobile_pair(user_id=user_id, sensor_pid=sensor_pid, mobile_udid=mobile_udid)
 
 
 def delete_sensor_mobile_pair(user_id=None):
@@ -807,12 +817,12 @@ def delete_sensor_mobile_pair(user_id=None):
         raise InvalidSchemaException('Missing user_id')
 
     user = pull_user_object(user_id)
-    user.sensor_uid = None
-    user.mobile_uid = None
+    user.sensor_pid = None
+    user.mobile_udid = None
     session.commit()
     return {'message': 'Sensor and mobile uid successfully deleted.',
             'user_id': user.id,
-            'sensor_uid': user.sensor_uid,
-            'mobile_uid': user.mobile_uid
+            'sensor_pid': user.sensor_pid,
+            'mobile_udid': user.mobile_udid
             }
 
