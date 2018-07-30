@@ -17,11 +17,10 @@ depends_on = None
 
 
 def upgrade(): # TODO: Look up how to rename a column
-    op.add_column('users', sa.Column('sensor_pid', sa.String))
-    op.add_column('users', sa.Column('mobile_uuid', sa.String))
+    op.alter_column('users', 'sensor_uid', new_column_name='sensor_pid')
+    op.alter_column('users', 'mobile_uid', new_column_name='mobile_udid')
 
 
 def downgrade():
-    op.drop_column('users', 'sensor_pid')
-    op.drop_column('users', 'mobile_uuid')
-
+    op.alter_column('users', 'sensor_pid', new_column_name='sensor_uid')
+    op.alter_column('users', 'mobile_udid', new_column_name='mobile_uid')

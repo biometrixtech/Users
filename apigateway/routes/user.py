@@ -108,7 +108,7 @@ def create_user_dictionary(user):
         "updated_date": format_datetime(user.updated_at),
         "training_status": user.status,
         "sensor_pid": user.sensor_pid,
-        "mobile_uuid": user.mobile_uuid
+        "mobile_udid": user.mobile_udid
     }
 
 
@@ -736,7 +736,7 @@ def sensor_mobile_pair_routing(user_id):
 
     # data = request.json
     # sensor_pid = data['sensor_pid']
-    # mobile_uuid = data['mobile_uuid']
+    # mobile_udid = data['mobile_udid']
     if request.data:
         return route_handlers[request.method](user_id=user_id, **request.json)
     else:
@@ -757,26 +757,26 @@ def pull_user_object(user_id):
     #     raise ApplicationException(400, 'UserNotFoundError', 'User {} not found.'.format(user_id))
 
 
-def create_sensor_mobile_pair(user_id=None, sensor_pid=None, mobile_uuid=None):
+def create_sensor_mobile_pair(user_id=None, sensor_pid=None, mobile_udid=None):
     """
     Adds the sensor and mobile info to a given user
     :param user_id:
     :return:
     """
-    if user_id is None or sensor_pid is None or mobile_uuid is None:
-        raise InvalidSchemaException('Missing user_id, or sensor_pid, or mobile_uuid')
+    if user_id is None or sensor_pid is None or mobile_udid is None:
+        raise InvalidSchemaException('Missing user_id, or sensor_pid, or mobile_udid')
 
     user = pull_user_object(user_id)
 
     user.sensor_pid = str(sensor_pid)
-    user.mobile_uuid = str(mobile_uuid)
+    user.mobile_udid = str(mobile_udid)
 
     session.commit()
 
     return {'message': 'Success!',
             'user_id': user.id,
             'sensor_pid': user.sensor_pid,
-            'mobile_uuid': user.mobile_uuid
+            'mobile_udid': user.mobile_udid
             }
 
 
@@ -793,18 +793,18 @@ def retrieve_sensor_mobile_pair(user_id=None):
     return {'message': 'Success!',
             'user_id': user.id,
             'sensor_pid': user.sensor_pid,
-            'mobile_uuid': user.mobile_uuid
+            'mobile_udid': user.mobile_udid
             }
 
 
-def update_sensor_mobile_pair(user_id=None, sensor_pid=None, mobile_uuid=None):
+def update_sensor_mobile_pair(user_id=None, sensor_pid=None, mobile_udid=None):
     """
     Adds the sensor and mobile info to a given user
     :param user_id:
     :return:
     """
     # Not Needed as it matches the create_sensor_mobile_pair function
-    return create_sensor_mobile_pair(user_id=user_id, sensor_pid=sensor_pid, mobile_uuid=mobile_uuid)
+    return create_sensor_mobile_pair(user_id=user_id, sensor_pid=sensor_pid, mobile_udid=mobile_udid)
 
 
 def delete_sensor_mobile_pair(user_id=None):
@@ -818,11 +818,11 @@ def delete_sensor_mobile_pair(user_id=None):
 
     user = pull_user_object(user_id)
     user.sensor_pid = None
-    user.mobile_uuid = None
+    user.mobile_udid = None
     session.commit()
     return {'message': 'Sensor and mobile uid successfully deleted.',
             'user_id': user.id,
             'sensor_pid': user.sensor_pid,
-            'mobile_uuid': user.mobile_uuid
+            'mobile_udid': user.mobile_udid
             }
 

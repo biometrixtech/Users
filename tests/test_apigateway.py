@@ -103,7 +103,7 @@ def test_create_sensor_mobile_pair(client):
     user_id = '19bfad75-9d95-4fff-aec9-de4a93da214d'  # Needs to match JWT token in environmental variable and be in database
 
     sensor_mobile_info = {'sensor_pid': "ERAFASDFVASHKVIAS",
-                          'mobile_uuid': "F3423nVA324afVJKs",
+                          'mobile_udid': "F3423nVA324afVJKs",
                           # 'path': None,
                           # 'httpMethod': 'post'
                          }
@@ -120,7 +120,7 @@ def test_retrieve_sensor_mobile_pair(client):
     user_id = '19bfad75-9d95-4fff-aec9-de4a93da214d'  # Needs to match JWT token in environmental variable and be in database
 
     sensor_mobile_info = {'sensor_pid': "ERAFASDFVASHKVIAS",
-                          'mobile_uuid': "F3423nVA324afVJKs",
+                          'mobile_udid': "F3423nVA324afVJKs",
                           # 'path': None,
                           # 'httpMethod': 'post'
                          }
@@ -129,6 +129,6 @@ def test_retrieve_sensor_mobile_pair(client):
     data = json.loads(res.data)
     assert 200 == res.status_code
     assert data['sensor_pid'] == sensor_mobile_info['sensor_pid']
-    assert data['mobile_uuid'] == sensor_mobile_info['mobile_uuid']
+    assert data['mobile_udid'] == sensor_mobile_info['mobile_udid']
 
     # TODO: Add verification that the entry is in the database

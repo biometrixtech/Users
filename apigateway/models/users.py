@@ -110,7 +110,7 @@ class Users(Base):
     account_status = Column(AccountStatusEnumType)
     system_type = Column(SystemTypeEnumType)
     sensor_pid = Column(String)
-    mobile_uuid = Column(String)
+    mobile_udid = Column(String)
     injury_status = Column(InjuryStatusEnumtype)
     onboarding_status = Column(ARRAY(String))
     

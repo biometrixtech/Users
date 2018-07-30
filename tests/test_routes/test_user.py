@@ -120,14 +120,14 @@ def test_verify_user_id_matches_jwt():
 def test_create_user_sensor_mobile_pair(session):
     user = session.query(Users).first()
     sensor_pid = "ADFN@#L)FA)FDFNKSDF12"
-    mobile_uuid = "3NVAODR@)JASDFK@#KASFNSF3923nfa3"
-    res = create_sensor_mobile_pair(user_id=user.id, sensor_pid=sensor_pid, mobile_uuid=mobile_uuid)
+    mobile_udid = "3NVAODR@)JASDFK@#KASFNSF3923nfa3"
+    res = create_sensor_mobile_pair(user_id=user.id, sensor_pid=sensor_pid, mobile_udid=mobile_udid)
     print(res)
     assert type(res) == dict
     assert res['message'] == 'Success!'
     assert res['user_id'] == user.id
     assert res['sensor_pid'] == sensor_pid
-    assert res['mobile_uuid'] == mobile_uuid
+    assert res['mobile_udid'] == mobile_udid
 
 
 def test_retrieve_user_sensor_mobile_pair(session):
@@ -138,20 +138,20 @@ def test_retrieve_user_sensor_mobile_pair(session):
     assert res['message'] == 'Success!'
     assert res['user_id'] == user.id
     assert 'sensor_pid' in res
-    assert 'mobile_uuid' in res
+    assert 'mobile_udid' in res
 
 
 def test_update_user_sensor_mobile_pair(session):
     user = session.query(Users).first()
     sensor_pid = "ZZFER11NEW11Bb"
-    mobile_uuid = "99DFaff39Vnf9FS44"
-    res = update_sensor_mobile_pair(user_id=user.id, sensor_pid=sensor_pid, mobile_uuid=mobile_uuid)
+    mobile_udid = "99DFaff39Vnf9FS44"
+    res = update_sensor_mobile_pair(user_id=user.id, sensor_pid=sensor_pid, mobile_udid=mobile_udid)
     print(res)
     assert type(res) == dict
     assert res['message'] == 'Success!'
     assert res['user_id'] == user.id
     assert 'sensor_pid' in res
-    assert 'mobile_uuid' in res
+    assert 'mobile_udid' in res
 
 
 def test_delete_user_sensor_mobile_pair(session):
@@ -165,7 +165,7 @@ def test_delete_user_sensor_mobile_pair(session):
     assert str(res['user_id']) == user_id
     user_updated = session.query(Users).filter(Users.id==user_id).one()
     assert user_updated.sensor_pid is None
-    assert user_updated.mobile_uuid is None
+    assert user_updated.mobile_udid is None
 
 
 def test_save_user_data(session):
