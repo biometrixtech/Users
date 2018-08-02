@@ -185,6 +185,37 @@ def test_save_user_data(session):
     assert "555-123-4508" == user_new.phone_number
 
 
+def test_save_user_data_2(session):
+    user_id = 'e562e24e-933a-4de8-a799-44bfed8d7e8d'
+    user = session.query(Users).filter(Users.id == user_id).one()
+    user_data_update = {
+            "email": "mazen+mvp@fathomai.com",
+            "password": "Fathom123!",
+            "biometric_data": {
+                "gender": "male",
+                "height": {"m": 1.9},
+                "mass": {"kg": 102.5}
+            },
+            "personal_data": {
+              "birth_date": "01/10/1989",
+              "first_name": "Mazen",
+              "last_name": "Chami",
+              "phone_number": "6319889681",
+              "account_type": "free",
+              "account_status": "active",
+              "zip_code": "27701"
+            },
+            "role": "athlete",
+            "system_type": "1-sensor",
+            "injury_status": "healthy",
+            "onboarding_status": ["account_setup"]
+        }
+    user_new = save_user_data(user, user_data_update)
+    assert "account_setup" == user_new.onboarding_status[0]
+    assert "free" == user_new.account_type
+    assert "active" == user_new.account_status
+
+
 def test_delete_user(session):
 
     user_object = create_user_object(example_user_data_2)
