@@ -425,6 +425,8 @@ def save_user_data(user, user_data):
             user.weight=weight
         if 'gender' in user_data['biometric_data'].keys():
             user.gender=user_data['biometric_data']['gender']
+        if 'sex' in user_data['biometric_data'].keys():
+            user.gender=user_data['biometric_data']['sex']
 
     user.updated_at = datetime.datetime.now()
     return user
