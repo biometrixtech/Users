@@ -329,7 +329,13 @@ def create_user_object(user_data):
     :param user_data: dictionary with user data
     :return: User ORM object ready to save
     """
-    height_feet, height_inches = convert_to_ft_inches(user_data['biometric_data']['height'])
+    height_tuple = convert_to_ft_inches(user_data['biometric_data']['height'])
+    if height_tuple:
+        height_feet = height_tuple[0]
+        height_inches = height_tuple[1]
+    else:
+        height_feet = None
+        height_inches = None
     weight = convert_to_pounds(user_data['biometric_data']['mass'])
     password_hash = bcrypt.generate_password_hash(user_data['password']).decode('utf-8')
     # user_data = add_missing_keys(user_data, expected_user_keys)

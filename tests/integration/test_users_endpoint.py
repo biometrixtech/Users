@@ -59,9 +59,10 @@ def test_create_user():
 
 def test_update_user():
     headers['content-type'] = 'application/json'
-    user_id = "3a07c79a-2e9f-487f-aef7-555954537e29"
-    updated_user_data = {'biometric_data': {'phone_number': '23412302'},
-                         'personal_data': {
+    # user_id = "3a07c79a-2e9f-487f-aef7-555954537e29"
+    user_id = 'e1d09699-5f8b-49ed-8637-35c548f9edc8'
+    updated_user_data = {'personal_data': {'phone_number': '23412302'},
+                         'biometric_data': {
                                             'height': {'ft': 1.5}
                                           },
                          }
@@ -116,6 +117,7 @@ def test_retrieve_sensor_mobile_pair():
 def test_update_sensor_mobile_pair():
     headers['content-type'] = 'application/json'
     user_id = '19bfad75-9d95-4fff-aec9-de4a93da214d'  # Needs to match JWT token above
+    user_id = 'e1d09699-5f8b-49ed-8637-35c548f9edc8'
     sensor_mobile_info = {'sensor_pid': "avn30vat0Vas",
                           'mobile_udid': "vaLFJ20Vnv59Da"
                           }
