@@ -92,23 +92,21 @@ def create_user_dictionary(user):
         "personal_data": {
             "birth_date": format_date(user.birthday),
             "email": user.email,
-            # "zip_code": user.zipcode,  # TODO: Add to database
-            # "competition_level": enum,
-            # "sports": [sports_position_id,
-            #     sports_position_id,
-            #     sports_position_id
-            # ],
             "first_name": user.first_name,
             "last_name": user.last_name,
             "phone_number": user.phone_number,
-            # "account_type": user.account_type,   # enum
+            "account_type": user.account_type,  # enum
             "account_status": user.active,
+            "zip_code": user.zip_code
         },
         "role": user.role,
         "updated_date": format_datetime(user.updated_at),
         "training_status": user.status,
+        "onboarding_status": user.onboarding_status,
         "sensor_pid": user.sensor_pid,
-        "mobile_udid": user.mobile_udid
+        "mobile_udid": user.mobile_udid,
+        "system_type": user.system_type,
+        "injury_status": user.injury_status
     }
 
 
