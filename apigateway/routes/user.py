@@ -624,10 +624,10 @@ def update_user(user_id):
     user = save_user_data(user, user_data)
     try:
         session.commit()
+        ret = {'user': create_user_dictionary(user)}
     finally:
         session.close()
 
-    ret = {'user': create_user_dictionary(user)}
     ret['message'] = 'Success!'
     return ret
 
