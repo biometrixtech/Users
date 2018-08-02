@@ -83,9 +83,10 @@ def test_incorrect_password(client):
 
 
 def test_update_user(client):
-    user_id = "3a07c79a-2e9f-487f-aef7-555954537e29"
-    updated_user_data = {'biometric_data': {'phone_number': '23412302'},
-                         'personal_data': {
+    # user_id = "3a07c79a-2e9f-487f-aef7-555954537e29"
+    user_id = 'e1d09699-5f8b-49ed-8637-35c548f9edc8'
+    updated_user_data = {'personal_data': {'phone_number': '23412302'},
+                         'biometric_data': {
                              'height': {'ft': 1.5}
                          },
                          }

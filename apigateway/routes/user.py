@@ -425,11 +425,8 @@ def save_user_data(user, user_data):
             if height_tuple:
                 height_feet = height_tuple[0]
                 height_inches = height_tuple[1]
-            else:
-                height_feet = None
-                height_inches = None
-            user.height_feet = height_feet
-            user.height_inches = height_inches
+                user.height_feet = height_feet
+                user.height_inches = height_inches
         if 'mass' in user_data['biometric_data'].keys():
             weight = convert_to_pounds(user_data['biometric_data']['mass'])
             user.weight=weight
@@ -439,6 +436,7 @@ def save_user_data(user, user_data):
             user.gender=user_data['biometric_data']['sex']
 
     user.updated_at = datetime.datetime.now()
+
     return user
 
 
@@ -624,7 +622,10 @@ def update_user(user_id):
 
 
     user = save_user_data(user, user_data)
-    session.commit()
+    try:
+        session.commit()
+    finally:
+        session.close()
 
     ret = {'user': create_user_dictionary(user)}
     ret['message'] = 'Success!'
