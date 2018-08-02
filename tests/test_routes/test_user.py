@@ -5,7 +5,8 @@ import os
 from routes.user import jwt_make_payload, create_user_object, add_missing_keys, \
                         verify_user_id_matches_jwt, save_user_data, delete_user, \
                         create_sensor_mobile_pair, update_sensor_mobile_pair, \
-                        retrieve_sensor_mobile_pair, delete_sensor_mobile_pair
+                        retrieve_sensor_mobile_pair, delete_sensor_mobile_pair, \
+                        create_authorization_resp
 from db_connection import engine, Base
 from models import Users, Teams, TeamsUsers #, SportsHistory  # , TrainingGroups, TrainingGroupsUsers
 from routes.user import create_user_dictionary, save_sports_history, save_training_schedule
@@ -24,6 +25,7 @@ def setup_module(session):
 
 
 def teardown_module():
+    # http://alexmic.net/flask-sqlalchemy-pytest/
     # session.rollback()
     # session.close()  # Closes the transaction and commits all the changes.
     pass
@@ -117,15 +119,15 @@ def test_verify_user_id_matches_jwt():
 
 def test_create_user_sensor_mobile_pair(session):
     user = session.query(Users).first()
-    sensor_uid = "ADFN@#L)FA)FDFNKSDF12"
-    mobile_uid = "3NVAODR@)JASDFK@#KASFNSF3923nfa3"
-    res = create_sensor_mobile_pair(user_id=user.id, sensor_uid=sensor_uid, mobile_uid=mobile_uid)
+    sensor_pid = "ADFN@#L)FA)FDFNKSDF12"
+    mobile_udid = "3NVAODR@)JASDFK@#KASFNSF3923nfa3"
+    res = create_sensor_mobile_pair(user_id=user.id, sensor_pid=sensor_pid, mobile_udid=mobile_udid)
     print(res)
     assert type(res) == dict
     assert res['message'] == 'Success!'
     assert res['user_id'] == user.id
-    assert res['sensor_uid'] == sensor_uid
-    assert res['mobile_uid'] == mobile_uid
+    assert res['sensor_pid'] == sensor_pid
+    assert res['mobile_udid'] == mobile_udid
 
 
 def test_retrieve_user_sensor_mobile_pair(session):
@@ -135,21 +137,21 @@ def test_retrieve_user_sensor_mobile_pair(session):
     assert type(res) == dict
     assert res['message'] == 'Success!'
     assert res['user_id'] == user.id
-    assert 'sensor_uid' in res
-    assert 'mobile_uid' in res
+    assert 'sensor_pid' in res
+    assert 'mobile_udid' in res
 
 
 def test_update_user_sensor_mobile_pair(session):
     user = session.query(Users).first()
-    sensor_uid = "ZZFER11NEW11Bb"
-    mobile_uid = "99DFaff39Vnf9FS44"
-    res = update_sensor_mobile_pair(user_id=user.id, sensor_uid=sensor_uid, mobile_uid=mobile_uid)
+    sensor_pid = "ZZFER11NEW11Bb"
+    mobile_udid = "99DFaff39Vnf9FS44"
+    res = update_sensor_mobile_pair(user_id=user.id, sensor_pid=sensor_pid, mobile_udid=mobile_udid)
     print(res)
     assert type(res) == dict
     assert res['message'] == 'Success!'
     assert res['user_id'] == user.id
-    assert 'sensor_uid' in res
-    assert 'mobile_uid' in res
+    assert 'sensor_pid' in res
+    assert 'mobile_udid' in res
 
 
 def test_delete_user_sensor_mobile_pair(session):
@@ -162,8 +164,8 @@ def test_delete_user_sensor_mobile_pair(session):
     assert res['message'] == 'Sensor and mobile uid successfully deleted.'
     assert str(res['user_id']) == user_id
     user_updated = session.query(Users).filter(Users.id==user_id).one()
-    assert user_updated.sensor_uid is None
-    assert user_updated.mobile_uid is None
+    assert user_updated.sensor_pid is None
+    assert user_updated.mobile_udid is None
 
 
 def test_save_user_data(session):
@@ -183,10 +185,46 @@ def test_save_user_data(session):
     assert "555-123-4508" == user_new.phone_number
 
 
+def test_save_user_data_2(session):
+    user_id = 'e562e24e-933a-4de8-a799-44bfed8d7e8d'
+    user = session.query(Users).filter(Users.id == user_id).one()
+    user_data_update = {
+            "email": "mazen+mvp@fathomai.com",
+            "password": "Fathom123!",
+            "biometric_data": {
+                "gender": "male",
+                "height": {"m": 1.9},
+                "mass": {"kg": 102.5}
+            },
+            "personal_data": {
+              "birth_date": "01/10/1989",
+              "first_name": "Mazen",
+              "last_name": "Chami",
+              "phone_number": "6319889681",
+              "account_type": "free",
+              "account_status": "active",
+              "zip_code": "27701"
+            },
+            "role": "athlete",
+            "system_type": "1-sensor",
+            "injury_status": "healthy",
+            "onboarding_status": ["account_setup"]
+        }
+    user_new = save_user_data(user, user_data_update)
+    assert "account_setup" == user_new.onboarding_status[0]
+    assert "free" == user_new.account_type
+    assert "active" == user_new.account_status
+
+
 def test_delete_user(session):
-    user_to_be_deleted = '6f3ae305-304a-4fca-917e-aace4d5226a6'
+
+    user_object = create_user_object(example_user_data_2)
+    session.add(user_object)
+    session.commit()
+    user_to_be_deleted = str(user_object.id)
+    auth = create_authorization_resp(user_id=user_object.id, sign_in_method='json', role=user_object.role)
     user = session.query(Users).filter(Users.id == user_to_be_deleted).one()
-    res = delete_user(user.id)
+    res = delete_user(user.id, jwt_token=auth['jwt'])
     assert 'Success' in res['message']
     user = session.query(Users).filter(Users.id == user_to_be_deleted).first()
     assert user is None
