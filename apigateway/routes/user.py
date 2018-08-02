@@ -421,7 +421,13 @@ def save_user_data(user, user_data):
 
     if 'biometric_data' in user_data.keys():
         if 'height' in user_data['biometric_data'].keys():
-            height_feet, height_inches = convert_to_ft_inches(user_data['biometric_data']['height'])
+            height_tuple = convert_to_ft_inches(user_data['biometric_data']['height'])
+            if height_tuple:
+                height_feet = height_tuple[0]
+                height_inches = height_tuple[1]
+            else:
+                height_feet = None
+                height_inches = None
             user.height_feet = height_feet
             user.height_inches = height_inches
         if 'mass' in user_data['biometric_data'].keys():
