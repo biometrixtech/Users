@@ -190,3 +190,4 @@ def test_delete_user(session):
     assert 'Success' in res['message']
     user = session.query(Users).filter(Users.id == user_to_be_deleted).first()
     assert user is None
+
