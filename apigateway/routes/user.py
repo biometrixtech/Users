@@ -76,7 +76,7 @@ def create_user_dictionary(user):
 
     return {
         "biometric_data": {
-            "sex": user.gender,
+            "sex": str(user.gender),
             "height": {
                 "ft_in": [user.height_feet, user.height_inches or 0],
                 "m": feet_to_meters(user.height_feet, user.height_inches)
@@ -96,7 +96,7 @@ def create_user_dictionary(user):
             "last_name": user.last_name,
             "phone_number": user.phone_number,
             "account_type": user.account_type,  # enum
-            "account_status": user.active,
+            "account_status": user.account_status,
             "zip_code": user.zip_code
         },
         "role": user.role,
@@ -406,7 +406,7 @@ def save_user_data(user, user_data):
             user.last_name=user_data['personal_data']['last_name']
         if 'phone_number' in user_data['personal_data'].keys():
             user.phone_number=user_data['personal_data']['phone_number']
-        if 'birthday' in user_data['personal_data'].keys():
+        if 'birth_date' in user_data['personal_data'].keys():
             user.birthday = user_data['personal_data']['birth_date']
         if 'zip_code' in user_data['personal_data'].keys():
             user.zip_code = user_data['personal_data']['zip_code']
@@ -622,6 +622,7 @@ def update_user(user_id):
 
 
     user = save_user_data(user, user_data)
+    # TODO: Custom EnumTypes aren't saving to the database...
     try:
         session.commit()
         ret = {'user': create_user_dictionary(user)}
