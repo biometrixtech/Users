@@ -622,7 +622,6 @@ def update_user(user_id):
 
 
     user = save_user_data(user, user_data)
-    # TODO: Custom EnumTypes aren't saving to the database...
     try:
         session.commit()
         ret = {'user': create_user_dictionary(user)}
