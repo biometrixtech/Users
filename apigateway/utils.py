@@ -73,7 +73,7 @@ def format_date(date_input):
     if isinstance(date_input, datetime.datetime):
         return date_input.strftime("%Y-%m-%d")
     else:
-        for format_string in ('%Y-%m-%d', '%m/%d/%y', '%Y-%m'):
+        for format_string in ('%Y-%m-%d', '%m/%d/%y', '%m/%d/%Y', '%Y-%m'):
             try:
                 date_input = datetime.datetime.strptime(date_input, format_string)
                 return date_input.strftime("%Y-%m-%d")
