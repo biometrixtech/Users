@@ -61,15 +61,39 @@ def test_update_user():
     headers['content-type'] = 'application/json'
     # user_id = "3a07c79a-2e9f-487f-aef7-555954537e29"
     user_id = 'e1d09699-5f8b-49ed-8637-35c548f9edc8'
-    updated_user_data = {'personal_data': {'phone_number': '23412302'},
-                         'biometric_data': {
-                                            'height': {'ft': 1.5}
-                                          },
-                         }
+    updated_user_data = {
+    "email": "mazen+mvp@fathomai.com",
+    "password": "Fathom123!",
+    "biometric_data": {
+        "gender": "male",
+        "height": {"m": 1.9},
+        "mass": {"kg": 102.5}
+    },
+    "personal_data": {
+      "birth_date": "01/10/1989",
+      "first_name": "Mazen",
+      "last_name": "Chami",
+      "phone_number": "6319889681",
+      "account_type": "free",
+      "account_status": "active",
+      "zip_code": "27701"
+    },
+    "role": "athlete",
+    "system_type": "1-sensor",
+    "injury_status": "healthy",
+    "onboarding_status": ["account_setup"]
+    }
     res = requests.put("{}/users/user/{}".format(API_URL, user_id), headers=headers,
                        data=json.dumps(updated_user_data))
     print(res.text)
     assert 200 == res.status_code
+    data = res.json()['user']
+    assert "free" == data['personal_data']['account_type']
+    assert "active" == data['personal_data']['account_status']
+    assert "account_setup" == data['onboarding_status'][0]
+    assert "1989-01-10" == data['personal_data']['birth_date']
+    assert "healthy" == data['injury_status']
+    assert "male" == data['biometric_data']['sex']
 
 
 def test_create_sensor_mobile_pair():
