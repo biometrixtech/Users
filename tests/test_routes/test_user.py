@@ -50,6 +50,7 @@ def test_create_user_dictionary(session):
     # training_groups = session.query(TrainingGroups).join(TrainingGroupsUsers).filter(TrainingGroupsUsers.user_id == user.id).all()
     user_dictionary = create_user_dictionary(user)
     assert type(user_dictionary) == dict
+    assert 'cleared_to_play'  in user_dictionary.keys()
 
 
 def test_add_missing_keys():
@@ -73,7 +74,8 @@ def test_add_missing_keys():
         "role": str,
         "system_type": str,
         "injury_status": str,
-        "onboarding_status": list
+        "onboarding_status": list,
+        "cleared_to_play": True
     }
     data = {"personal_data": {"Hello": "123"}}
     data = add_missing_keys(data, expected_user_keys)

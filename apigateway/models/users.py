@@ -113,7 +113,10 @@ class Users(Base):
     mobile_udid = Column(String)
     injury_status = Column(InjuryStatusEnumtype)
     onboarding_status = Column(ARRAY(String))
-    
+    agreed_terms_of_use = Column(Boolean) # TODO: Move to DateTime Terms were Agreed to
+    agreed_privacy_policy = Column(Boolean) # TODO: Move to DateTime Privacy Policy was agreed to
+    cleared_to_play = Column(Boolean)
+
 """
 ﻿-- Table: public.users
 

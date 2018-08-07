@@ -81,7 +81,9 @@ def test_update_user():
     "role": "athlete",
     "system_type": "1-sensor",
     "injury_status": "healthy",
-    "onboarding_status": ["account_setup"]
+    "onboarding_status": ["account_setup"],
+    "cleared_to_play": False,
+    "agreed_terms_of_use": True
     }
     res = requests.put("{}/users/user/{}".format(API_URL, user_id), headers=headers,
                        data=json.dumps(updated_user_data))
