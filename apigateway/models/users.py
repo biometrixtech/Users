@@ -109,11 +109,14 @@ class Users(Base):
     account_type = Column(AccountEnumType)
     account_status = Column(AccountStatusEnumType)
     system_type = Column(SystemTypeEnumType)
-    sensor_uid = Column(String)
-    mobile_uid = Column(String)
+    sensor_pid = Column(String)
+    mobile_udid = Column(String)
     injury_status = Column(InjuryStatusEnumtype)
     onboarding_status = Column(ARRAY(String))
-    
+    agreed_terms_of_use = Column(Boolean) # TODO: Move to DateTime Terms were Agreed to
+    agreed_privacy_policy = Column(Boolean) # TODO: Move to DateTime Privacy Policy was agreed to
+    cleared_to_play = Column(Boolean)
+
 """
 ﻿-- Table: public.users
 

@@ -65,6 +65,13 @@ def extract_email_and_password_from_request(data):
         raise InvalidSchemaException('Request payload was not received')
 
 
+def date_exists(_date=None):
+    if _date is None:
+        return False
+    else:
+        return True
+
+
 def create_user_dictionary(user):
     """
     Convert the user ORM to the desired output format
@@ -76,7 +83,7 @@ def create_user_dictionary(user):
 
     return {
         "biometric_data": {
-            "sex": user.gender,
+            "sex": str(user.gender),
             "height": {
                 "ft_in": [user.height_feet, user.height_inches or 0],
                 "m": feet_to_meters(user.height_feet, user.height_inches)
@@ -92,23 +99,24 @@ def create_user_dictionary(user):
         "personal_data": {
             "birth_date": format_date(user.birthday),
             "email": user.email,
-            # "zip_code": user.zipcode,  # TODO: Add to database
-            # "competition_level": enum,
-            # "sports": [sports_position_id,
-            #     sports_position_id,
-            #     sports_position_id
-            # ],
             "first_name": user.first_name,
             "last_name": user.last_name,
             "phone_number": user.phone_number,
-            # "account_type": user.account_type,   # enum
-            "account_status": user.active,
+            "account_type": user.account_type,  # enum
+            "account_status": user.account_status,
+            "zip_code": user.zip_code
         },
         "role": user.role,
         "updated_date": format_datetime(user.updated_at),
         "training_status": user.status,
-        "sensor_uid": user.sensor_uid,
-        "mobile_uid": user.mobile_uid
+        "onboarding_status": user.onboarding_status,
+        "sensor_pid": user.sensor_pid,
+        "mobile_udid": user.mobile_udid,
+        "system_type": user.system_type,
+        "injury_status": user.injury_status,
+        "agreed_terms_of_use": user.agreed_terms_of_use,
+        "agreed_privacy_policy": user.agreed_privacy_policy,
+        "cleared_to_play": user.cleared_to_play
     }
 
 
@@ -331,7 +339,13 @@ def create_user_object(user_data):
     :param user_data: dictionary with user data
     :return: User ORM object ready to save
     """
-    height_feet, height_inches = convert_to_ft_inches(user_data['biometric_data']['height'])
+    height_tuple = convert_to_ft_inches(user_data['biometric_data']['height'])
+    if height_tuple:
+        height_feet = height_tuple[0]
+        height_inches = height_tuple[1]
+    else:
+        height_feet = None
+        height_inches = None
     weight = convert_to_pounds(user_data['biometric_data']['mass'])
     password_hash = bcrypt.generate_password_hash(user_data['password']).decode('utf-8')
     # user_data = add_missing_keys(user_data, expected_user_keys)
@@ -345,36 +359,44 @@ def create_user_object(user_data):
     else:
         gender = None
 
-    user = Users(email=user_data['email'],
-                first_name=user_data['personal_data']['first_name'],
-                last_name=user_data['personal_data']['last_name'],
-                phone_number=user_data['personal_data']['phone_number'],
-                password_digest=password_hash,
-                created_at=datetime.datetime.now(),
-                updated_at=datetime.datetime.now(),
-                # avatar_file_name
-                # avatar_content_type
-                # avatar_file_size
-                # avatar_updated_at
-                # position
-                role=user_data['role'],
-                # active
-                # in_training
-                height_feet=height_feet,
-                height_inches=height_inches,
-                weight=weight,
-                gender=gender,
-                status=None,
-                # onboarded
-                birthday=user_data['personal_data']['birth_date'],
-                zip_code=user_data['personal_data']['zip_code'],
-                account_type=user_data['personal_data']['account_type'],
-                account_status = user_data['personal_data']['account_status'],
-                system_type = user_data['system_type'],
-                injury_status = user_data['injury_status'],
-                onboarding_status = user_data['onboarding_status']
-               )
-    return user
+    cleared_to_play = None
+    agreed_terms_of_use = None
+    agreed_privacy_policy = None
+    if 'agreed_terms_of_use' in user_data:
+        agreed_terms_of_use = user_data['agreed_terms_of_use']
+    if 'agreed_privacy_policy' in user_data:
+        agreed_privacy_policy = user_data['agreed_privacy_policy']
+    if 'cleared_to_play' in user_data:
+        cleared_to_play = user_data['cleared_to_play']
+
+    try:
+        user = Users(email=user_data['email'],
+                    first_name=user_data['personal_data']['first_name'],
+                    last_name=user_data['personal_data']['last_name'],
+                    phone_number=user_data['personal_data']['phone_number'],
+                    password_digest=password_hash,
+                    created_at=datetime.datetime.now(),
+                    updated_at=datetime.datetime.now(),
+                    role=user_data['role'],
+                    height_feet=height_feet,
+                    height_inches=height_inches,
+                    weight=weight,
+                    gender=gender,
+                    status=None,
+                    birthday=user_data['personal_data']['birth_date'],
+                    zip_code=user_data['personal_data']['zip_code'],
+                    account_type=user_data['personal_data']['account_type'],
+                    account_status = user_data['personal_data']['account_status'],
+                    system_type = user_data['system_type'],
+                    injury_status = user_data['injury_status'],
+                    onboarding_status = user_data['onboarding_status'],
+                    agreed_terms_of_use = agreed_terms_of_use,
+                    agreed_privacy_policy = agreed_privacy_policy,
+                    cleared_to_play = cleared_to_play
+                     )
+        return user
+    except KeyError as e:
+        raise ApplicationException(400, 'MissingRequiredUserFields', 'Missing parameters: {}'.format(str(e)))
 
 
 def save_user_data(user, user_data):
@@ -393,6 +415,13 @@ def save_user_data(user, user_data):
     if 'onboarding_status' in user_data:
         user.onboarding_status = user_data['onboarding_status']
 
+    if 'agreed_terms_of_use' in user_data:
+        user.agreed_terms_of_use = user_data['agreed_terms_of_use']
+    if 'agreed_privacy_policy' in user_data:
+        user.agreed_privacy_policy = user_data['agreed_privacy_policy']
+    if 'cleared_to_play' in user_data:
+        user.cleared_to_play = user_data['cleared_to_play']
+
     if 'email' in user_data.keys():
         user.email = user_data['email']
     if 'personal_data' in user_data.keys():
@@ -402,7 +431,7 @@ def save_user_data(user, user_data):
             user.last_name=user_data['personal_data']['last_name']
         if 'phone_number' in user_data['personal_data'].keys():
             user.phone_number=user_data['personal_data']['phone_number']
-        if 'birthday' in user_data['personal_data'].keys():
+        if 'birth_date' in user_data['personal_data'].keys():
             user.birthday = user_data['personal_data']['birth_date']
         if 'zip_code' in user_data['personal_data'].keys():
             user.zip_code = user_data['personal_data']['zip_code']
@@ -417,16 +446,22 @@ def save_user_data(user, user_data):
 
     if 'biometric_data' in user_data.keys():
         if 'height' in user_data['biometric_data'].keys():
-            height_feet, height_inches = convert_to_ft_inches(user_data['biometric_data']['height'])
-            user.height_feet = height_feet
-            user.height_inches = height_inches
+            height_tuple = convert_to_ft_inches(user_data['biometric_data']['height'])
+            if height_tuple:
+                height_feet = height_tuple[0]
+                height_inches = height_tuple[1]
+                user.height_feet = height_feet
+                user.height_inches = height_inches
         if 'mass' in user_data['biometric_data'].keys():
             weight = convert_to_pounds(user_data['biometric_data']['mass'])
             user.weight=weight
         if 'gender' in user_data['biometric_data'].keys():
             user.gender=user_data['biometric_data']['gender']
+        if 'sex' in user_data['biometric_data'].keys():
+            user.gender=user_data['biometric_data']['sex']
 
     user.updated_at = datetime.datetime.now()
+
     return user
 
 
@@ -612,22 +647,35 @@ def update_user(user_id):
 
 
     user = save_user_data(user, user_data)
-    session.commit()
+    try:
+        session.commit()
+        ret = {'user': create_user_dictionary(user)}
+    finally:
+        session.close()
 
-    ret = {'user': create_user_dictionary(user)}
     ret['message'] = 'Success!'
     return ret
 
 
 @user_app.route('/<uuid:user_id>', methods=['DELETE'])
 @authentication_required
-def delete_user(user_id):
+def call_delete_user(user_id):
+    """
+    Wrapper around delete user to allow for delete_user to be tested without the request context required in the
+      decorators of this function
+    :param user_id:
+    :return:
+    """
+    return delete_user(user_id, jwt_token=request.headers['jwt'])
+
+
+def delete_user(user_id, jwt_token):
     """
     Verifies the user is authorized to delete this account
     :param user_id:
     :return:
     """
-    if not verify_user_id_matches_jwt(jwt_token=request.headers['jwt'], user_id=user_id):
+    if not verify_user_id_matches_jwt(jwt_token=jwt_token, user_id=user_id):
         raise UnauthorizedException('user_id supplied ({}) does not match user_id in jwt'.format(user_id))
     user = pull_user_object(user_id)
     user_id_found = user.id
@@ -702,7 +750,7 @@ def verify_user_id_matches_jwt(jwt_token=None, user_id=None):
 
     token = jwt.decode(jwt_token, os.getenv('SECRET_KEY_BASE'), algorithms='HS256', verify=False)
     if 'user_id' in token.keys():
-        return token['user_id'] == user_id
+        return token['user_id'] == str(user_id)
     raise ApplicationException(400, 'MissingUserIdFromJWT', 'user_id was not found in jwt token.')
 
 
@@ -725,8 +773,8 @@ def sensor_mobile_pair_routing(user_id):
         raise UnauthorizedException('user_id supplied ({}) does not match user_id in jwt'.format(user_id))
 
     # data = request.json
-    # sensor_uid = data['sensor_uid']
-    # mobile_uid = data['mobile_uid']
+    # sensor_pid = data['sensor_pid']
+    # mobile_udid = data['mobile_udid']
     if request.data:
         return route_handlers[request.method](user_id=user_id, **request.json)
     else:
@@ -747,26 +795,26 @@ def pull_user_object(user_id):
     #     raise ApplicationException(400, 'UserNotFoundError', 'User {} not found.'.format(user_id))
 
 
-def create_sensor_mobile_pair(user_id=None, sensor_uid=None, mobile_uid=None):
+def create_sensor_mobile_pair(user_id=None, sensor_pid=None, mobile_udid=None):
     """
     Adds the sensor and mobile info to a given user
     :param user_id:
     :return:
     """
-    if user_id is None or sensor_uid is None or mobile_uid is None:
-        raise InvalidSchemaException('Missing user_id, or sensor_uid, or mobile_uid')
+    if user_id is None or sensor_pid is None or mobile_udid is None:
+        raise InvalidSchemaException('Missing user_id, or sensor_pid, or mobile_udid')
 
     user = pull_user_object(user_id)
 
-    user.sensor_uid = str(sensor_uid)
-    user.mobile_uid = str(mobile_uid)
+    user.sensor_pid = str(sensor_pid)
+    user.mobile_udid = str(mobile_udid)
 
     session.commit()
 
     return {'message': 'Success!',
             'user_id': user.id,
-            'sensor_uid': user.sensor_uid,
-            'mobile_uid': user.mobile_uid
+            'sensor_pid': user.sensor_pid,
+            'mobile_udid': user.mobile_udid
             }
 
 
@@ -782,19 +830,19 @@ def retrieve_sensor_mobile_pair(user_id=None):
     user = pull_user_object(user_id)
     return {'message': 'Success!',
             'user_id': user.id,
-            'sensor_uid': user.sensor_uid,
-            'mobile_uid': user.mobile_uid
+            'sensor_pid': user.sensor_pid,
+            'mobile_udid': user.mobile_udid
             }
 
 
-def update_sensor_mobile_pair(user_id=None, sensor_uid=None, mobile_uid=None):
+def update_sensor_mobile_pair(user_id=None, sensor_pid=None, mobile_udid=None):
     """
     Adds the sensor and mobile info to a given user
     :param user_id:
     :return:
     """
     # Not Needed as it matches the create_sensor_mobile_pair function
-    return create_sensor_mobile_pair(user_id=user_id, sensor_uid=sensor_uid, mobile_uid=mobile_uid)
+    return create_sensor_mobile_pair(user_id=user_id, sensor_pid=sensor_pid, mobile_udid=mobile_udid)
 
 
 def delete_sensor_mobile_pair(user_id=None):
@@ -807,12 +855,12 @@ def delete_sensor_mobile_pair(user_id=None):
         raise InvalidSchemaException('Missing user_id')
 
     user = pull_user_object(user_id)
-    user.sensor_uid = None
-    user.mobile_uid = None
+    user.sensor_pid = None
+    user.mobile_udid = None
     session.commit()
     return {'message': 'Sensor and mobile uid successfully deleted.',
             'user_id': user.id,
-            'sensor_uid': user.sensor_uid,
-            'mobile_uid': user.mobile_uid
+            'sensor_pid': user.sensor_pid,
+            'mobile_udid': user.mobile_udid
             }
 

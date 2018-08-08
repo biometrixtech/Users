@@ -5,7 +5,9 @@ from sqlalchemy import types
 class EnumTypeBase(types.TypeDecorator):
     impl = types.Integer
     name_values = {}
-    reverse_look_up = dict(zip(name_values.values(), name_values.keys()))
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.reverse_look_up = dict(zip(self.name_values.values(), self.name_values.keys()))
 
     def process_bind_param(self, value, dialect):
         try:
