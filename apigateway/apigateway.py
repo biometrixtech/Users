@@ -70,7 +70,7 @@ def handler(event, context):
     event['path'] = event['path'].rstrip('/')
 
     # Trim semantic versioning string from urls, if present
-    event['path'] = event['path'].replace('/plans/latest/', '/plans/').replace('/plans/1.0.0/', '/plans/')
+    event['path'] = event['path'].replace('/users/latest/', '/users/').replace('/users/1.0.0/', '/users/')
 
     # Pass tracing info to X-Ray
     if 'X-Amzn-Trace-Id-Safe' in event['headers']:
