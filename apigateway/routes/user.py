@@ -65,6 +65,13 @@ def extract_email_and_password_from_request(data):
         raise InvalidSchemaException('Request payload was not received')
 
 
+def date_exists(_date=None):
+    if _date is None:
+        return False
+    else:
+        return True
+
+
 def create_user_dictionary(user):
     """
     Convert the user ORM to the desired output format
@@ -106,7 +113,10 @@ def create_user_dictionary(user):
         "sensor_pid": user.sensor_pid,
         "mobile_udid": user.mobile_udid,
         "system_type": user.system_type,
-        "injury_status": user.injury_status
+        "injury_status": user.injury_status,
+        "agreed_terms_of_use": user.agreed_terms_of_use,
+        "agreed_privacy_policy": user.agreed_privacy_policy,
+        "cleared_to_play": user.cleared_to_play
     }
 
 
@@ -349,36 +359,44 @@ def create_user_object(user_data):
     else:
         gender = None
 
-    user = Users(email=user_data['email'],
-                first_name=user_data['personal_data']['first_name'],
-                last_name=user_data['personal_data']['last_name'],
-                phone_number=user_data['personal_data']['phone_number'],
-                password_digest=password_hash,
-                created_at=datetime.datetime.now(),
-                updated_at=datetime.datetime.now(),
-                # avatar_file_name
-                # avatar_content_type
-                # avatar_file_size
-                # avatar_updated_at
-                # position
-                role=user_data['role'],
-                # active
-                # in_training
-                height_feet=height_feet,
-                height_inches=height_inches,
-                weight=weight,
-                gender=gender,
-                status=None,
-                # onboarded
-                birthday=user_data['personal_data']['birth_date'],
-                zip_code=user_data['personal_data']['zip_code'],
-                account_type=user_data['personal_data']['account_type'],
-                account_status = user_data['personal_data']['account_status'],
-                system_type = user_data['system_type'],
-                injury_status = user_data['injury_status'],
-                onboarding_status = user_data['onboarding_status']
-               )
-    return user
+    cleared_to_play = None
+    agreed_terms_of_use = None
+    agreed_privacy_policy = None
+    if 'agreed_terms_of_use' in user_data:
+        agreed_terms_of_use = user_data['agreed_terms_of_use']
+    if 'agreed_privacy_policy' in user_data:
+        agreed_privacy_policy = user_data['agreed_privacy_policy']
+    if 'cleared_to_play' in user_data:
+        cleared_to_play = user_data['cleared_to_play']
+
+    try:
+        user = Users(email=user_data['email'],
+                    first_name=user_data['personal_data']['first_name'],
+                    last_name=user_data['personal_data']['last_name'],
+                    phone_number=user_data['personal_data']['phone_number'],
+                    password_digest=password_hash,
+                    created_at=datetime.datetime.now(),
+                    updated_at=datetime.datetime.now(),
+                    role=user_data['role'],
+                    height_feet=height_feet,
+                    height_inches=height_inches,
+                    weight=weight,
+                    gender=gender,
+                    status=None,
+                    birthday=user_data['personal_data']['birth_date'],
+                    zip_code=user_data['personal_data']['zip_code'],
+                    account_type=user_data['personal_data']['account_type'],
+                    account_status = user_data['personal_data']['account_status'],
+                    system_type = user_data['system_type'],
+                    injury_status = user_data['injury_status'],
+                    onboarding_status = user_data['onboarding_status'],
+                    agreed_terms_of_use = agreed_terms_of_use,
+                    agreed_privacy_policy = agreed_privacy_policy,
+                    cleared_to_play = cleared_to_play
+                     )
+        return user
+    except KeyError as e:
+        raise ApplicationException(400, 'MissingRequiredUserFields', 'Missing parameters: {}'.format(str(e)))
 
 
 def save_user_data(user, user_data):
@@ -396,6 +414,13 @@ def save_user_data(user, user_data):
         user.injury_status = user_data['injury_status']
     if 'onboarding_status' in user_data:
         user.onboarding_status = user_data['onboarding_status']
+
+    if 'agreed_terms_of_use' in user_data:
+        user.agreed_terms_of_use = user_data['agreed_terms_of_use']
+    if 'agreed_privacy_policy' in user_data:
+        user.agreed_privacy_policy = user_data['agreed_privacy_policy']
+    if 'cleared_to_play' in user_data:
+        user.cleared_to_play = user_data['cleared_to_play']
 
     if 'email' in user_data.keys():
         user.email = user_data['email']
