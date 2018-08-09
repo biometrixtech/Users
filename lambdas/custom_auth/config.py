@@ -2,7 +2,6 @@ import boto3
 import os
 import json
 from botocore.exceptions import ClientError
-from exceptions import ApplicationException
 
 
 def get_secret(secret_name):
@@ -11,7 +10,7 @@ def get_secret(secret_name):
         secret_name = '/'.join(['users', os.environ['ENVIRONMENT'], secret_name])
         get_secret_value_response = client.get_secret_value(SecretId=secret_name)
     except ClientError as e:
-        raise ApplicationException('SecretsManagerError', json.dumps(e.response), 500)
+        raise Exception('SecretsManagerError', json.dumps(e.response), 500)
     else:
         if 'SecretString' in get_secret_value_response:
             return json.loads(get_secret_value_response['SecretString'])
