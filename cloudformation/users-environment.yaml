@@ -422,6 +422,20 @@ Resources:
               - { Key: "Environment", Value: { Ref: "Environment" } }
               - { Key: "Service", Value: "apigateway" }
 
+    CustomAuthExecutionPolicy:
+        Type: "AWS::IAM::ManagedPolicy"
+        Properties:
+            Description: "Allows entities to call the Lambda function to validate authentication tokens"
+            ManagedPolicyName: { "Fn::Sub": "users-${Environment}-customauth" }
+            Path: "/"
+            PolicyDocument:
+                Version: "2012-10-17"
+                Statement:
+                  - Action:
+                      - "lambda:InvokeFunction"
+                    Effect: "Allow"
+                    Resource: { "Fn::GetAtt": [ "CustomAuthLambda", "Arn" ] }
+
     ##########################################################################################################
     ##  LAMBDA
     ##########################################################################################################
@@ -569,3 +583,9 @@ Outputs:
         Value: { "Fn::GetAtt": [ "CustomAuthLambda", "Arn" ] }
         Export:
             Name: { "Fn::Sub": "users-${Environment}-CustomAuthLambdaArn" }
+
+    CustomAuthPolicyArn:
+        Description: "The ARN of the customauth IAM Policy"
+        Value: { Ref: "CustomAuthExecutionPolicy" }
+        Export:
+            Name: { "Fn::Sub": "CustomAuthPolicyArn-${Environment}" }
