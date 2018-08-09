@@ -424,7 +424,7 @@ Resources:
                     ENVIRONMENT: { Ref: 'Environment' }
             Handler: "custom_auth.validate_handler"
             Runtime: "python3.6"
-            Timeout: "1"
+            Timeout: "10"
             Role: { "Fn::GetAtt" : [ "CustomAuthLambdaExecutionRole", "Arn" ] }
             FunctionName: { "Fn::Sub": "users-${Environment}-apigateway-validateauth" }
             Tags:
@@ -447,7 +447,7 @@ Resources:
                     ENVIRONMENT: { Ref: 'Environment' }
             Handler: "custom_auth.service_handler"
             Runtime: "python3.6"
-            Timeout: "1"
+            Timeout: "10"
             Role: { "Fn::GetAtt" : [ "CustomAuthLambdaExecutionRole", "Arn" ] }
             FunctionName: { "Fn::Sub": "users-${Environment}-apigateway-serviceauth" }
             Tags:
