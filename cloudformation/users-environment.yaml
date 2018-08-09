@@ -469,7 +469,7 @@ Resources:
         Type: "AWS::IAM::ManagedPolicy"
         Properties:
             Description: "Allows entities to call the Lambda function to create authentication tokens"
-            ManagedPolicyName: { "Fn::Sub": "users-${Environment}-validateauth" }
+            ManagedPolicyName: { "Fn::Sub": "users-${Environment}-serviceauth" }
             Path: "/"
             PolicyDocument:
                 Version: "2012-10-17"
