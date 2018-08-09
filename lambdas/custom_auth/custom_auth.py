@@ -2,9 +2,12 @@ import jwt
 import os
 from uuid import UUID
 
+from config import load_secrets
 
-def handler(event, _):
+
+def validate_handler(event, _):
     print(event)
+    load_secrets()
 
     user_id = get_user_id_from_request(event)
 
@@ -21,6 +24,12 @@ def handler(event, _):
     return ret
 
 
+def service_handler(event, _):
+    return {
+        'token': jwt.encode({'sub': '00000000-0000-4000-8000-000000000000'}, os.environ['SECRET_KEY_BASE'], algorithm='HS256')
+    }
+
+
 def get_user_id_from_request(event):
     raw_token = event.get('authorizationToken', None)
     if not raw_token:
@@ -29,7 +38,7 @@ def get_user_id_from_request(event):
     try:
         token = jwt.decode(raw_token, verify=False)
         validate_token(token)
-    except:
+    except Exception:
         raise Exception('Unauthorized')  # Token not a valid JWT
 
     print(token)
