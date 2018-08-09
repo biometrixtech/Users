@@ -640,6 +640,6 @@ Outputs:
 
     ServiceAuthPolicyArn:
         Description: "The ARN of the serviceauth IAM Policy"
-        Value: { Ref: "ValidateAuthExecutionPolicy" }
+        Value: { Ref: "ServiceAuthExecutionPolicy" }
         Export:
             Name: { "Fn::Sub": "UsersServiceAuthPolicyArn-${Environment}" }
