@@ -463,10 +463,9 @@ Resources:
                   - Action:
                       - "lambda:InvokeFunction"
                     Effect: "Allow"
-                    Resource:
-                      - { "Fn::GetAtt": [ "ValidateAuthLambda", "Arn" ] }
+                    Resource: { "Fn::GetAtt": [ "ValidateAuthLambda", "Arn" ] }
 
-    ValidateAuthExecutionPolicy:
+    ServiceAuthExecutionPolicy:
         Type: "AWS::IAM::ManagedPolicy"
         Properties:
             Description: "Allows entities to call the Lambda function to create authentication tokens"
@@ -478,8 +477,7 @@ Resources:
                   - Action:
                       - "lambda:InvokeFunction"
                     Effect: "Allow"
-                    Resource:
-                      - { "Fn::GetAtt": [ "ServiceAuthLambda", "Arn" ] }
+                    Resource: { "Fn::GetAtt": [ "ServiceAuthLambda", "Arn" ] }
 
     ##########################################################################################################
     ##  LAMBDA
