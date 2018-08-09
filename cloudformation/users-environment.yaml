@@ -609,7 +609,7 @@ Outputs:
 
     CustomAuthLambdaArn:
         Description: "The ARN of the Lambda function that can be used as a custom authorizer in API Gateway"
-        Value: { "Fn::GetAtt": [ "ValidateAuthLambda", "Arn" ] }
+        Value: "arn:aws:lambda:us-west-2:887689817172:function:users-dev-apigateway-authenticate" # TODO deprecate and remove
         Export:
             Name: { "Fn::Sub": "users-${Environment}-CustomAuthLambdaArn" }
 
