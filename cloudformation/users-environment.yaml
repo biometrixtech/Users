@@ -466,6 +466,21 @@ Resources:
                     Resource:
                       - { "Fn::GetAtt": [ "ValidateAuthLambda", "Arn" ] }
 
+    ValidateAuthExecutionPolicy:
+        Type: "AWS::IAM::ManagedPolicy"
+        Properties:
+            Description: "Allows entities to call the Lambda function to create authentication tokens"
+            ManagedPolicyName: { "Fn::Sub": "users-${Environment}-validateauth" }
+            Path: "/"
+            PolicyDocument:
+                Version: "2012-10-17"
+                Statement:
+                  - Action:
+                      - "lambda:InvokeFunction"
+                    Effect: "Allow"
+                    Resource:
+                      - { "Fn::GetAtt": [ "ServiceAuthLambda", "Arn" ] }
+
     ##########################################################################################################
     ##  LAMBDA
     ##########################################################################################################
@@ -614,7 +629,13 @@ Outputs:
             Name: { "Fn::Sub": "users-${Environment}-CustomAuthLambdaArn" }
 
     ValidateAuthPolicyArn:
-        Description: "The ARN of the customauth IAM Policy"
+        Description: "The ARN of the validateauth IAM Policy"
         Value: { Ref: "ValidateAuthExecutionPolicy" }
         Export:
-            Name: { "Fn::Sub": "ValidateAuthPolicyArn-${Environment}" }
+            Name: { "Fn::Sub": "UsersValidateAuthPolicyArn-${Environment}" }
+
+    ServiceAuthPolicyArn:
+        Description: "The ARN of the serviceauth IAM Policy"
+        Value: { Ref: "ValidateAuthExecutionPolicy" }
+        Export:
+            Name: { "Fn::Sub": "usersServiceAuthPolicyArn-${Environment}" }
