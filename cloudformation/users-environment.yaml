@@ -419,6 +419,9 @@ Resources:
                 S3Key: { "Fn::Sub": [ "lambdas/users/${TemplateVersion}/custom_auth.zip", {
                     TemplateVersion: { "Fn::FindInMap": [ "TemplateVersion", "Self", "Commit" ] }
                 } ] }
+            Environment:
+                Variables:
+                    ENVIRONMENT: { Ref: 'Environment' }
             Handler: "custom_auth.validate_handler"
             Runtime: "python3.6"
             Timeout: "1"
@@ -439,6 +442,9 @@ Resources:
                 S3Key: { "Fn::Sub": [ "lambdas/users/${TemplateVersion}/custom_auth.zip", {
                     TemplateVersion: { "Fn::FindInMap": [ "TemplateVersion", "Self", "Commit" ] }
                 } ] }
+            Environment:
+                Variables:
+                    ENVIRONMENT: { Ref: 'Environment' }
             Handler: "custom_auth.service_handler"
             Runtime: "python3.6"
             Timeout: "1"
