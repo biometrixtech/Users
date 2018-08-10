@@ -62,8 +62,10 @@ def get_user_id_from_request(event):
 
     if 'exp' not in token:
         raise Exception('No expiry time in token')
-    elif datetime.datetime.fromtimestamp(token['exp']) < datetime.datetime.utcnow():
-        raise Exception('Token has expired')
+    expiry_date = datetime.datetime.fromtimestamp(token['exp'])
+    now = datetime.datetime.utcnow()
+    if expiry_date < now:
+        raise Exception(f'Token has expired: {expiry_date.isoformat()} < {now.isoformat()}')
 
     return user_id
 
