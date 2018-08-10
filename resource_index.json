@@ -10,7 +10,13 @@
             "pip": true
         },
         {
-            "name": "users-{ENVIRONMENT}-apigateway-authenticate",
+            "name": "users-{ENVIRONMENT}-apigateway-validateauth",
+            "s3_filename": "custom_auth.zip",
+            "src": "lambdas/custom_auth",
+            "pip": true
+        },
+        {
+            "name": "users-{ENVIRONMENT}-apigateway-serviceauth",
             "s3_filename": "custom_auth.zip",
             "src": "lambdas/custom_auth",
             "pip": true
