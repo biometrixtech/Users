@@ -1,3 +1,4 @@
+import datetime
 import jwt
 import os
 from uuid import UUID
@@ -58,6 +59,11 @@ def get_user_id_from_request(event):
         raise Exception('Unauthorized')  # Mismatching region
     if not validate_uuid4(user_id):
         raise Exception('Unauthorized')  # Invalid UUID
+
+    if 'exp' not in token:
+        raise Exception('No expiry time in token')
+    elif datetime.datetime.fromtimestamp(token['exp']) < datetime.datetime.utcnow():
+        raise Exception('Token has expired')
 
     return user_id
 
