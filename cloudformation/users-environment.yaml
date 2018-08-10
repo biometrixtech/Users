@@ -502,6 +502,7 @@ Resources:
               - "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
               - "arn:aws:iam::aws:policy/AWSXrayWriteOnlyAccess"
               - { "Fn::ImportValue": { "Fn::Sub": "QuerypostgresPolicyArn-${Environment}" } }
+              - { Ref: "ValidateAuthExecutionPolicy" }
             Policies:
               - PolicyName: "default"
                 PolicyDocument:
