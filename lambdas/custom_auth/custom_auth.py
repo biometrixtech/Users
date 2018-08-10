@@ -4,11 +4,11 @@ import os
 from uuid import UUID
 
 from config import load_secrets
+load_secrets()
 
 
 def validate_handler(event, _):
     print(event)
-    load_secrets()
 
     user_id = get_user_id_from_request(event)
 
@@ -34,13 +34,13 @@ def service_handler(event, _):
 def get_user_id_from_request(event):
     raw_token = event.get('authorizationToken', None)
     if not raw_token:
-        raise Exception('Unauthorized')  # No raw token
+        raise Exception('No raw token')
 
     try:
         token = jwt.decode(raw_token, verify=False)
         validate_token(token)
     except Exception:
-        raise Exception('Unauthorized')  # Token not a valid JWT
+        raise Exception('Token not a valid JWT')
 
     print(token)
     if 'sub' in token:
@@ -48,7 +48,7 @@ def get_user_id_from_request(event):
     elif 'user_id' in token:
         raw_user_id = token['user_id']
     else:
-        raise Exception('Unauthorized')  # No user id in token
+        raise Exception('No user id in token')
 
     if ':' in raw_user_id:
         region, user_id = raw_user_id.split(':', 1)
@@ -56,9 +56,9 @@ def get_user_id_from_request(event):
         region, user_id = os.environ['AWS_REGION'], raw_user_id
 
     if region != os.environ['AWS_REGION']:
-        raise Exception('Unauthorized')  # Mismatching region
+        raise Exception(f'Mismatching region "{region}" != {os.environ["AWS_REGION"]}')
     if not validate_uuid4(user_id):
-        raise Exception('Unauthorized')  # Invalid UUID
+        raise Exception(f'"{user_id}" is not a valid  UUID')
 
     if 'exp' not in token:
         raise Exception('No expiry time in token')
