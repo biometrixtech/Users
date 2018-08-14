@@ -221,6 +221,19 @@ def get_user_from_ddb(user_id):
     return res['Items'][0] if len(res['Items']) else None
 
 
+def create_user_response_with_training_groups(session, user):
+    user_resp = create_user_dictionary(user)
+
+    teams = session.query(Teams).join(TeamsUsers).filter(TeamsUsers.user_id == user.id).all()
+    training_groups = session.query(TrainingGroups).join(TrainingGroupsUsers) \
+        .filter(TrainingGroupsUsers.user_id == user.id).all()
+
+    user_resp['teams'] = [create_team_dictionary(team) for team in teams]
+    user_resp['training_groups'] = [create_training_group_dictionary(training_group) for training_group in
+                                    training_groups]
+    return user_resp
+
+
 @user_app.route('/sign_in', methods=['POST'])
 def user_sign_in():
     """
@@ -273,15 +286,11 @@ def user_sign_in():
     user_query = session.query(Users).filter_by(email=email)
     user = user_query.first()
     if user:
-        teams = session.query(Teams).join(TeamsUsers).filter(TeamsUsers.user_id == user.id).all()
-        training_groups = session.query(TrainingGroups).join(TrainingGroupsUsers)\
-                                 .filter(TrainingGroupsUsers.user_id == user.id).all()
+
         if password_received:
             if bcrypt.check_password_hash(user.password_digest, password_received):  # Check if the password matches
-                user_resp = create_user_dictionary(user)
-                user_resp['teams'] = [create_team_dictionary(team) for team in teams]
-                user_resp['training_groups'] = [create_training_group_dictionary(training_group) for training_group in training_groups]
 
+                user_resp = create_user_response_with_training_groups(session, user)
                 user_ddb_res = get_user_from_ddb(str(user_resp['id'])) or {'sessions': [], 'updated_date': '1970-01-01T00:00:00Z'}
                 ret = {
                     "authorization": create_authorization_resp(user_id=user_resp['id'], sign_in_method='json', role=user_resp['role']),
@@ -688,37 +697,18 @@ def delete_user(user_id, jwt_token):
 @authentication_required
 @xray_recorder.capture('routes.user.get')
 def handle_user_get(user_id):
-    user_data, teams, training_groups = query_postgres([
-        (
-            """SELECT * FROM users WHERE id = %s""",
-            [user_id]
-        ),
-        (
-            """SELECT * FROM teams 
-                    LEFT JOIN teams_users ON teams.id=teams_users.team_id 
-                    WHERE teams_users.user_id = %s""",
-            [user_id]
-        ),
-        (
-            """SELECT * FROM training_groups 
-                    LEFT JOIN training_groups_users ON training_groups.id=training_groups_users.training_group_id
-                     WHERE training_groups_users.user_id = %s""",
-            [user_id]
-        ),
-    ])
-    print(user_data, teams, training_groups)
-    if len(user_data) == 0:
-        raise NoSuchEntityException()
+    """
+        Wrapper around delete user to allow for get_user to be tested without the request context required in the
+          decorators of this function
+        :param user_id:
+        :return:
+    """
+    return get_user(user_id)
 
-    if user_data[0]['weight']:
-        user_mass = float(user_data[0]['weight'])
-    else:
-        user_mass = 0
 
-    user_resp = create_user_dictionary(user_data[0])
-    user_resp['teams'] = [create_team_dictionary(team) for team in teams]
-    user_resp['training_groups'] = [create_training_group_dictionary(training_group) for training_group in training_groups]
-
+def get_user(user_id):
+    user = pull_user_object(user_id)
+    user_resp = create_user_response_with_training_groups(session, user)
     return {'user': user_resp}
 
 
@@ -790,7 +780,7 @@ def pull_user_object(user_id):
     try:
         return session.query(Users).filter(Users.id == user_id).one()
     except NoResultFound as e:
-        raise InvalidSchemaException('User {} was not found.'.format(user_id))
+        raise NoSuchEntityException('User {} was not found.'.format(user_id))
     # if not user:
     #     raise ApplicationException(400, 'UserNotFoundError', 'User {} not found.'.format(user_id))
 
