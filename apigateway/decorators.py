@@ -33,7 +33,9 @@ def authenticate_user_jwt(jwt):
         return res['principalId']
     elif 'errorMessage' in res:
         # Some failure
-        raise UnauthorizedException()
+        raise UnauthorizedException(res['errorMessage'])
+    else:
+        raise UnauthorizedException('Unauthorised')
 
 
 def body_required(required_body):
