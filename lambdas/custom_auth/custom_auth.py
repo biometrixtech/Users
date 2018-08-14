@@ -37,10 +37,10 @@ def get_user_id_from_request(event):
         raise Exception('No raw token')
 
     try:
-        token = jwt.decode(raw_token, verify=False)
+        token = jwt.decode(raw_token, os.environ['SECRET_KEY_BASE'], algorithms=['HS256'])
         validate_token(token)
     except Exception:
-        raise Exception('Token not a valid JWT')
+        raise
 
     print(token)
     if 'sub' in token:
