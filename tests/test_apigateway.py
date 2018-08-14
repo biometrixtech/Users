@@ -51,7 +51,9 @@ def test_sign_in(client):
     res_data = json.loads(res.data.decode())
     assert type(res_data) == dict
     print(res_data)
-    assert res_data['user'] == expected_ouptut
+    assert 'personal_data' in res_data['user']
+    assert 'biometric_data' in res_data['user']
+    assert 'onboarding_status' in res_data['user']
 
 
 def test_no_data(client):
