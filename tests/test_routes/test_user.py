@@ -9,7 +9,7 @@ from routes.user import jwt_make_payload, create_user_object, add_missing_keys, 
                         create_authorization_resp
 from db_connection import engine, Base
 from models import Users, Teams, TeamsUsers #, SportsHistory  # , TrainingGroups, TrainingGroupsUsers
-from routes.user import create_user_dictionary, save_sports_history, save_training_schedule
+from routes.user import create_user_dictionary, save_sports_history, save_training_schedule, get_user
 from tests.test_fixtures import example_user_data, example_user_data_2
 
 
@@ -230,4 +230,13 @@ def test_delete_user(session):
     assert 'Success' in res['message']
     user = session.query(Users).filter(Users.id == user_to_be_deleted).first()
     assert user is None
+
+
+def test_get_user(session):
+    user_id = 'e562e24e-933a-4de8-a799-44bfed8d7e8d'
+
+    user_resp = get_user(user_id)
+    assert type(user_resp) == dict
+    assert 'biometric_data' in user_resp['user']
+    assert 'personal_data' in user_resp['user']
 
