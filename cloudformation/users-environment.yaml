@@ -501,7 +501,6 @@ Resources:
             ManagedPolicyArns:
               - "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
               - "arn:aws:iam::aws:policy/AWSXrayWriteOnlyAccess"
-              - { "Fn::ImportValue": { "Fn::Sub": "QuerypostgresPolicyArn-${Environment}" } }
               - { Ref: "ValidateAuthExecutionPolicy" }
             Policies:
               - PolicyName: "default"
@@ -573,6 +572,7 @@ Resources:
                 } ] }
             Environment:
                 Variables:
+                    SERVICE: 'users'
                     ENVIRONMENT: { Ref: 'Environment' }
                     AWS_ACCOUNT_ID: { Ref: "AWS::AccountId" }
                     IOT_POLICY_NAME: { Ref: "DevicePolicy" }
