@@ -572,6 +572,7 @@ Resources:
                 } ] }
             Environment:
                 Variables:
+                    SERVICE: 'users'
                     ENVIRONMENT: { Ref: 'Environment' }
                     AWS_ACCOUNT_ID: { Ref: "AWS::AccountId" }
                     IOT_POLICY_NAME: { Ref: "DevicePolicy" }
