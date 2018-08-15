@@ -712,22 +712,6 @@ def get_user(user_id):
     return {'user': user_resp}
 
 
-@xray_recorder.capture('apigateway.query_postgres')
-def query_postgres(queries):
-    lambda_client = boto3.client('lambda', region_name=os.environ['AWS_REGION'])
-    res = json.loads(lambda_client.invoke(
-        FunctionName='arn:aws:lambda:{AWS_REGION}:{AWS_ACCOUNT_ID}:function:infrastructure-{ENVIRONMENT}-querypostgres'.format(**os.environ),
-        Payload=json.dumps({
-            "Queries": [{"Query": query[0], "Parameters": query[1]} for query in queries],
-            "Config": {"ENVIRONMENT": os.environ['ENVIRONMENT']}
-        }),
-    )['Payload'].read().decode('utf-8'))
-    if len(list(filter(None, res['Errors']))):
-        raise Exception(list(filter(None, res['Errors'])))
-    else:
-        return res['Results']
-
-
 def verify_user_id_matches_jwt(jwt_token=None, user_id=None):
     """
     Extracts user_id from the jwt and compares it with the user_id supplied.
