@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import sys
 import traceback
 
@@ -23,11 +24,9 @@ patch_all()
 # Load Flask and routes
 from flask_app import app
 from routes.user import user_app as user_routes
-app.register_blueprint(user_routes, url_prefix='/v1/user')
-app.register_blueprint(user_routes, url_prefix='/users/user')
+app.register_blueprint(user_routes, url_prefix='/user')
 from routes.device import device_app as device_routes
-app.register_blueprint(device_routes, url_prefix='/v1/device')
-app.register_blueprint(device_routes, url_prefix='/users/device')
+app.register_blueprint(device_routes, url_prefix='/device')
 
 
 @app.errorhandler(500)
@@ -66,27 +65,29 @@ def handle_application_exception(e):
 def handler(event, context):
     print(json.dumps(event))
 
-    # Trim trailing slashes from urls
-    event['path'] = event['path'].rstrip('/')
-
-    # Trim semantic versioning string from urls, if present
-    event['path'] = event['path'].replace('/users/latest/', '/users/').replace('/users/1.0.0/', '/users/')
+    # Strip mount point and version information from the path
+    path_match = re.match(f'^/(?P<mount>({os.environ["SERVICE"]}|v1))(/(?P<version>(\d+(\.\d+)?(\.\d+)?)))?(?P<path>/.+?)/?$', event['path'])
+    if path_match is None:
+        raise Exception('Invalid path')
+    event['path'] = path_match.groupdict()['path']
+    api_version = path_match.groupdict()['version']
 
     # Pass tracing info to X-Ray
     if 'X-Amzn-Trace-Id-Safe' in event['headers']:
         xray_trace = TraceHeader.from_header_str(event['headers']['X-Amzn-Trace-Id-Safe'])
         xray_recorder.begin_segment(
-            name='users.{}.fathomai.com'.format(os.environ['ENVIRONMENT']),
+            name='{SERVICE}.{ENVIRONMENT}.fathomai.com'.format(**os.environ),
             traceid=xray_trace.root,
             parent_id=xray_trace.parent
         )
     else:
-        xray_recorder.begin_segment(name='users.{}.fathomai.com'.format(os.environ['ENVIRONMENT']))
+        xray_recorder.begin_segment(name='{SERVICE}.{ENVIRONMENT}.fathomai.com'.format(**os.environ))
 
-    xray_recorder.current_segment().put_http_meta('url', 'https://{}{}'.format(event['headers']['Host'], event['path']))
+    xray_recorder.current_segment().put_http_meta('url', f"https://{event['headers']['Host']}/{os.environ['SERVICE']}/{api_version}{event['path']}")
     xray_recorder.current_segment().put_http_meta('method', event['httpMethod'])
     xray_recorder.current_segment().put_http_meta('user_agent', event['headers']['User-Agent'])
     xray_recorder.current_segment().put_annotation('environment', os.environ['ENVIRONMENT'])
+    xray_recorder.current_segment().put_annotation('version', str(api_version))
 
     ret = app(event, context)
     ret['headers'].update({
