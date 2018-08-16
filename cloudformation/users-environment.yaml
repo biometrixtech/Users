@@ -57,7 +57,7 @@ Parameters:
 Mappings:
     TemplateVersion:
         Self: { Commit: "da39a3ee5e6b4b0d3255bfef95601890afd80709" }
-        Infrastructure: { Commit: "a06bb38bfa6aa5035868f152366c39deb860db0b" }
+        Infrastructure: { Commit: "ce515bec23118ff812105775854ac2ec360892e4" }
 
 Metadata:
     "AWS::CloudFormation::Interface":
