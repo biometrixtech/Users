@@ -24,5 +24,11 @@
         }
     ],
     "datastores": [
+    ],
+    "apigateways": [
+        {
+            "name": "users-{ENVIRONMENT}-apigateway",
+            "publish_tags": true
+        }
     ]
 }
