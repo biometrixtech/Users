@@ -28,7 +28,7 @@
     "apigateways": [
         {
             "name": "users-{ENVIRONMENT}-apigateway",
-            "publish_tags": true
+            "lambda_function_name": "users-{ENVIRONMENT}-apigateway-execute"
         }
     ]
 }
