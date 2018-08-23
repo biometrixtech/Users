@@ -715,7 +715,7 @@ def get_user(user_id):
 def verify_user_id_matches_jwt(jwt_token=None, user_id=None):
     """
     Extracts user_id from the jwt and compares it with the user_id supplied.
-    :param jwt:
+    :param jwt_token:
     :param user_id:
     :return: True/False
     """
