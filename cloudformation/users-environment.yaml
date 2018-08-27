@@ -114,6 +114,47 @@ Resources:
     ##  DATABASE
     ##########################################################################################################
 
+    UsersCognitoUserPool:
+        Type: "AWS::Cognito::UserPool"
+        Properties:
+            AdminCreateUserConfig:
+                AllowAdminCreateUserOnly: true
+            Policies:
+                PasswordPolicy:
+                    MinimumLength: 8
+                    RequireLowercase: true
+                    RequireNumbers: true
+                    RequireSymbols: false
+                    RequireUppercase: true
+            UserPoolName: { "Fn::Sub": "users-${Environment}-users2" }
+            Schema:
+              - Name: 'role'
+                AttributeDataType: 'String'
+                Mutable: true
+                Required: true
+                StringAttributeConstraints:
+                    MinLength: '1'
+                    MaxLength: '256'
+            UserPoolTags:
+              Name: { "Fn::Sub": "users-${Environment}-users" }
+              Management: "managed"
+              Project: "users"
+              Environment: { Ref: "Environment" }
+              Service: "users"
+        DeletionPolicy : "Retain"
+
+    UsersCognitoUserPoolClient:
+        Type: "AWS::Cognito::UserPoolClient"
+        Properties:
+            ClientName: { "Fn::Sub": "users-${Environment}-login" }
+            ExplicitAuthFlows:
+              - "ADMIN_NO_SRP_AUTH"
+            GenerateSecret: false
+            ReadAttributes:
+              - "custom:role"
+            RefreshTokenValidity: 30
+            UserPoolId: { Ref: "UsersCognitoUserPool" }
+
     UsersTable:
         Type: "AWS::DynamoDB::Table"
         Properties:
@@ -516,6 +557,15 @@ Resources:
                         Effect: "Allow"
                         Resource: { "Fn::Sub": "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:users/${Environment}/*" }
                       - Action:
+                          - "cognito-idp:AdminCreateUser"
+                          - "cognito-idp:AdminDeleteUserAttributes"
+                          - "cognito-idp:AdminGetUser"
+                          - "cognito-idp:AdminInitiateAuth"
+                          - "cognito-idp:AdminRespondToAuthChallenge"
+                          - "cognito-idp:AdminUpdateUserAttributes"
+                        Effect: "Allow"
+                        Resource: { "Fn::GetAtt": [ "UsersCognitoUserPool", "Arn" ] }
+                      - Action:
                           - "dynamodb:DeleteItem"
                           - "dynamodb:GetItem"
                           - "dynamodb:PutItem"
@@ -578,6 +628,8 @@ Resources:
                     IOT_POLICY_NAME: { Ref: "DevicePolicy" }
                     SNS_APPLICATION_ARN_IOS: { Ref: "SnsApplicationArnIos" }
                     SNS_APPLICATION_ARN_ANDROID: { Ref: "SnsApplicationArnAndroid" }
+                    USERS_COGNITO_USER_POOL_ID: { Ref: "UsersCognitoUserPool" }
+                    USERS_COGNITO_USER_POOL_CLIENT_ID: { Ref: "UsersCognitoUserPoolClient" }
             Handler: "apigateway.handler"
             Runtime: "python3.6"
             Timeout: "30"

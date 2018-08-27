@@ -22,8 +22,8 @@ class User(CognitoEntity):
         
     @property
     def user_pool_id(self):
-        return os.environ['COGNITO_USER_POOL_ID']
+        return os.environ['USERS_COGNITO_USER_POOL_ID']
     
     @property
     def user_pool_client_id(self):
-        return os.environ['COGNITO_USER_POOL_CLIENT_ID']
+        return os.environ['USERS_COGNITO_USER_POOL_CLIENT_ID']
