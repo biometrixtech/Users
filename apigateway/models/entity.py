@@ -9,7 +9,8 @@ import datetime
 import json
 
 from dynamodbupdate import DynamodbUpdate
-from exceptions import InvalidSchemaException, NoSuchEntityException, DuplicateEntityException, ApplicationException
+from exceptions import InvalidSchemaException, NoSuchEntityException, DuplicateEntityException, ApplicationException, \
+    InvalidPasswordFormatException
 
 
 class Entity:
@@ -145,7 +146,8 @@ class CognitoEntity(Entity):
 
         custom_properties = {prop['Name'].split(':')[-1]: prop['Value'] for prop in res['UserAttributes']}
 
-        ret = self.primary_key
+        ret = {'username': res['Username']}
+        ret.update(self.primary_key)
         for key in self.get_fields(primary_key=False):
             if key in custom_properties:
                 ret[key] = self.cast(key, custom_properties[key])
@@ -202,6 +204,8 @@ class CognitoEntity(Entity):
         except ClientError as e:
             if 'UsernameExistsException' in str(e):
                 raise DuplicateEntityException()
+            if 'InvalidPasswordException' in str(e):
+                raise InvalidPasswordFormatException()
             else:
                 print(json.dumps({'exception': str(e)}))
                 raise

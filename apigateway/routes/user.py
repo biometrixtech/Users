@@ -26,6 +26,8 @@ def create_user():
     """
     Creates a new user
     """
+    # TODO
+    request.json['role'] = 'athlete'
 
     res = {'user': {}}
 
