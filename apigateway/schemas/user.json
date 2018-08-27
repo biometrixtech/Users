@@ -1,0 +1,22 @@
+{
+    "$schema": "http://json-schema.org/schema#",
+    "id": "http://schema.fathomai.com/schemas/user.json",
+    "description": "User",
+    "type": "object",
+    "properties": {
+        "email": {
+            "description": "User's email address",
+            "type": "string",
+            "readonly": true
+        },
+        "role": {
+            "description": "Role",
+            "type": "string"
+        }
+    },
+    "required": [
+        "email",
+        "role"
+    ],
+    "additionalProperties": false
+}
