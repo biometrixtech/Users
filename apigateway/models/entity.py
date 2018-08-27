@@ -111,8 +111,6 @@ cognito_client = boto3.client('cognito-idp')
 
 
 class CognitoEntity(Entity):
-    def __init__(self, email):
-        super().__init__({'email': email})
 
     @property
     @abstractmethod
