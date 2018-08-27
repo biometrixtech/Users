@@ -131,7 +131,7 @@ Resources:
               - Name: 'role'
                 AttributeDataType: 'String'
                 Mutable: true
-                Required: true
+                Required: false
                 StringAttributeConstraints:
                     MinLength: '1'
                     MaxLength: '256'
