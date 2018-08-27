@@ -1,0 +1,25 @@
+{
+    "$schema": "http://json-schema.org/schema#",
+    "id": "http://schema.fathomai.com/schemas/user_data.json",
+    "description": "UserData",
+    "type": "object",
+    "properties": {
+        "user_id": {
+            "description": "The user id",
+            "type": "string",
+            "readonly": true
+        },
+        "created_date": {
+            "description": "The date the user was created",
+            "type": "string"
+        },
+        "updated_date": {
+            "description": "The date the user was last updated",
+            "type": "string"
+        }
+    },
+    "required": [
+        "user_id"
+    ],
+    "additionalProperties": false
+}
