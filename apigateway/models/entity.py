@@ -25,14 +25,21 @@ class Entity:
         self._primary_key_fields = list(primary_key.keys())
         self._fields = {}
         schema = self.schema()
-        for field, config in schema['properties'].items():
-            self._fields[field] = {
-                'immutable': config.get('readonly', False),
-                'required': field in schema['required'],
-                'primary_key': field in self._primary_key_fields
-            }
-
+        self._load_fields(schema)
         self._exists = None
+
+    def _load_fields(self, schema, prefix=''):
+        for field, config in schema['properties'].items():
+            if config['type'] == 'object':
+                self._load_fields(config, prefix=f'{prefix}{field}.')
+            else:
+                self._fields[f'{prefix}{field}'] = {
+                    'immutable': config.get('readonly', False),
+                    'required': field in schema.get('required', []),
+                    'primary_key': field in self._primary_key_fields,
+                    'type': config['type'],
+                    'default': config.get('default', None)
+                }
 
     @property
     def primary_key(self):
@@ -52,15 +59,18 @@ class Entity:
         ]
 
     def cast(self, field, value):
-        schema = self.schema()
-        if field not in schema['properties']:
+        if field not in self._fields:
             raise KeyError(field)
 
-        field_type = schema['properties'][field]['type']
+        field_type = self._fields[field]['type']
         if isinstance(field_type, dict) and '$ref' in field_type:
             field_type = field_type['$ref']
 
-        if field_type == 'string':
+        if isinstance(field_type, dict) and 'enum' in field_type:
+            if value not in field_type['enum']:
+                raise ValueError(f'{field} must be one of {field_type["enum"]}, not {value}')
+            return value
+        elif field_type == 'string':
             return str(value)
         elif field_type == 'number':
             return Decimal(str(value))
@@ -71,10 +81,12 @@ class Entity:
         else:
             raise NotImplementedError("field_type '{}' cannot be cast".format(field_type))
 
-    def validate(self, operation, body):
+    def validate(self, operation: str, body: dict):
         # Primary key must be complete
         if None in self.primary_key.values():
             raise InvalidSchemaException('Incomplete primary key')
+
+        body = flatten(body)
 
         if operation == 'PATCH':
             # Not allowed to modify readonly attributes for PATCH
@@ -88,6 +100,13 @@ class Entity:
                 if key not in body and key not in self.primary_key.keys():
                     raise InvalidSchemaException('Missing required parameter: {}'.format(key))
 
+        for key in self.get_fields(primary_key=False):
+            if key in body:
+                try:
+                    self.cast(key, body[key])
+                except ValueError as e:
+                    raise InvalidSchemaException(str(e))
+
     def exists(self):
         if self._exists is None:
             try:
@@ -97,8 +116,19 @@ class Entity:
                 self._exists = False
         return self._exists
 
-    @abstractmethod
     def get(self):
+        fetch_result = self._fetch()
+
+        ret = self.primary_key
+        for key in self.get_fields(primary_key=False):
+            if key in fetch_result:
+                ret[key] = self.cast(key, fetch_result[key])
+            else:
+                ret[key] = self._fields[key]['default']
+        return unflatten(ret)
+
+    @abstractmethod
+    def _fetch(self):
         raise NotImplementedError()
 
     @abstractmethod
@@ -118,6 +148,7 @@ cognito_client = boto3.client('cognito-idp')
 
 
 class CognitoEntity(Entity):
+    _id = None
 
     @property
     @abstractmethod
@@ -140,29 +171,26 @@ class CognitoEntity(Entity):
         raise NotImplementedError
 
     def get(self):
+        ret = super().get()
+        ret['id'] = self._id
+        return ret
+
+    def _fetch(self):
         try:
             res = cognito_client.admin_get_user(
                 UserPoolId=self.user_pool_id,
                 Username=self.username,
             )
+            self._id = res['Username']
+            return {prop['Name'].split(':')[-1]: prop['Value'] for prop in res['UserAttributes']}
+
         except ClientError as e:
             if 'UserNotFoundException' in str(e):
                 raise NoSuchEntityException()
             raise
 
-        custom_properties = {prop['Name'].split(':')[-1]: prop['Value'] for prop in res['UserAttributes']}
-
-        ret = {'id': res['Username']}
-        ret.update(self.primary_key)
-
-        for key in self.get_fields():
-            if key in custom_properties:
-                ret[key] = self.cast(key, custom_properties[key])
-            else:
-                ret[key] = self.schema()['properties'][key].get('default', None)
-        return ret
-
     def patch(self, body):
+        self.validate('PATCH', body)
         attributes_to_update = []
         attributes_to_delete = []
         for key in self.get_fields(immutable=False, primary_key=False):
@@ -190,12 +218,10 @@ class CognitoEntity(Entity):
         return self.get()
 
     def create(self, body):
-        body['mac_address'] = self.username
         body['updated_date'] = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
         body['created_date'] = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
-        for key in self.get_fields(required=True):
-            if key not in body:
-                raise InvalidSchemaException('Missing required request parameters: {}'.format(key))
+        self.validate('PUT', body)
+
         try:
             cognito_client.admin_create_user(
                 UserPoolId=self.user_pool_id,
@@ -208,7 +234,8 @@ class CognitoEntity(Entity):
                 ],
                 MessageAction='SUPPRESS',
             )
-            return self.get()
+            self._fetch()
+            return self._id
 
         except ClientError as e:
             if 'UsernameExistsException' in str(e):
@@ -295,7 +322,6 @@ class CognitoEntity(Entity):
             # Need to set a new password
             raise Exception('Cannot refresh credentials, need to reset password')
 
-        print(response)
         expiry_date = datetime.datetime.now() + datetime.timedelta(seconds=response['AuthenticationResult']['ExpiresIn'])
         return {
             'jwt': response['AuthenticationResult']['AccessToken'],
@@ -317,38 +343,34 @@ class CognitoEntity(Entity):
 
 class DynamodbEntity(Entity):
 
-    def get(self):
+    def _fetch(self):
         # And together all the elements of the primary key
         kcx = reduce(iand, [Key(k).eq(v) for k, v in self.primary_key.items()])
         res = self._query_dynamodb(kcx)
 
         if len(res) == 0:
             raise NoSuchEntityException()
-
-        ret = self.primary_key
-        for key in self.get_fields(primary_key=False):
-            if key in res[0]:
-                ret[key] = self.cast(key, res[0][key])
-            else:
-                ret[key] = self.schema()['properties'][key].get('default', None)
-        return ret
+        return res[0]
 
     def patch(self, body, create=False):
         self.validate('PATCH', body)
+        body = flatten(body)
 
         try:
             upsert = DynamodbUpdate()
             for key in self.get_fields(immutable=None if create else False, primary_key=False):
                 if key in body:
-                    if self.schema()['properties'][key]['type'] in ['list', 'object']:
+                    if self._fields[key]['type'] in ['list', 'object']:
                         upsert.add(key, set(body[key]))
                     else:
                         upsert.set(key, body[key])
+            print(upsert)
 
             self._get_dynamodb_resource().update_item(
                 Key=self.primary_key,
                 UpdateExpression=upsert.update_expression,
-                ExpressionAttributeValues=upsert.parameters,
+                ExpressionAttributeNames=upsert.parameter_names,
+                ExpressionAttributeValues=upsert.parameter_values,
             )
             # TODO include conditional check if create=False
 
@@ -363,7 +385,8 @@ class DynamodbEntity(Entity):
 
     def create(self, body):
         self.validate('PUT', body)
-        return self.patch(body, True)
+        self.patch(body, True)
+        return self.primary_key
 
     @abstractmethod
     def _get_dynamodb_resource(self):
@@ -396,3 +419,38 @@ class DynamodbEntity(Entity):
     @staticmethod
     def _print_condition_expression(expression):
         print(ConditionExpressionBuilder().build_expression(expression, True))
+
+
+def flatten(d, prefix=''):
+    """
+    Flatten nested dictionaries
+    :param dict d:
+    :param str prefix:
+    :return:
+    """
+    return (reduce(
+        lambda new_d, kv:
+        isinstance(kv[1], dict) and
+        {**new_d, **flatten(kv[1], f'{prefix}{kv[0]}.')} or
+        {**new_d, f'{prefix}{kv[0]}': kv[1]},
+        d.items(),
+        {}
+    ))
+
+
+def unflatten(d):
+    """
+    Unflatten nested dictionaries
+    :param dict d:
+    :return:
+    """
+    ret = {}
+    for key, value in d.items():
+        key_parts = key.split(".")
+        d2 = ret
+        for part in key_parts[:-1]:
+            if part not in d2:
+                d2[part] = dict()
+            d2 = d2[part]
+        d2[key_parts[-1]] = value
+    return ret

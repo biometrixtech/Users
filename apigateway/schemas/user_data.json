@@ -23,6 +23,20 @@
         "agreed_privacy_policy": {
             "type": "bool",
             "default": false
+        },
+        "biometric_data": {
+            "type": "object",
+            "description": "Biometric data",
+            "properties": {
+                "sex": {
+                    "type": { "enum": [ "male", "female", "other" ] },
+                    "description": "User sex"
+                }
+            },
+            "required": [
+                "sex"
+            ],
+            "additionalProperties": false
         }
     },
     "required": [
