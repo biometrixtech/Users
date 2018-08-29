@@ -37,13 +37,14 @@ def create_user():
     # address is 'squatted' and can't be re-registered) but their data not saved in DDB
     try:
         # Create Cognito user
-        user_obj = user.create(request.json)
-        xray_recorder.current_segment().put_annotation('user_id', user_obj['id'])
-        res['user'].update(user_obj)
+        print(request.json)
+        user_id = user.create(request.json)
+        xray_recorder.current_segment().put_annotation('user_id', user_id)
 
         # Save other data in DDB
-        user_data = UserData(user_obj['id']).create(request.json)
-        res['user'].update(user_data)
+        print(user_id)
+        UserData(user_id).create(request.json)
+        res['user'] = user.get()
 
     except DuplicateEntityException:
         # The user already exists
