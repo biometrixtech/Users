@@ -560,6 +560,7 @@ Resources:
                         Resource: { "Fn::Sub": "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:users/${Environment}/*" }
                       - Action:
                           - "cognito-idp:AdminCreateUser"
+                          - "cognito-idp:AdminDeleteUser"
                           - "cognito-idp:AdminDeleteUserAttributes"
                           - "cognito-idp:AdminGetUser"
                           - "cognito-idp:AdminInitiateAuth"
@@ -630,6 +631,7 @@ Resources:
                     IOT_POLICY_NAME: { Ref: "DevicePolicy" }
                     SNS_APPLICATION_ARN_IOS: { Ref: "SnsApplicationArnIos" }
                     SNS_APPLICATION_ARN_ANDROID: { Ref: "SnsApplicationArnAndroid" }
+                    USERS_DYNAMODB_TABLE_NAME: { Ref: "UsersTable" }
                     USERS_COGNITO_USER_POOL_ID: { Ref: "UsersCognitoUserPool" }
                     USERS_COGNITO_USER_POOL_CLIENT_ID: { Ref: "UsersCognitoUserPoolClient" }
             Handler: "apigateway.handler"

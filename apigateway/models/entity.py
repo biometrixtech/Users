@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from boto3.dynamodb.conditions import Key, Attr
+from boto3.dynamodb.conditions import Key, Attr, ConditionExpressionBuilder
 from botocore.exceptions import ClientError
 from decimal import Decimal
 from functools import reduce
@@ -9,8 +9,12 @@ import datetime
 import json
 
 from dynamodbupdate import DynamodbUpdate
-from exceptions import InvalidSchemaException, NoSuchEntityException, DuplicateEntityException, ApplicationException, \
-    InvalidPasswordFormatException
+from exceptions import InvalidSchemaException, \
+    NoSuchEntityException, \
+    DuplicateEntityException, \
+    ApplicationException, \
+    InvalidPasswordFormatException, \
+    UnauthorizedException
 
 
 class Entity:
@@ -60,6 +64,8 @@ class Entity:
             return str(value)
         elif field_type == 'number':
             return Decimal(str(value))
+        elif field_type == 'bool':
+            return bool(value)
         elif field_type == "types.json/definitions/macaddress":
             return str(value).upper()
         else:
@@ -146,9 +152,10 @@ class CognitoEntity(Entity):
 
         custom_properties = {prop['Name'].split(':')[-1]: prop['Value'] for prop in res['UserAttributes']}
 
-        ret = {'username': res['Username']}
+        ret = {'id': res['Username']}
         ret.update(self.primary_key)
-        for key in self.get_fields(primary_key=False):
+
+        for key in self.get_fields():
             if key in custom_properties:
                 ret[key] = self.cast(key, custom_properties[key])
             else:
@@ -184,6 +191,8 @@ class CognitoEntity(Entity):
 
     def create(self, body):
         body['mac_address'] = self.username
+        body['updated_date'] = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+        body['created_date'] = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
         for key in self.get_fields(required=True):
             if key not in body:
                 raise InvalidSchemaException('Missing required request parameters: {}'.format(key))
@@ -210,6 +219,17 @@ class CognitoEntity(Entity):
                 print(json.dumps({'exception': str(e)}))
                 raise
 
+    def delete(self):
+        try:
+            cognito_client.admin_delete_user(
+                UserPoolId=self.user_pool_id,
+                Username=self.username
+            )
+        except ClientError as e:
+            if 'UserNotFoundException' in str(e):
+                raise NoSuchEntityException()
+            raise e
+
     def login(self, *, password=None, token=None):
         if not self.exists():
             raise NoSuchEntityException()
@@ -235,6 +255,9 @@ class CognitoEntity(Entity):
         except ClientError as e:
             if 'UserNotFoundException' in str(e):
                 raise NoSuchEntityException()
+            if 'NotAuthorizedException' in str(e):
+                details = str(e).split(':')[-1].strip(' ')
+                raise UnauthorizedException(details)
             raise
         if 'ChallengeName' in response and response['ChallengeName'] == "NEW_PASSWORD_REQUIRED":
             # Need to set a new password
@@ -272,11 +295,12 @@ class CognitoEntity(Entity):
             # Need to set a new password
             raise Exception('Cannot refresh credentials, need to reset password')
 
+        print(response)
         expiry_date = datetime.datetime.now() + datetime.timedelta(seconds=response['AuthenticationResult']['ExpiresIn'])
         return {
             'jwt': response['AuthenticationResult']['AccessToken'],
             'expires': expiry_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
-            'session_token': response['AuthenticationResult']['RefreshToken'],
+            'session_token': token,
         }
 
     def logout(self):
@@ -300,7 +324,14 @@ class DynamodbEntity(Entity):
 
         if len(res) == 0:
             raise NoSuchEntityException()
-        return res[0]
+
+        ret = self.primary_key
+        for key in self.get_fields(primary_key=False):
+            if key in res[0]:
+                ret[key] = self.cast(key, res[0][key])
+            else:
+                ret[key] = self.schema()['properties'][key].get('default', None)
+        return ret
 
     def patch(self, body, create=False):
         self.validate('PATCH', body)
@@ -327,7 +358,7 @@ class DynamodbEntity(Entity):
             if 'ConditionalCheckFailed' in str(e):
                 raise DuplicateEntityException()
             else:
-                print(json.dumps({'exception': e}))
+                print(str(e))
                 raise
 
     def create(self, body):
@@ -339,6 +370,7 @@ class DynamodbEntity(Entity):
         raise NotImplementedError
 
     def _query_dynamodb(self, key_condition_expression, limit=10000, scan_index_forward=True, exclusive_start_key=None):
+        self._print_condition_expression(key_condition_expression)
         if exclusive_start_key is not None:
             ret = self._get_dynamodb_resource().query(
                 Select='ALL_ATTRIBUTES',
@@ -360,3 +392,7 @@ class DynamodbEntity(Entity):
         else:
             # No more items
             return ret['Items']
+
+    @staticmethod
+    def _print_condition_expression(expression):
+        print(ConditionExpressionBuilder().build_expression(expression, True))
