@@ -3,6 +3,7 @@ import json
 import os
 
 from models.entity import CognitoEntity
+from models.user_data import UserData
 
 cognito_client = boto3.client('cognito-idp')
 
@@ -22,8 +23,14 @@ class User(CognitoEntity):
         
     @property
     def user_pool_id(self):
-        return os.environ['COGNITO_USER_POOL_ID']
+        return os.environ['USERS_COGNITO_USER_POOL_ID']
     
     @property
     def user_pool_client_id(self):
-        return os.environ['COGNITO_USER_POOL_CLIENT_ID']
+        return os.environ['USERS_COGNITO_USER_POOL_CLIENT_ID']
+
+    def get(self):
+        ret = super().get()
+        ret.update(UserData(ret['id']).get())
+        return ret
+

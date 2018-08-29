@@ -7,16 +7,15 @@ from models.entity import DynamodbEntity
 
 class UserData(DynamodbEntity):
 
-    def __init__(self, user_id, updated_date=None):
-        super().__init__({'user_id': user_id})
-        self._updated_date = updated_date
+    def __init__(self, user_id):
+        super().__init__({'id': user_id})
 
     @property
     def user_id(self):
-        return self.primary_key['user_id']
+        return self.primary_key['id']
 
     def _get_dynamodb_resource(self):
-        return boto3.resource('dynamodb').Table(os.environ['DYNAMODB_USERS_TABLE_NAME'])
+        return boto3.resource('dynamodb').Table(os.environ['USERS_DYNAMODB_TABLE_NAME'])
 
     @staticmethod
     def schema():

@@ -4,7 +4,7 @@
     "description": "UserData",
     "type": "object",
     "properties": {
-        "user_id": {
+        "id": {
             "description": "The user id",
             "type": "string",
             "readonly": true
@@ -16,10 +16,18 @@
         "updated_date": {
             "description": "The date the user was last updated",
             "type": "string"
+        },
+        "agreed_terms_of_use": {
+            "type": "bool"
+        },
+        "agreed_privacy_policy": {
+            "type": "bool",
+            "default": false
         }
     },
     "required": [
-        "user_id"
+        "user_id",
+        "agreed_terms_of_use"
     ],
     "additionalProperties": false
 }

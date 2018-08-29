@@ -13,10 +13,12 @@ user_app = Blueprint('user', __name__)
 @user_app.route('/login', methods=['POST'])  # TODO was /sign_in
 @body_required({'email': str, 'password': str})
 @xray_recorder.capture('routes.user.login')
-def user_sign_in():
+def user_login():
     user = User(request.json['email'])
-    user.login(password=request.json['password'])
-    return {'user': {**user.get(), **UserData(user.username).get()}}
+    return {
+        'user': user.get(),
+        'authorization': user.login(password=request.json['password'])  # This throws AuthorizationException
+    }
 
 
 @user_app.route('/', methods=['POST'])
@@ -26,8 +28,8 @@ def create_user():
     """
     Creates a new user
     """
-    # TODO
-    request.json['role'] = 'athlete'
+    request.json['role'] = 'athlete'  # TODO
+    user = User(request.json['email'])
 
     res = {'user': {}}
 
@@ -35,12 +37,12 @@ def create_user():
     # address is 'squatted' and can't be re-registered) but their data not saved in DDB
     try:
         # Create Cognito user
-        user = User(request.json['email']).create(request.json)
-        xray_recorder.current_segment().put_annotation('user_id', user['id'])
-        res['user'].update(user)
+        user_obj = user.create(request.json)
+        xray_recorder.current_segment().put_annotation('user_id', user_obj['id'])
+        res['user'].update(user_obj)
 
         # Save other data in DDB
-        user_data = UserData(user.id).create(request.json)
+        user_data = UserData(user_obj['id']).create(request.json)
         res['user'].update(user_data)
 
     except DuplicateEntityException:
@@ -49,9 +51,8 @@ def create_user():
 
     except Exception:
         # Rollback
-        # TODO
+        user.delete()
         raise
-        # User(request.json['email']).delete()
 
     res['authorization'] = user.login(password=request.json['password'])
 
@@ -95,4 +96,5 @@ def handle_delete_user(user_id):
 @authentication_required
 @xray_recorder.capture('routes.user.get')
 def handle_user_get(user_id):
-    return {'user': {**User(user_id).get(), **UserData(user_id).get()}}
+    ret = {'user': User(user_id).get()}
+    return ret
