@@ -1,39 +1,32 @@
-import pytest
-from sqlalchemy.orm import Session
-from models import Sport
-from utils import validate_value, convert_to_ft_inches, convert_to_pounds
-
-from db_connection import engine
+import unittest
+from utils import ftin_to_metres, metres_to_ftin
 
 
-@pytest.fixture
-def session():
-    session = Session(bind=engine)
-    session.begin_nested()   # TODO Figure out why data is not being saved when this is turned on even when session.close is used
-    return session
+def data_provider(data):
+    """Data provider decorator, allows another callable to provide the data for the test"""
+    def test_decorator(fn):
+        def repl(self, *args):
+            for datum in data:
+                try:
+                    fn(self, *datum)
+                except AssertionError:
+                    print("Error with data set ", datum)
+                    raise
+        return repl
+    return test_decorator
 
 
-#def teardown_module(session):
-#    session.close()
+class TestFtinToMetres(unittest.TestCase):
+    tests = [
+        ((0, 0), 0),
+        ((0, 1), 0.025),
+        ((1, 0), 0.305),
+        ((1, 1), 0.330),
+        ((0, 2), 0.051),
+        ((2, 0), 0.610),
+        ((2, 2), 0.660),
+    ]
 
-
-def test_validate_value(session):
-
-    name = validate_value(session, Sport, 'name', 'Lacrosse')
-    assert 'Lacrosse' == name
-    name = validate_value(session, Sport, 'name', 'lacrosse')
-    assert 'Lacrosse' == name
-
-
-def test_convert_to_ft_inches():
-    height_conversions = [( (6, 0), { 'm': 1.8288 })]
-    for meters, ft_in in height_conversions:
-        result = convert_to_ft_inches(ft_in)
-        assert meters == result
-
-
-def test_convert_to_pounds():
-    weight_conversions = [(2.204624, {'kg': 1 })]
-    for expected_lbs, kg in weight_conversions:
-        result = convert_to_pounds(kg)
-        assert expected_lbs == result
+    @data_provider(tests)
+    def test(self, input, output):
+        self.assertEqual(output, ftin_to_metres(*input))

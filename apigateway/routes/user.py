@@ -2,8 +2,8 @@ from aws_xray_sdk.core import xray_recorder
 from flask import Blueprint, request
 
 from decorators import authentication_required, body_required, self_authentication_required
-from exceptions import DuplicateEntityException
-
+from exceptions import DuplicateEntityException, UnauthorizedException, NoSuchEntityException
+from utils import ftin_to_metres, lb_to_kg
 from models.user import User
 from models.user_data import UserData
 
@@ -11,10 +11,10 @@ user_app = Blueprint('user', __name__)
 
 
 @user_app.route('/login', methods=['POST'])  # TODO was /sign_in
-@body_required({'email': str, 'password': str})
+@body_required({'personal_data': {'email': str}, 'password': str})
 @xray_recorder.capture('routes.user.login')
 def user_login():
-    user = User(request.json['email'])
+    user = User(request.json['personal_data']['email'])
     return {
         'user': user.get(),
         'authorization': user.login(password=request.json['password'])  # This throws AuthorizationException
@@ -22,14 +22,28 @@ def user_login():
 
 
 @user_app.route('/', methods=['POST'])
-@body_required({'email': str})
+@body_required({'personal_data': {'email': str}, 'password': str})
 @xray_recorder.capture('routes.user.post')
 def create_user():
     """
     Creates a new user
     """
-    request.json['role'] = 'athlete'  # TODO
-    user = User(request.json['email'])
+    if 'role' in request.json and request.json['role'] != 'athlete':
+        raise UnauthorizedException('Cannot create user with elevated role')
+    request.json['role'] = 'athlete'
+
+    # Get the metric values for height and weight if only imperial values were given
+    if 'biometric_data' in request.json:
+        if 'height' in request.json['biometric_data']:
+            height = request.json['biometric_data']['height']
+            if 'ft_in' in height and 'm' not in height:
+                request.json['biometric_data']['height']['m'] = ftin_to_metres(height['ft_in'][0], height['ft_in'][1])
+        if 'weight' in request.json['biometric_data']:
+            weight = request.json['biometric_data']['weight']
+            if 'lb' in weight and 'kg' not in weight:
+                request.json['biometric_data']['weight']['kg'] = lb_to_kg(weight['lb'])
+
+    user = User(request.json['personal_data']['email'])
 
     res = {'user': {}}
 
@@ -37,12 +51,10 @@ def create_user():
     # address is 'squatted' and can't be re-registered) but their data not saved in DDB
     try:
         # Create Cognito user
-        print(request.json)
         user_id = user.create(request.json)
         xray_recorder.current_segment().put_annotation('user_id', user_id)
 
         # Save other data in DDB
-        print(user_id)
         UserData(user_id).create(request.json)
         res['user'] = user.get()
 
@@ -50,10 +62,15 @@ def create_user():
         # The user already exists
         raise DuplicateEntityException('A user with that email address is already registered')
 
-    except Exception:
+    except Exception as e:
         # Rollback
-        user.delete()
-        raise
+        try:
+            user.delete()
+        except NoSuchEntityException:
+            pass
+        except Exception as e2:
+            raise e2 from e
+        raise e
 
     res['authorization'] = user.login(password=request.json['password'])
 
@@ -81,7 +98,11 @@ def handle_user_logout(user_id):
 @xray_recorder.capture('routes.user.patch')
 def update_user(user_id):
     xray_recorder.current_segment().put_annotation('user_id', user_id)
-    ret = UserData(user_id).patch(request.json)
+
+    if 'role' in request.json:
+        raise UnauthorizedException('Cannot elevate user role')
+
+    ret = User(user_id).patch(request.json)
     return {'user': ret}
 
 
@@ -97,5 +118,4 @@ def handle_delete_user(user_id):
 @authentication_required
 @xray_recorder.capture('routes.user.get')
 def handle_user_get(user_id):
-    ret = {'user': User(user_id).get()}
-    return ret
+    return {'user': User(user_id).get()}

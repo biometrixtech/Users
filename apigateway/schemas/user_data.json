@@ -11,7 +11,8 @@
         },
         "created_date": {
             "description": "The date the user was created",
-            "type": "string"
+            "type": "string",
+            "readonly": true
         },
         "updated_date": {
             "description": "The date the user was last updated",
@@ -21,8 +22,7 @@
             "type": "bool"
         },
         "agreed_privacy_policy": {
-            "type": "bool",
-            "default": false
+            "type": "bool"
         },
         "biometric_data": {
             "type": "object",
@@ -31,16 +31,68 @@
                 "sex": {
                     "type": { "enum": [ "male", "female", "other" ] },
                     "description": "User sex"
+                },
+                "height": {
+                    "type": "object",
+                    "properties": {
+                        "m": {
+                            "type": "number",
+                            "description": "Height in metres"
+                        }
+                    },
+                    "required": [ "m" ],
+                    "description": "Height"
+                },
+                "weight": {
+                    "type": "object",
+                    "properties": {
+                        "kg": {
+                            "type": "number",
+                            "description": "Weight in kilograms"
+                        }
+                    },
+                    "required": [ "kg" ],
+                    "description": "Weight"
                 }
             },
             "required": [
                 "sex"
             ],
             "additionalProperties": false
+        },
+        "personal_data": {
+            "type": "object",
+            "properties": {
+                "birth_date": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string",
+                    "readonly": true
+                },
+                "first_name": {
+                    "type": "string"
+                },
+                "last_name": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "birth-date",
+                "email",
+                "first_name",
+                "last_name"
+            ]
+        },
+        "sensor_pid": {
+            "type": "string"
+        },
+        "mobile_udid": {
+            "type": "string"
         }
     },
     "required": [
-        "user_id",
+        "agreed_privacy_policy",
         "agreed_terms_of_use"
     ],
     "additionalProperties": false

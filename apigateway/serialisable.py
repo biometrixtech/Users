@@ -23,7 +23,7 @@ def json_serialise(obj):
     if issubclass(type(obj), Serialisable):
         return obj.json_serialise()
     if isinstance(obj, Decimal):
-        return str(obj)
+        return float(obj)
     if isinstance(obj, set):
         return list(obj)
     if isinstance(obj, bytes):
