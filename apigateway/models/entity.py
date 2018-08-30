@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from boto3.dynamodb.conditions import Key, Attr, ConditionExpressionBuilder
-from botocore.exceptions import ClientError
+from botocore.exceptions import ClientError, ParamValidationError
 from decimal import Decimal
 from functools import reduce
 from operator import iand
@@ -26,16 +26,18 @@ class Entity:
         self._fields = {}
         schema = self.schema()
         self._load_fields(schema)
+        print(self._fields)
         self._exists = None
 
-    def _load_fields(self, schema, prefix=''):
+    def _load_fields(self, schema, parent='', parent_required=True):
         for field, config in schema['properties'].items():
+            required = field in schema.get('required', []) and parent_required
             if config['type'] == 'object':
-                self._load_fields(config, prefix=f'{prefix}{field}.')
+                self._load_fields(config, parent=f'{parent}{field}.', parent_required=required)
             else:
-                self._fields[f'{prefix}{field}'] = {
+                self._fields[f'{parent}{field}'] = {
                     'immutable': config.get('readonly', False),
-                    'required': field in schema.get('required', []),
+                    'required': field in schema.get('required', []) and required,
                     'primary_key': field in self._primary_key_fields,
                     'type': config['type'],
                     'default': config.get('default', None)
@@ -170,6 +172,12 @@ class CognitoEntity(Entity):
     def user_pool_client_id(self):
         raise NotImplementedError
 
+    @property
+    def id(self):
+        if self._id is None:
+            self._fetch()
+        return self._id
+
     def get(self):
         ret = super().get()
         ret['id'] = self._id
@@ -235,7 +243,7 @@ class CognitoEntity(Entity):
                 MessageAction='SUPPRESS',
             )
             self._fetch()
-            return self._id
+            return self.id
 
         except ClientError as e:
             if 'UsernameExistsException' in str(e):
@@ -245,6 +253,8 @@ class CognitoEntity(Entity):
             else:
                 print(json.dumps({'exception': str(e)}))
                 raise
+        except ParamValidationError:
+            raise InvalidPasswordFormatException()
 
     def delete(self):
         try:
@@ -353,7 +363,7 @@ class DynamodbEntity(Entity):
         return res[0]
 
     def patch(self, body, create=False):
-        self.validate('PATCH', body)
+        self.validate('PUT' if create else 'PATCH', body)
         body = flatten(body)
 
         try:
@@ -362,6 +372,8 @@ class DynamodbEntity(Entity):
                 if key in body:
                     if self._fields[key]['type'] in ['list', 'object']:
                         upsert.add(key, set(body[key]))
+                    elif self._fields[key]['type'] == 'number':
+                        upsert.set(key, Decimal(str(body[key])))
                     else:
                         upsert.set(key, body[key])
             print(upsert)
@@ -384,7 +396,6 @@ class DynamodbEntity(Entity):
                 raise
 
     def create(self, body):
-        self.validate('PUT', body)
         self.patch(body, True)
         return self.primary_key
 

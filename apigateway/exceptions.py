@@ -45,4 +45,4 @@ class ValueNotFoundInDatabase(ApplicationException):
 
 class InvalidPasswordFormatException(ApplicationException):
     def __init__(self, message=''):
-        super().__init__(404, 'InvalidPasswordFormat', message)
+        super().__init__(400, 'InvalidPasswordFormat', message)
