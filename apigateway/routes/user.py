@@ -1,3 +1,4 @@
+from query_postgres import query_postgres
 from aws_xray_sdk.core import xray_recorder
 from flask import Blueprint, request
 
@@ -7,6 +8,8 @@ from exceptions import DuplicateEntityException, UnauthorizedException, NoSuchEn
 from utils import ftin_to_metres, lb_to_kg
 from models.user import User
 from models.user_data import UserData
+from utils import nowdate
+import os
 
 user_app = Blueprint('user', __name__)
 
@@ -16,9 +19,28 @@ user_app = Blueprint('user', __name__)
 @xray_recorder.capture('routes.user.login')
 def user_login():
     user = User(request.json['personal_data']['email'])
+    user_record = user.get()
+
+    try:
+        authorisation = user.login(password=request.json['password'])
+    except UnauthorizedException as e:
+        if user_record['migrated_date'] is not None:
+            # Try migrating them
+            try:
+                authorisation = _attempt_cognito_migration(
+                    user,
+                    request.json['personal_data']['email'],
+                    request.json['password']
+                )
+            except Exception:
+                # Raise the original error
+                raise e
+        else:
+            raise e
+
     return {
-        'user': user.get(),
-        'authorization': user.login(password=request.json['password'])  # This throws AuthorizationException
+        'user': user_record,
+        'authorization': authorisation
     }
 
 
@@ -32,6 +54,11 @@ def create_user():
     if 'role' in request.json and request.json['role'] != 'athlete':
         raise ForbiddenException('Cannot create user with elevated role')
     request.json['role'] = 'athlete'
+
+    if 'User-Agent' in request.headers and request.headers['User-Agent'] == 'biometrix/cognitomigrator':
+        request.json['migrated_date'] = nowdate()
+    elif 'migrated_date' in request.json:
+        del request.json['migrated_date']
 
     # Get the metric values for height and mass if only imperial values were given
     metricise_values()
@@ -128,3 +155,31 @@ def handle_delete_user(user_id):
 @xray_recorder.capture('routes.user.get')
 def handle_user_get(user_id):
     return {'user': User(user_id).get()}
+
+
+def _attempt_cognito_migration(user, email, password):
+    # Check that we can still log in with the migration default password
+    temp_authorisation = user.login(password=os.environ['MIGRATION_DEFAULT_PASSWORD'])
+
+    # Check that the supplied password matches the one in Cognito.  Note that this does not require
+    # us to have bcrypt or Flask-bcrypt installed in this codebase, but does require the `pgcrypto`
+    # extension to be enabled in postgres.
+    check_postgres = query_postgres(
+        "SELECT id, password_digest=crypt(%s, password_digest) AS password_match FROM users WHERE email=%s",
+        [password, email]
+    )
+    if not check_postgres['password_match']:
+        raise UnauthorizedException('Password does not match in Postgres')
+
+    # Change the password in cognito
+    user.change_password(
+        temp_authorisation['AccessToken'],
+        os.environ['MIGRATION_DEFAULT_PASSWORD'],
+        password
+    )
+
+    # Record the date
+    user.patch({'migrated_date': nowdate()})
+
+    # And login as normal
+    return user.login(password=password)

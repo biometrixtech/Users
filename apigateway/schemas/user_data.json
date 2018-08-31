@@ -63,6 +63,10 @@
         "injury_status": {
             "enum": [ "healthy", "injured", "healthy_chronically_injured" ]
         },
+        "migrated_date": {
+            "description": "The date the user logged in after postgres-to-cognito migration",
+            "type": "string"
+        },
         "mobile_udid": {
             "type": "string"
         },

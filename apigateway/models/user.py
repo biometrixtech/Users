@@ -50,3 +50,10 @@ class User(CognitoEntity):
         if 'email' in ret:
             del ret['email']
         return ret
+
+    def change_password(self, access_token, old_password, new_password):
+        cognito_client.change_password(
+            AccessToken=access_token,
+            PreviousPassword=old_password,
+            ProposedPassword=new_password,
+        )
