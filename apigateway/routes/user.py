@@ -2,7 +2,8 @@ from aws_xray_sdk.core import xray_recorder
 from flask import Blueprint, request
 
 from decorators import authentication_required, body_required, self_authentication_required
-from exceptions import DuplicateEntityException, UnauthorizedException, NoSuchEntityException
+from exceptions import DuplicateEntityException, UnauthorizedException, NoSuchEntityException, \
+    ForbiddenException
 from utils import ftin_to_metres, lb_to_kg
 from models.user import User
 from models.user_data import UserData
@@ -29,19 +30,11 @@ def create_user():
     Creates a new user
     """
     if 'role' in request.json and request.json['role'] != 'athlete':
-        raise UnauthorizedException('Cannot create user with elevated role')
+        raise ForbiddenException('Cannot create user with elevated role')
     request.json['role'] = 'athlete'
 
     # Get the metric values for height and weight if only imperial values were given
-    if 'biometric_data' in request.json:
-        if 'height' in request.json['biometric_data']:
-            height = request.json['biometric_data']['height']
-            if 'ft_in' in height and 'm' not in height:
-                request.json['biometric_data']['height']['m'] = ftin_to_metres(height['ft_in'][0], height['ft_in'][1])
-        if 'weight' in request.json['biometric_data']:
-            weight = request.json['biometric_data']['weight']
-            if 'lb' in weight and 'kg' not in weight:
-                request.json['biometric_data']['weight']['kg'] = lb_to_kg(weight['lb'])
+    metricise_values()
 
     user = User(request.json['personal_data']['email'])
 
@@ -77,6 +70,18 @@ def create_user():
     return res, 201
 
 
+def metricise_values():
+    if 'biometric_data' in request.json:
+        if 'height' in request.json['biometric_data']:
+            height = request.json['biometric_data']['height']
+            if 'ft_in' in height and 'm' not in height:
+                request.json['biometric_data']['height']['m'] = ftin_to_metres(height['ft_in'][0], height['ft_in'][1])
+        if 'weight' in request.json['biometric_data']:
+            weight = request.json['biometric_data']['weight']
+            if 'lb' in weight and 'kg' not in weight:
+                request.json['biometric_data']['weight']['kg'] = lb_to_kg(weight['lb'])
+
+
 @user_app.route('/<uuid:user_id>/authorize', methods=['POST'])
 @body_required({'session_token': str})
 @xray_recorder.capture('routes.user.authorise')
@@ -95,12 +100,16 @@ def handle_user_logout(user_id):
 
 @user_app.route('/<uuid:user_id>', methods=['PATCH'])  # TODO This was PUT
 @authentication_required
+@body_required({})
 @xray_recorder.capture('routes.user.patch')
 def update_user(user_id):
     xray_recorder.current_segment().put_annotation('user_id', user_id)
 
     if 'role' in request.json:
         raise UnauthorizedException('Cannot elevate user role')
+
+    # Get the metric values for height and weight if only imperial values were given
+    metricise_values()
 
     ret = User(user_id).patch(request.json)
     return {'user': ret}

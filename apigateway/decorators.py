@@ -47,8 +47,9 @@ def authenticate_user_jwt(jwt):
 
 def body_required(required_body):
     def validate_request():
-        if not request.json or not isinstance(request.json, dict):
-            raise InvalidSchemaException('Request body must be a JSON object')
+        if request.json is None or not isinstance(request.json, dict):
+            t = type(request.json)
+            raise InvalidSchemaException(f'Request body must be a JSON object, not "{t}"')
         validate_dict(request.json, required_body)
 
     def validate_dict(body, schema, prefix=''):

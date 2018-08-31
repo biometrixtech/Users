@@ -12,9 +12,10 @@ from dynamodbupdate import DynamodbUpdate
 from exceptions import InvalidSchemaException, \
     NoSuchEntityException, \
     DuplicateEntityException, \
-    ApplicationException, \
+    ImmutableFieldUpdatedException, \
     InvalidPasswordFormatException, \
-    UnauthorizedException
+    UnauthorizedException, \
+    NoUpdatesException
 
 
 class Entity:
@@ -94,7 +95,7 @@ class Entity:
             # Not allowed to modify readonly attributes for PATCH
             for key in self.get_fields(immutable=True, primary_key=False):
                 if key in body:
-                    raise InvalidSchemaException('Cannot modify value of immutable parameter: {}'.format(key))
+                    raise ImmutableFieldUpdatedException('Cannot modify value of immutable parameter: {}'.format(key))
 
         else:
             # Required fields must be present for PUT
@@ -376,7 +377,10 @@ class DynamodbEntity(Entity):
                         upsert.set(key, Decimal(str(body[key])))
                     else:
                         upsert.set(key, body[key])
+
             print(upsert)
+            if len(upsert.parameter_values) == 0:
+                raise NoUpdatesException()
 
             self._get_dynamodb_resource().update_item(
                 Key=self.primary_key,
