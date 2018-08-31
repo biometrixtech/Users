@@ -14,13 +14,13 @@ def metres_to_ftin(metres):
     return inches // 12, round(inches % 12, 1)
 
 
-def kg_to_lb(weight_kg):
+def kg_to_lb(mass_kg):
     """
     Convert a kilogram value to pounds
-    :param weight_kg:
+    :param mass_kg:
     :return:
     """
-    return round(float(weight_kg) / 0.453592, 1) if weight_kg is not None else None
+    return round(float(mass_kg) / 0.453592, 1) if mass_kg is not None else None
 
 
 def ftin_to_metres(feet, inches):
@@ -36,14 +36,14 @@ def ftin_to_metres(feet, inches):
     return round(float(inches) * 0.0254, 3)
 
 
-def lb_to_kg(weight_lbs):
+def lb_to_kg(mass_lbs):
     """
     Converts pounds to kilograms.
-    Handles the case where the weight is None
-    :param weight_lbs:
+    Handles the case where the input is None
+    :param mass_lbs:
     :return:
     """
-    return round(float(weight_lbs) * 0.453592, 3) if weight_lbs is not None else None
+    return round(float(mass_lbs) * 0.453592, 3) if mass_lbs is not None else None
 
 
 def format_date(date_input):

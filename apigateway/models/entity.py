@@ -33,14 +33,26 @@ class Entity:
     def _load_fields(self, schema, parent='', parent_required=True):
         for field, config in schema['properties'].items():
             required = field in schema.get('required', []) and parent_required
-            if config['type'] == 'object':
+            if config.get('type', None) == 'object':
                 self._load_fields(config, parent=f'{parent}{field}.', parent_required=required)
             else:
+                if 'enum' in config:
+                    field_type = set(config['enum'])
+                elif config['type'] == 'array':
+                    if 'items' in config:
+                        if isinstance(config['items'], list):
+                            field_type = config['items']
+                        else:
+                            field_type = [config['items']]
+                    else:
+                        field_type = []
+                else:
+                    field_type = config['type']
                 self._fields[f'{parent}{field}'] = {
                     'immutable': config.get('readonly', False),
                     'required': field in schema.get('required', []) and required,
                     'primary_key': field in self._primary_key_fields,
-                    'type': config['type'],
+                    'type': field_type,
                     'default': config.get('default', None)
                 }
 
@@ -69,9 +81,14 @@ class Entity:
         if isinstance(field_type, dict) and '$ref' in field_type:
             field_type = field_type['$ref']
 
-        if isinstance(field_type, dict) and 'enum' in field_type:
-            if value not in field_type['enum']:
-                raise ValueError(f'{field} must be one of {field_type["enum"]}, not {value}')
+        if isinstance(field_type, set):
+            if value not in field_type:
+                raise ValueError(f'{field} must be one of {field_type}, not {value}')
+            return value
+        elif isinstance(field_type, list):
+            # TODO validate items
+            if not isinstance(value, list):
+                raise ValueError(f'{field} must be a list')
             return value
         elif field_type == 'string':
             return str(value)
@@ -121,6 +138,7 @@ class Entity:
 
     def get(self):
         fetch_result = self._fetch()
+        print(self.get_fields(primary_key=False))
 
         ret = self.primary_key
         for key in self.get_fields(primary_key=False):
@@ -255,7 +273,7 @@ class CognitoEntity(Entity):
                 print(json.dumps({'exception': str(e)}))
                 raise
         except ParamValidationError:
-            raise InvalidPasswordFormatException()
+            raise InvalidPasswordFormatException('Password does not meet security requirements')
 
     def delete(self):
         try:
@@ -361,6 +379,7 @@ class DynamodbEntity(Entity):
 
         if len(res) == 0:
             raise NoSuchEntityException()
+        print(res[0])
         return res[0]
 
     def patch(self, body, create=False):

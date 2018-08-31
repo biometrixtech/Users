@@ -4,34 +4,21 @@
     "description": "UserData",
     "type": "object",
     "properties": {
+        "agreed_privacy_policy": {
+            "type": "bool"
+        },
+        "agreed_terms_of_use": {
+            "type": "bool"
+        },
         "id": {
             "description": "The user id",
             "type": "string",
             "readonly": true
         },
-        "created_date": {
-            "description": "The date the user was created",
-            "type": "string",
-            "readonly": true
-        },
-        "updated_date": {
-            "description": "The date the user was last updated",
-            "type": "string"
-        },
-        "agreed_terms_of_use": {
-            "type": "bool"
-        },
-        "agreed_privacy_policy": {
-            "type": "bool"
-        },
         "biometric_data": {
             "type": "object",
             "description": "Biometric data",
             "properties": {
-                "sex": {
-                    "type": { "enum": [ "male", "female", "other" ] },
-                    "description": "User sex"
-                },
                 "height": {
                     "type": "object",
                     "properties": {
@@ -43,26 +30,57 @@
                     "required": [ "m" ],
                     "description": "Height"
                 },
-                "weight": {
+                "sex": {
+                    "enum": [ "male", "female", "other" ]
+                },
+                "mass": {
                     "type": "object",
                     "properties": {
                         "kg": {
                             "type": "number",
-                            "description": "Weight in kilograms"
+                            "description": "Mass in kilograms"
                         }
                     },
                     "required": [ "kg" ],
-                    "description": "Weight"
+                    "description": "Mass"
                 }
             },
             "required": [
+                "height",
+                "mass",
                 "sex"
             ],
             "additionalProperties": false
         },
+        "cleared_to_play": {
+            "type": "bool"
+        },
+        "created_date": {
+            "description": "The date the user was created",
+            "type": "string",
+            "readonly": true
+        },
+        "injury_status": {
+            "enum": [ "healthy", "injured", "healthy_chronically_injured" ]
+        },
+        "mobile_udid": {
+            "type": "string"
+        },
+        "onboarding_status": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
         "personal_data": {
             "type": "object",
             "properties": {
+                "account_status": {
+                    "enum": [ "active", "pending", "past_due", "expired" ]
+                },
+                "account_type": {
+                    "enum": [ "free", "paid" ]
+                },
                 "birth_date": {
                     "type": "string"
                 },
@@ -75,10 +93,13 @@
                 },
                 "last_name": {
                     "type": "string"
+                },
+                "zip_code": {
+                    "type": "string"
                 }
             },
             "required": [
-                "birth-date",
+                "birth_date",
                 "email",
                 "first_name",
                 "last_name"
@@ -87,13 +108,23 @@
         "sensor_pid": {
             "type": "string"
         },
-        "mobile_udid": {
+        "system_type": {
+            "enum": [ "1-sensor", "3-sensor" ]
+        },
+        "updated_date": {
+            "description": "The date the user was last updated",
             "type": "string"
         }
     },
     "required": [
         "agreed_privacy_policy",
-        "agreed_terms_of_use"
+        "agreed_terms_of_use",
+        "biometric_data",
+        "personal_data",
+        "cleared_to_play",
+        "system_type",
+        "injury_status",
+        "onboarding_status"
     ],
     "additionalProperties": false
 }
