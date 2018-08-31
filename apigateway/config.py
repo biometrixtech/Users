@@ -28,8 +28,8 @@ def load_secrets():
         secret_key_base = get_secret("secret_key_base")
         os.environ['SECRET_KEY_BASE'] = secret_key_base['key']
 
-        secret_key_base = get_secret("migration_default_password")
-        os.environ['MIGRATION_DEFAULT_PASSWORD'] = secret_key_base['key']
+        migration_default_password = get_secret("migration_default_password")
+        os.environ['MIGRATION_DEFAULT_PASSWORD'] = migration_default_password['password']
     else:
         from dotenv import load_dotenv
         load_dotenv('.env', verbose=True)
