@@ -44,10 +44,13 @@ class BaseTest(unittest.TestCase):
             res = requests.get(endpoint, headers=self._get_headers())
         elif self.method == 'POST':
             res = requests.post(endpoint, json=self.body, headers=self._get_headers())
+        elif self.method == 'PATCH':
+            res = requests.patch(endpoint, json=self.body, headers=self._get_headers())
         else:
             self.fail('Unsupported method')
 
-        self.assertEqual(self.expected_status, res.status_code, msg=res.json().get('message', ''))
+        expected_statuses = self.expected_status if isinstance(self.expected_status, list) else [self.expected_status]
+        self.assertIn(res.status_code, expected_statuses, msg=res.json().get('message', ''))
 
         if 200 <= res.status_code < 300:
             self.validate_response(res.json(), res.headers, res.status_code)

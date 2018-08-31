@@ -4,7 +4,10 @@ import boto3
 
 
 cognito_client = boto3.client('cognito-idp', region_name='us-west-2')
-cognito_user_pool_id = 'us-west-2_rMjE5fYgA'
+cognito_user_pool_id = None
+for up in cognito_client.list_user_pools(MaxResults=60)['UserPools']:
+    if up['Name'] == 'users-dev-users2':
+        cognito_user_pool_id = up['Id']
 
 dynamodb_table = boto3.resource('dynamodb').Table('users-dev-users')
 
@@ -73,14 +76,23 @@ class TestUserCreate(BaseTest):
         self.assertIn('Username', cognito_record)
         self.assertIn('UserAttributes', cognito_record)
         user_attributes = {att['Name']: att['Value'] for att in cognito_record['UserAttributes']}
+
         self.assertIn('sub', user_attributes)
+
         self.assertIn('custom:role', user_attributes)
         self.assertEqual('athlete', user_attributes['custom:role'])
+
         self.assertIn('email', user_attributes)
         self.assertEqual('apitest@fathomai.com', user_attributes['email'])
 
         ddb_record = dynamodb_table.get_item(Key={'id': cognito_record['Username']})
         self.assertIn('Item', ddb_record)
+        ddb_values = ddb_record['Item']
+
+        self.assertIn('personal_data.email', ddb_values)
+        self.assertEqual('apitest@fathomai.com', ddb_values['personal_data.email'])
+
+        self.assertNotIn('password', ddb_values)
 
     def validate_response(self, body, headers, status):
         self.assertIn('user', body)
@@ -89,8 +101,12 @@ class TestUserCreate(BaseTest):
         self.assertEqual(user['agreed_terms_of_use'], True)
 
     def tearDown(self):
-        cognito_client.admin_delete_user(
-            UserPoolId=cognito_user_pool_id,
-            Username='apitest@fathomai.com'
-        )
+        try:
+            cognito_client.admin_delete_user(
+                UserPoolId=cognito_user_pool_id,
+                Username='apitest@fathomai.com'
+            )
+        except ClientError as e:
+            if 'UserNotFoundException' not in str(e):
+                raise
 

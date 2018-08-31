@@ -47,5 +47,6 @@ class User(CognitoEntity):
     def _munge_response(ret):
         ret['biometric_data']['height']['ft_in'] = metres_to_ftin(ret['biometric_data']['height']['m'])
         ret['biometric_data']['weight']['lb'] = metres_to_ftin(ret['biometric_data']['weight']['kg'])
-        del ret['email']
+        if 'email' in ret:
+            del ret['email']
         return ret
