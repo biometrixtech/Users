@@ -126,7 +126,7 @@ Resources:
                     RequireNumbers: true
                     RequireSymbols: false
                     RequireUppercase: true
-            UserPoolName: { "Fn::Sub": "users-${Environment}-users2" }
+            UserPoolName: { "Fn::Sub": "users-${Environment}-users" }
             Schema:
               - Name: 'role'
                 AttributeDataType: 'String'
