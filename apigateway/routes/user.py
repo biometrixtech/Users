@@ -33,7 +33,7 @@ def create_user():
         raise ForbiddenException('Cannot create user with elevated role')
     request.json['role'] = 'athlete'
 
-    # Get the metric values for height and weight if only imperial values were given
+    # Get the metric values for height and mass if only imperial values were given
     metricise_values()
 
     user = User(request.json['personal_data']['email'])
@@ -76,10 +76,10 @@ def metricise_values():
             height = request.json['biometric_data']['height']
             if 'ft_in' in height and 'm' not in height:
                 request.json['biometric_data']['height']['m'] = ftin_to_metres(height['ft_in'][0], height['ft_in'][1])
-        if 'weight' in request.json['biometric_data']:
-            weight = request.json['biometric_data']['weight']
-            if 'lb' in weight and 'kg' not in weight:
-                request.json['biometric_data']['weight']['kg'] = lb_to_kg(weight['lb'])
+        if 'mass' in request.json['biometric_data']:
+            mass = request.json['biometric_data']['mass']
+            if 'lb' in mass and 'kg' not in mass:
+                request.json['biometric_data']['mass']['kg'] = lb_to_kg(mass['lb'])
 
 
 @user_app.route('/<uuid:user_id>/authorize', methods=['POST'])
@@ -108,7 +108,7 @@ def update_user(user_id):
     if 'role' in request.json:
         raise UnauthorizedException('Cannot elevate user role')
 
-    # Get the metric values for height and weight if only imperial values were given
+    # Get the metric values for height and mass if only imperial values were given
     metricise_values()
 
     ret = User(user_id).patch(request.json)
