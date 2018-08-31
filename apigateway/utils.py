@@ -46,6 +46,10 @@ def lb_to_kg(mass_lbs):
     return round(float(mass_lbs) * 0.453592, 3) if mass_lbs is not None else None
 
 
+def nowdate():
+    return datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
 def format_date(date_input):
     """
     Formats a date in ISO8601 short format.
