@@ -19,8 +19,8 @@ class ApplicationException(Exception):
 
 
 class NoUpdatesException(ApplicationException):
-    def __init__(self, message=''):
-        super().__init__(204, 'NoUpdates', message)
+    def __init__(self, message='No updates are to be performed'):
+        super().__init__(202, 'NoUpdates', message)
 
 
 class InvalidSchemaException(ApplicationException):
