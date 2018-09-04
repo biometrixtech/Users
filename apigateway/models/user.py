@@ -2,7 +2,7 @@ import boto3
 import json
 import os
 
-from models.entity import CognitoEntity
+from ._cognito_entity import CognitoEntity
 from models.user_data import UserData
 from utils import metres_to_ftin, kg_to_lb
 
