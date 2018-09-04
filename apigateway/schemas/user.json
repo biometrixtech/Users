@@ -11,7 +11,19 @@
         },
         "role": {
             "description": "Role",
-            "type": "string"
+            "enum": [
+                "admin" ,
+                "athlete",
+                "biometrix_admin",
+                "consumer",
+                "manager",
+                "subject",
+                "super_admin"
+            ]
+        },
+        "password": {
+            "type": "string",
+            "readonly": true
         }
     },
     "required": [
