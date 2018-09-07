@@ -286,10 +286,8 @@ def user_sign_in():
     user_query = session.query(Users).filter_by(email=email)
     user = user_query.first()
     if user:
-
-        if password_received:
+        if password_received and user.password_digest:
             if bcrypt.check_password_hash(user.password_digest, password_received):  # Check if the password matches
-
                 user_resp = create_user_response_with_training_groups(session, user)
                 user_ddb_res = get_user_from_ddb(str(user_resp['id'])) or {'sessions': [], 'updated_date': '1970-01-01T00:00:00Z'}
                 ret = {
@@ -304,6 +302,8 @@ def user_sign_in():
                 return ret
             else:
                 raise UnauthorizedException("Password was not correct.")
+        else:
+            raise UnauthorizedException("Must supply a password.")
     raise NoSuchEntityException('User not found')
 
 
@@ -715,7 +715,7 @@ def get_user(user_id):
 def verify_user_id_matches_jwt(jwt_token=None, user_id=None):
     """
     Extracts user_id from the jwt and compares it with the user_id supplied.
-    :param jwt:
+    :param jwt_token:
     :param user_id:
     :return: True/False
     """

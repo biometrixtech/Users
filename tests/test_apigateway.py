@@ -6,7 +6,7 @@ from .test_fixtures import example_user_data, example_user_data_2
 import os
 from aws_xray_sdk.core import patch_all, xray_recorder
 
-LOGIN_URL = "/v1/user/sign_in"
+LOGIN_URL = "/user/sign_in"
 
 # Headers:
 headers = {
@@ -25,7 +25,7 @@ def client():
 
 
 def test_create_user(client):
-    res = client.post('/v1/user/',
+    res = client.post('/user/',
                       headers={'content-type': 'application/json'},
                       data=json.dumps(example_user_data_2))
     print(res.data)
@@ -35,10 +35,10 @@ def test_create_user(client):
 
 
 def test_sign_in(client):
-    dev_login, expected_ouptut = sample_logins[0]['input'], sample_logins[0]['expected_output']
+
     dev_login = {
-                 "email": "steve1234@gmail.com",
-                 "password": "ABC123456"
+                "email": "tests000015@biometrixtech.com",
+                "password": "Fathom123!",
                 }
     res = client.post(LOGIN_URL,
                       headers={'content-type': 'application/json'},
@@ -75,8 +75,8 @@ def test_no_password(client):
 def test_incorrect_password(client):
     # TODO: Password is missing in database for this account in the test database. Need to be added.
     user_login = {
-                  "email": "glitch0@gmail.com",
-                  "password": "muffins1s"
+                  "email": "tests00001@biometrixtech.com",
+                  "password": "muffins1"
                  }
     res = client.post(LOGIN_URL, headers={'content-type': 'application/json'},
                       data=json.dumps(user_login))
@@ -85,14 +85,14 @@ def test_incorrect_password(client):
 
 
 def test_update_user(client):
-    # user_id = "3a07c79a-2e9f-487f-aef7-555954537e29"
-    user_id = 'e1d09699-5f8b-49ed-8637-35c548f9edc8'
+    user_id = "95babffb-53b2-48ee-97e8-f51245a15cce"
+    # user_id = 'e1d09699-5f8b-49ed-8637-35c548f9edc8'
     updated_user_data = {'personal_data': {'phone_number': '23412302'},
                          'biometric_data': {
                              'height': {'ft': 1.5}
                          },
                          }
-    res = client.put('/v1/user/{}'.format(user_id),
+    res = client.put('/user/{}'.format(user_id),
                       headers=headers,
                       data=json.dumps(updated_user_data)
                       )
@@ -101,7 +101,7 @@ def test_update_user(client):
 
 
 def test_update_user_2(client):
-    user_id = 'c4f3ba9c-c874-4687-bbb8-67633a6a6d7d'
+    user_id = '95babffb-53b2-48ee-97e8-f51245a15cce'
     user_data_2 = {
     "email": "mazen+mvp@fathomai.com",
     "password": "Fathom123!",
@@ -124,7 +124,7 @@ def test_update_user_2(client):
     "injury_status": "healthy",
     "onboarding_status": ["account_setup"]
     }
-    res = client.put('/v1/user/{}'.format(user_id),
+    res = client.put('/user/{}'.format(user_id),
                      headers=headers,
                      data=json.dumps(user_data_2)
                      )
@@ -138,18 +138,18 @@ def test_update_user_2(client):
     assert "healthy" == data['injury_status']
     assert "male" == data['biometric_data']['sex']
 
-
+# TODO: Fix testing strategy and seed a test database with the intial correct values for testing.
+# TODO: Ensure user_id matches JWT token
 def test_create_sensor_mobile_pair(client):
     headers['content-type'] = 'application/json'
-    # TODO: Fix testing strategy and seed a test database with the intial correct values for testing.
     user_id = '19bfad75-9d95-4fff-aec9-de4a93da214d'  # Needs to match JWT token in environmental variable and be in database
-
+    user_id = '95babffb-53b2-48ee-97e8-f51245a15cce'
     sensor_mobile_info = {'sensor_pid': "ERAFASDFVASHKVIAS",
                           'mobile_udid': "F3423nVA324afVJKs",
                           # 'path': None,
                           # 'httpMethod': 'post'
                          }
-    res = client.post("/users/user/{}/sensor_mobile_pair".format(user_id), headers=headers,
+    res = client.post("/user/{}/sensor_mobile_pair".format(user_id), headers=headers,
                         data=json.dumps(sensor_mobile_info))
     print(res.data)
     assert 200 == res.status_code
@@ -159,14 +159,14 @@ def test_create_sensor_mobile_pair(client):
 def test_retrieve_sensor_mobile_pair(client):
     headers['content-type'] = 'application/json'
     # TODO: Fix testing strategy and seed a test database with the intial correct values for testing.
-    user_id = '19bfad75-9d95-4fff-aec9-de4a93da214d'  # Needs to match JWT token in environmental variable and be in database
-
+    user_id = '95babffb-53b2-48ee-97e8-f51245a15cce'  # Needs to match JWT token in environmental variable and be in database
+    user_id = '95babffb-53b2-48ee-97e8-f51245a15cce'
     sensor_mobile_info = {'sensor_pid': "ERAFASDFVASHKVIAS",
                           'mobile_udid': "F3423nVA324afVJKs",
                           # 'path': None,
                           # 'httpMethod': 'post'
                          }
-    res = client.get("/users/user/{}/sensor_mobile_pair".format(user_id), headers=headers)
+    res = client.get("/user/{}/sensor_mobile_pair".format(user_id), headers=headers)
     print(res.data)
     data = json.loads(res.data)
     assert 200 == res.status_code
