@@ -105,7 +105,8 @@ def test_create_sensor_mobile_pair():
     """
     headers['content-type'] = 'application/json'
     # user_id = '3a07c79a-2e9f-487f-aef7-555954537e29'  # Needs to match JWT token above
-    user_id = '19bfad75-9d95-4fff-aec9-de4a93da214d'
+    # user_id = '19bfad75-9d95-4fff-aec9-de4a93da214d'
+    user_id = 'e8514489-8de9-47e0-b3d5-b15da244783f'
     sensor_mobile_info = {'sensor_pid': "ERAFASDFVASHKVIAS",
                           'mobile_udid': "F3423nVA324afVJKs"
                           }

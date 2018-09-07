@@ -63,7 +63,8 @@ def handle_application_exception(e):
 
 
 def handler(event, context):
-    print(json.dumps(event))
+    if os.environ['ENVIRONMENT'] != 'production':
+        print(json.dumps(event))
 
     # Strip mount point and version information from the path
     path_match = re.match(f'^/(?P<mount>({os.environ["SERVICE"]}|v1))?(/(?P<version>(\d+([._]\d+([._]\d+(-\w+([._]\d+)?)?)?)?)|latest))?(?P<path>/.+?)/?$', event['path'])
@@ -107,7 +108,8 @@ def handler(event, context):
     xray_recorder.current_segment().apply_status_code(ret['statusCode'])
     xray_recorder.end_segment()
 
-    print(json.dumps(ret))
+    if os.environ['ENVIRONMENT'] != 'production':
+        print(json.dumps(ret))
     return ret
 
 

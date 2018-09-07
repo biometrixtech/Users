@@ -7,7 +7,8 @@
             "name": "users-{ENVIRONMENT}-apigateway-execute",
             "s3_filename": "apigateway.zip",
             "src": "apigateway",
-            "pip": true
+            "pip": true,
+            "publish_tags": true
         },
         {
             "name": "users-{ENVIRONMENT}-apigateway-validateauth",
@@ -23,5 +24,11 @@
         }
     ],
     "datastores": [
+    ],
+    "apigateways": [
+        {
+            "name": "users-{ENVIRONMENT}-apigateway",
+            "lambda_function_name": "users-{ENVIRONMENT}-apigateway-execute"
+        }
     ]
 }
