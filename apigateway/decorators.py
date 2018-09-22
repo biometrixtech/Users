@@ -11,13 +11,22 @@ def authentication_required(decorated_function):
     """Decorator to require a JWT token to be passed."""
     @wraps(decorated_function)
     def wrapper(*args, **kwargs):
-        if 'Authorization' in request.headers and authenticate_user_jwt(request.headers['Authorization']):
-            return decorated_function(*args, **kwargs)
-        elif 'jwt' in request.headers and authenticate_user_jwt(request.headers['jwt']):
-            # Legacy 10.1 firmware
-            return decorated_function(*args, **kwargs)
-        else:
+        if 'Authorization' not in request.headers or not authenticate_user_jwt(request.headers['Authorization']):
             raise UnauthorizedException("Unauthorized")
+        return decorated_function(*args, **kwargs)
+    return wrapper
+
+
+def self_authentication_required(decorated_function):
+    """Decorator to require a JWT token to be passed."""
+    @wraps(decorated_function)
+    def wrapper(*args, **kwargs):
+        if 'Authorization' not in request.headers:
+            raise UnauthorizedException("Unauthorized")
+        principal_id = authenticate_user_jwt(request.headers['Authorization'])
+        if len(args) == 0 or args[0] is None or args[0] != principal_id:
+            raise UnauthorizedException("You may only execute this action on yourself")
+        return decorated_function(*args, **kwargs)
     return wrapper
 
 
@@ -38,8 +47,9 @@ def authenticate_user_jwt(jwt):
 
 def body_required(required_body):
     def validate_request():
-        if not request.json or not isinstance(request.json, dict):
-            raise InvalidSchemaException('Request body must be a JSON object')
+        if request.json is None or not isinstance(request.json, dict):
+            t = type(request.json)
+            raise InvalidSchemaException(f'Request body must be a JSON object, not "{t}"')
         validate_dict(request.json, required_body)
 
     def validate_dict(body, schema, prefix=''):

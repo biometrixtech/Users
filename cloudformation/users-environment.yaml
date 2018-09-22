@@ -57,7 +57,7 @@ Parameters:
 Mappings:
     TemplateVersion:
         Self: { Commit: "da39a3ee5e6b4b0d3255bfef95601890afd80709" }
-        Infrastructure: { Commit: "7f9d4ffc366d5b1d328c5be1a80eab35c3fa6eca" }
+        Infrastructure: { Commit: "75121e414c6725f23e9b2cff9e158f538c61333b" }
 
 Metadata:
     "AWS::CloudFormation::Interface":
@@ -113,6 +113,49 @@ Resources:
     ##########################################################################################################
     ##  DATABASE
     ##########################################################################################################
+
+    UsersCognitoUserPool:
+        Type: "AWS::Cognito::UserPool"
+        Properties:
+            AdminCreateUserConfig:
+                AllowAdminCreateUserOnly: true
+            Policies:
+                PasswordPolicy:
+                    MinimumLength: 8
+                    RequireLowercase: true
+                    RequireNumbers: true
+                    RequireSymbols: false
+                    RequireUppercase: true
+            UserPoolName: { "Fn::Sub": "users-${Environment}-users" }
+            Schema:
+              - Name: 'role'
+                AttributeDataType: 'String'
+                Mutable: true
+                Required: false
+                StringAttributeConstraints:
+                    MinLength: '1'
+                    MaxLength: '256'
+            UsernameAttributes:
+              - 'email'
+            UserPoolTags:
+              Name: { "Fn::Sub": "users-${Environment}-users" }
+              Management: "managed"
+              Project: "users"
+              Environment: { Ref: "Environment" }
+              Service: "users"
+        DeletionPolicy : "Retain"
+
+    UsersCognitoUserPoolClient:
+        Type: "AWS::Cognito::UserPoolClient"
+        Properties:
+            ClientName: { "Fn::Sub": "users-${Environment}-login" }
+            ExplicitAuthFlows:
+              - "ADMIN_NO_SRP_AUTH"
+            GenerateSecret: false
+            ReadAttributes:
+              - "custom:role"
+            RefreshTokenValidity: 30
+            UserPoolId: { Ref: "UsersCognitoUserPool" }
 
     UsersTable:
         Type: "AWS::DynamoDB::Table"
@@ -502,6 +545,7 @@ Resources:
               - "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
               - "arn:aws:iam::aws:policy/AWSXrayWriteOnlyAccess"
               - { Ref: "ValidateAuthExecutionPolicy" }
+              - { "Fn::ImportValue": { "Fn::Sub": "QuerypostgresPolicyArn-${Environment}" } }
             Policies:
               - PolicyName: "default"
                 PolicyDocument:
@@ -515,6 +559,16 @@ Resources:
                           - "secretsmanager:GetSecretValue"
                         Effect: "Allow"
                         Resource: { "Fn::Sub": "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:users/${Environment}/*" }
+                      - Action:
+                          - "cognito-idp:AdminCreateUser"
+                          - "cognito-idp:AdminDeleteUser"
+                          - "cognito-idp:AdminDeleteUserAttributes"
+                          - "cognito-idp:AdminGetUser"
+                          - "cognito-idp:AdminInitiateAuth"
+                          - "cognito-idp:AdminRespondToAuthChallenge"
+                          - "cognito-idp:AdminUpdateUserAttributes"
+                        Effect: "Allow"
+                        Resource: { "Fn::GetAtt": [ "UsersCognitoUserPool", "Arn" ] }
                       - Action:
                           - "dynamodb:DeleteItem"
                           - "dynamodb:GetItem"
@@ -578,6 +632,9 @@ Resources:
                     IOT_POLICY_NAME: { Ref: "DevicePolicy" }
                     SNS_APPLICATION_ARN_IOS: { Ref: "SnsApplicationArnIos" }
                     SNS_APPLICATION_ARN_ANDROID: { Ref: "SnsApplicationArnAndroid" }
+                    USERS_DYNAMODB_TABLE_NAME: { Ref: "UsersTable" }
+                    USERS_COGNITO_USER_POOL_ID: { Ref: "UsersCognitoUserPool" }
+                    USERS_COGNITO_USER_POOL_CLIENT_ID: { Ref: "UsersCognitoUserPoolClient" }
             Handler: "apigateway.handler"
             Runtime: "python3.6"
             Timeout: "30"

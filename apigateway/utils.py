@@ -1,64 +1,53 @@
 import datetime
 import uuid
-from exceptions import ValueNotFoundInDatabase
-import math
 
-# TODO: Verify math is correct.
-def convert_to_ft_inches(distance_dictionary):
+
+def metres_to_ftin(metres):
     """
-    Determines which metric was provided and converts it to the height in ft and inches
-    :param distance_dictionary:
+    Converts a height from metres to feet and inches
+    :param metres:
     :return:
     """
-    if 'ft_in' in distance_dictionary.keys():
-        return distance_dictionary['ft_in'][0], distance_dictionary['ft_in'][1]
-    elif 'm' in distance_dictionary.keys():
-        meters = distance_dictionary['m']
-        feet = math.floor(meters/0.3048)
-        inches = round(((meters - feet*0.3048) / 0.3048) * 12, 3)
-        return feet, inches
+    if metres is None:
+        return None, None
+    inches = float(metres) / 0.0254
+    return inches // 12, round(inches % 12, 1)
 
 
-def convert_to_pounds(weight_dictionary):
+def kg_to_lb(mass_kg):
     """
-    Determines which metric was provided and converts it to pounds
-    :param weight_dictionary:
+    Convert a kilogram value to pounds
+    :param mass_kg:
     :return:
     """
-    if 'kg' in weight_dictionary.keys():
-        return round(weight_dictionary['kg'] / 0.453592, 6)
-    elif 'lb' in weight_dictionary.keys():
-        return weight_dictionary['lb']
+    return round(float(mass_kg) / 0.453592, 1) if mass_kg is not None else None
 
 
-def feet_to_meters(feet, inches):
+def ftin_to_metres(feet, inches):
     """
-    Converts feet + inches into meters
+    Converts feet + inches into metres
     :param feet:
     :param inches:
     :return:
     """
-    meters = None
-    if feet:
-        if inches:
-            meters = (feet + inches / 12) * 0.3048
-        else:
-            meters = feet * 0.3048
-    elif inches:
-        meters = (inches / 12) * 0.3048
-    if meters:
-        return round(meters, 3)
+    if inches is None:
+        return None
+    inches = float(inches) + int(feet) * 12
+    return round(float(inches) * 0.0254, 3)
 
 
-def lb_to_kg(weight_lbs):
+def lb_to_kg(mass_lbs):
     """
     Converts pounds to kilograms.
-    Handles the case where the weight is None
-    :param weight_lbs:
+    Handles the case where the input is None
+    :param mass_lbs:
     :return:
     """
-    if weight_lbs:
-        return round(weight_lbs * 0.453592, 3)
+    return round(float(mass_lbs) * 0.453592, 3) if mass_lbs is not None else None
+
+
+def nowdate():
+    return datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def format_date(date_input):
@@ -106,19 +95,3 @@ def validate_uuid4(uuid_string):
     except ValueError:
         # If it's a value error, then the string is not a valid hex code for a UUID.
         return False
-
-
-def validate_value(session, TableObject, col_name, value):
-    """
-    Match the inputted value to the interest option available in the database
-    :param name:
-    :return: validated value matching an option in the database
-    """
-    valid_options = session.query(TableObject).distinct(col_name).all()
-    #valid_options_list = [ for option in valid_options] # Pull the column name
-    print(getattr(valid_options[0], col_name))
-    for option in valid_options:
-        table_value = getattr(option, col_name)
-        if value.lower() == table_value.lower():
-            return table_value
-    raise ValueNotFoundInDatabase()

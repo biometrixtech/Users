@@ -18,9 +18,9 @@ class ApplicationException(Exception):
         return self._message
 
 
-class DuplicateEntityException(ApplicationException):
-    def __init__(self, message='Duplicate Entity'):
-        super().__init__(409, 'DuplicateEntity', message)
+class NoUpdatesException(ApplicationException):
+    def __init__(self, message='No updates are to be performed'):
+        super().__init__(202, 'NoUpdates', message)
 
 
 class InvalidSchemaException(ApplicationException):
@@ -28,9 +28,19 @@ class InvalidSchemaException(ApplicationException):
         super().__init__(400, 'InvalidSchema', message)
 
 
+class InvalidPasswordFormatException(ApplicationException):
+    def __init__(self, message=''):
+        super().__init__(400, 'InvalidPasswordFormat', message)
+
+
 class UnauthorizedException(ApplicationException):
     def __init__(self, message=''):
         super().__init__(401, 'Unauthorized', message)
+
+
+class ForbiddenException(ApplicationException):
+    def __init__(self, message=''):
+        super().__init__(403, 'Forbidden', message)
 
 
 class NoSuchEntityException(ApplicationException):
@@ -43,6 +53,11 @@ class ValueNotFoundInDatabase(ApplicationException):
         super().__init__(404, 'ValueNotFoundInDatabase', message)
 
 
-class InvalidPasswordFormatException(ApplicationException):
+class DuplicateEntityException(ApplicationException):
+    def __init__(self, message='Duplicate Entity'):
+        super().__init__(409, 'DuplicateEntity', message)
+
+
+class ImmutableFieldUpdatedException(ApplicationException):
     def __init__(self, message=''):
-        super().__init__(404, 'InvalidPasswordFormat', message)
+        super().__init__(422, 'ImmutableFieldUpdated', message)

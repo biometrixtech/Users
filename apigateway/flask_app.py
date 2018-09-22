@@ -1,6 +1,5 @@
 import json
 from flask_lambda import FlaskLambda
-from flask_bcrypt import Bcrypt
 from flask import Response, jsonify
 from serialisable import json_serialise
 from utils import validate_uuid4
@@ -33,6 +32,3 @@ app = FlaskLambda(__name__)
 app.response_class = ApiResponse
 app.url_map.strict_slashes = False
 app.url_map.converters['uuid'] = UuidConverter
-bcrypt = Bcrypt(app)
-
-
