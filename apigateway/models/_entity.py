@@ -9,12 +9,11 @@ class Entity:
 
     def __init__(self, primary_key):
         self._primary_key = primary_key
-
         self._primary_key_fields = list(primary_key.keys())
+
         self._fields = {}
-        schema = self.schema()
-        self._load_fields(schema)
-        print(self._fields)
+        self._load_fields(self.schema())
+
         self._exists = None
 
     def _load_fields(self, schema, parent='', parent_required=True):
