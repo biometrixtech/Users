@@ -230,8 +230,8 @@ Resources:
                             if len(things):
                                 for thing in things:
                                     device_id = thing['thingName']
-                                    sns_endpoint = thing['attributes'].get('push_notifications_endpoint', None)
-                                    sns_enabled = thing['attributes'].get('push_notifications_enabled', True)
+                                    sns_endpoint = thing['attributes'].get('push_notifications.endpoint', thing['attributes'].get('push_notifications_endpoint', None))
+                                    sns_enabled = thing['attributes'].get('push_notifications.enabled', True)
                                     if sns_endpoint is not None:
                                         if sns_enabled:
                                             print('Sending notification to endpoint {}'.format(sns_endpoint))
