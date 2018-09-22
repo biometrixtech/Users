@@ -1,6 +1,10 @@
 from aws_xray_sdk.core import xray_recorder
+from botocore.exceptions import ClientError
 from flask import Blueprint, request
+import hashlib
+import time
 from boto3.dynamodb.conditions import Attr, Key
+from models.device import Device
 from collections import namedtuple
 import boto3
 import binascii
@@ -11,8 +15,6 @@ from sqlalchemy.orm.exc import NoResultFound
 import jwt
 
 from decorators import authentication_required
-from exceptions import InvalidSchemaException, NoSuchEntityException, UnauthorizedException, DuplicateEntityException, \
-                       ApplicationException, InvalidPasswordFormatException
 from flask_app import bcrypt
 
 from db_connection import engine
@@ -838,3 +840,24 @@ def delete_sensor_mobile_pair(user_id=None):
             'mobile_udid': user.mobile_udid
             }
 
+
+@user_app.route('/<uuid:user_id>/notify', methods=['POST'])
+@authentication_required
+@body_required({'message': str})
+@xray_recorder.capture('routes.user.notify')
+def handle_user_notify(user_id):
+    devices = Device.get_many('owner_id', user_id)
+
+    if len(devices) == 0:
+        return {'message': f'No devices registered for user {user_id}'}, 540
+
+    statuses = {}
+    for device in devices:
+        try:
+            device.send_push_notification(request.json['message'])
+            statuses[device.id] = {'success': True, 'message': 'Success'}
+        except ApplicationException as e:
+            statuses[device.id] = {'success': False, 'message': str(e)}
+
+    return statuses, 200
+	
