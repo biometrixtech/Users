@@ -668,7 +668,7 @@ Resources:
                     USERS_DYNAMODB_TABLE_NAME: { Ref: "UsersTable" }
                     USERS_COGNITO_USER_POOL_ID: { Ref: "UsersCognitoUserPool" }
                     USERS_COGNITO_USER_POOL_CLIENT_ID: { Ref: "UsersCognitoUserPoolClient" }
-                    PUSHNOTIFICATIONS_DYNAMODB_TABLE_NAME: { Ref: "UsersTable" }
+                    PUSHNOTIFICATIONS_DYNAMODB_TABLE_NAME: { Ref: "PushNotificationsTable" }
             Handler: "apigateway.handler"
             Runtime: "python3.6"
             Timeout: "30"
