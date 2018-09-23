@@ -99,7 +99,7 @@ class CognitoEntity(Entity):
                 UserAttributes=[
                     {'Name': 'custom:{}'.format(key), 'Value': body[key]}
                     for key in self.get_fields(primary_key=False)
-                    if key in body
+                    if key in body and key != 'password'
                 ],
                 MessageAction='SUPPRESS',
             )
