@@ -1,10 +1,10 @@
 import datetime
 import jwt
 import os
+import time
 from uuid import UUID
 
 from config import load_secrets
-load_secrets()
 
 
 def validate_handler(event, _):
@@ -27,8 +27,13 @@ def validate_handler(event, _):
 
 
 def service_handler(event, _):
+    load_secrets()
+    token = {
+        'sub': '00000000-0000-4000-8000-000000000000',
+        'exp': int(time.time()) + 60
+     }
     return {
-        'token': jwt.encode({'sub': '00000000-0000-4000-8000-000000000000'}, os.environ['SECRET_KEY_BASE'], algorithm='HS256').decode('utf-8')
+        'token': jwt.encode(token, os.environ['SECRET_KEY_BASE'], algorithm='HS256').decode('utf-8')
     }
 
 
