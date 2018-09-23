@@ -4,6 +4,7 @@ import os
 from uuid import UUID
 
 from config import load_secrets
+load_secrets()
 
 
 def validate_handler(event, _):
