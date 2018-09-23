@@ -26,8 +26,13 @@ def validate_handler(event, _):
 
 
 def service_handler(event, _):
+    load_secrets()
+    token = {
+        'sub': '00000000-0000-4000-8000-000000000000',
+        'exp': datetime.datetime.utcnow() + datetime.timedelta(seconds=60)
+     }
     return {
-        'token': jwt.encode({'sub': '00000000-0000-4000-8000-000000000000'}, os.environ['SECRET_KEY_BASE'], algorithm='HS256')
+        'token': jwt.encode(token, os.environ['SECRET_KEY_BASE'], algorithm='HS256').decode('utf-8')
     }
 
 
