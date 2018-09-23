@@ -610,6 +610,8 @@ Resources:
                         Resource:
                           - { "Fn::Sub": "${UsersTable.Arn}" }
                           - { "Fn::Sub": "${UsersTable.Arn}/*" }
+                          - { "Fn::Sub": "${PushNotificationsTable.Arn}" }
+                          - { "Fn::Sub": "${PushNotificationsTable.Arn}/*" }
                       - Action:
                           - "iot:AddThingToThingGroup"
                           - "iot:AttachPrincipalPolicy"
@@ -666,6 +668,7 @@ Resources:
                     USERS_DYNAMODB_TABLE_NAME: { Ref: "UsersTable" }
                     USERS_COGNITO_USER_POOL_ID: { Ref: "UsersCognitoUserPool" }
                     USERS_COGNITO_USER_POOL_CLIENT_ID: { Ref: "UsersCognitoUserPoolClient" }
+                    PUSHNOTIFICATIONS_DYNAMODB_TABLE_NAME: { Ref: "UsersTable" }
             Handler: "apigateway.handler"
             Runtime: "python3.6"
             Timeout: "30"
