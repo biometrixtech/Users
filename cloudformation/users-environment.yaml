@@ -183,7 +183,6 @@ Resources:
             AttributeDefinitions:
               - { AttributeName: "user_id", AttributeType: "S" }
               - { AttributeName: "message_hash", AttributeType: "S" }
-              - { AttributeName: "expires_timestamp", AttributeType: "N" }
             KeySchema:
               - { AttributeName: "user_id", KeyType: "HASH" }
               - { AttributeName: "message_hash", KeyType: "RANGE" }
