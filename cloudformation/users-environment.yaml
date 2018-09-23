@@ -556,6 +556,8 @@ Resources:
                         Resource:
                           - { "Fn::Sub": "${UsersTable.Arn}" }
                           - { "Fn::Sub": "${UsersTable.Arn}/*" }
+                          - { "Fn::Sub": "${PushNotificationsTable.Arn}" }
+                          - { "Fn::Sub": "${PushNotificationsTable.Arn}/*" }
                       - Action:
                           - "iot:AddThingToThingGroup"
                           - "iot:AttachPrincipalPolicy"
@@ -609,6 +611,7 @@ Resources:
                     IOT_POLICY_NAME: { Ref: "DevicePolicy" }
                     SNS_APPLICATION_ARN_IOS: { Ref: "SnsApplicationArnIos" }
                     SNS_APPLICATION_ARN_ANDROID: { Ref: "SnsApplicationArnAndroid" }
+                    PUSHNOTIFICATIONS_DYNAMODB_TABLE_NAME: { Ref: "PushNotificationsTable" }
             Handler: "apigateway.handler"
             Runtime: "python3.6"
             Timeout: "30"
@@ -639,7 +642,6 @@ Resources:
                 Environment: { Ref: "Environment" }
                 Service: "apigateway"
                 LambdaArn: { "Fn::GetAtt": [ "ApiGatewayLambda", "Arn" ] }
-                CreateCustomDomain: "true"
             Tags:
               - { Key: "Name", Value: { "Fn::Sub": "users-${Environment}-apigateway" } }
               - { Key: "Management", Value: "managed" }

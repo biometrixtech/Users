@@ -15,12 +15,15 @@ from sqlalchemy.orm.exc import NoResultFound
 import jwt
 
 from decorators import authentication_required
+from exceptions import InvalidSchemaException, NoSuchEntityException, UnauthorizedException, DuplicateEntityException, \
+                       ApplicationException, InvalidPasswordFormatException
 from flask_app import bcrypt
 
 from db_connection import engine
 from models import Users, Teams, TeamsUsers, TrainingGroups, TrainingGroupsUsers, Sport, SportHistory, Sport
 from utils import *
 
+push_notifications_table = boto3.resource('dynamodb').Table(os.environ['PUSHNOTIFICATIONS_DYNAMODB_TABLE_NAME'])
 user_app = Blueprint('user', __name__)
 
 session = Session(bind=engine)
@@ -851,10 +854,29 @@ def handle_user_notify(user_id):
     if len(devices) == 0:
         return {'message': f'No devices registered for user {user_id}'}, 540
 
+    message = request.json['message']
+    message_digest = hashlib.sha512(message.encode()).hexdigest()
+    now_time = int(time.time())
+
+    try:
+        push_notifications_table.put_item(
+            Item={
+                'user_id': user_id,
+                'message_hash': message_digest,
+                'expiry_timestamp': now_time + 30,
+            },
+            ConditionExpression='attribute_not_exists(user_id) OR expiry_timestamp < :expiry_timestamp',
+            ExpressionAttributeValues={':expiry_timestamp': now_time}
+        )
+    except ClientError as e:
+        if 'ConditionalCheckFailedException' in str(e):
+            return {'message': 'An identical message has already been sent to this user recently'}, 429
+        raise e
+
     statuses = {}
     for device in devices:
         try:
-            device.send_push_notification(request.json['message'])
+            device.send_push_notification(message)
             statuses[device.id] = {'success': True, 'message': 'Success'}
         except ApplicationException as e:
             statuses[device.id] = {'success': False, 'message': str(e)}
