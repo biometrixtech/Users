@@ -57,7 +57,7 @@ Parameters:
 Mappings:
     TemplateVersion:
         Self: { Commit: "da39a3ee5e6b4b0d3255bfef95601890afd80709" }
-        Infrastructure: { Commit: "75121e414c6725f23e9b2cff9e158f538c61333b" }
+        Infrastructure: { Commit: "fba0b4cc4b55dc377ae003ba907ed552660a579c" }
 
 Metadata:
     "AWS::CloudFormation::Interface":
@@ -665,7 +665,6 @@ Resources:
                 Environment: { Ref: "Environment" }
                 Service: "apigateway"
                 LambdaArn: { "Fn::GetAtt": [ "ApiGatewayLambda", "Arn" ] }
-                CreateCustomDomain: "true"
             Tags:
               - { Key: "Name", Value: { "Fn::Sub": "users-${Environment}-apigateway" } }
               - { Key: "Management", Value: "managed" }
