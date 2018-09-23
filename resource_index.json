@@ -24,6 +24,9 @@
         }
     ],
     "datastores": [
+        { "type": "dynamodb.table", "name": "users-{ENVIRONMENT}-users" },
+        { "type": "dynamodb.table", "name": "users-{ENVIRONMENT}-pushnotifications" },
+        { "type": "cognito.userpool", "name": "users-{ENVIRONMENT}-users" }
     ],
     "apigateways": [
         {
