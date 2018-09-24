@@ -29,6 +29,7 @@ class Device(IotEntity):
         return self.get()['push_notifications']['enabled']
 
     def send_push_notification(self, message):
+        message = str(message)
 
         if self.push_notifications_endpoint is None:
             raise NoSuchEntityException(f'No push notification endpoint configured for device {self.id}')
@@ -38,7 +39,7 @@ class Device(IotEntity):
 
         print(f'Sending notification "{message}" to endpoint {self.push_notifications_endpoint}')
         payload = {
-            'default': 'Your plan is ready!',
+            'default': message,
             'GCM': {
                 "data": {
                     "message": message,
@@ -51,6 +52,19 @@ class Device(IotEntity):
                 "collapse_key": "YOUR_CUSTOM_CATEGORY"
             },
             "APNS": {
+                "aps": {
+                    "alert": message,
+                    "sound": "default",
+                    "badge": 1,
+                    "category": "YOUR_CUSTOM_CATEGORY",
+                    "content-available": 1
+                },
+                "biometrix": {
+                    "hello": "world",
+                    "theanswer": 42,
+                }
+            },
+            "APNS_SANDBOX": {
                 "aps": {
                     "alert": message,
                     "sound": "default",
