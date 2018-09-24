@@ -40,7 +40,7 @@ class Device(IotEntity):
         print(f'Sending notification "{message}" to endpoint {self.push_notifications_endpoint}')
         payload = {
             'default': message,
-            'GCM': json.encode({
+            'GCM': json.dumps({
                 "data": {
                     "message": message,
                     "biometrix": {
@@ -51,7 +51,7 @@ class Device(IotEntity):
                 "time_to_live": 3600,
                 "collapse_key": "YOUR_CUSTOM_CATEGORY"
             }),
-            "APNS": json.encode({
+            "APNS": json.dumps({
                 "aps": {
                     "alert": message,
                     "sound": "default",
@@ -64,7 +64,7 @@ class Device(IotEntity):
                     "theanswer": 42,
                 }
             }),
-            "APNS_SANDBOX": json.encode({
+            "APNS_SANDBOX": json.dumps({
                 "aps": {
                     "alert": message,
                     "sound": "default",
