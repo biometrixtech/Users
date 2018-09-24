@@ -43,6 +43,10 @@ class Device(IotEntity):
             'GCM': {
                 "data": {
                     "message": message,
+                    "biometrix": {
+                        "hello": "world",
+                        "theanswer": 42,
+                    }
                 },
                 "time_to_live": 3600,
                 "collapse_key": "YOUR_CUSTOM_CATEGORY"
@@ -54,6 +58,10 @@ class Device(IotEntity):
                     "badge": 1,
                     "category": "YOUR_CUSTOM_CATEGORY",
                     "content-available": 1
+                },
+                "biometrix": {
+                    "hello": "world",
+                    "theanswer": 42,
                 }
             }
         }
