@@ -5,6 +5,8 @@ import boto3
 import hashlib
 import time
 import os
+import json
+import requests
 
 from decorators import authentication_required, body_required, self_authentication_required
 from exceptions import DuplicateEntityException, UnauthorizedException, NoSuchEntityException, ForbiddenException, ApplicationException
@@ -187,8 +189,19 @@ def _attempt_cognito_migration(user, email, password):
     user.patch({'migrated_date': nowdate()})
 
     # And login as normal
-    return user.login(password=password)
+    res = user.login(password=password)
 
+    # update mongo collections to the new user_id
+    url = "http://apis.{env}.fathomai.com/plans/1_0/misc/cognito_migration"
+    body = {"legacy_user_id": check_postgres['id'],
+            "user_id": user_id}
+    headers = {
+            'Content-Type': "application/json"
+            }
+
+    response = requests.request("PATCH", url, data=json.dumps(body), headers=headers)
+
+    return res
 
 @user_app.route('/<uuid:user_id>/notify', methods=['POST'])
 @authentication_required
