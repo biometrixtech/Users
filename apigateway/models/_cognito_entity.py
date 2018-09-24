@@ -110,7 +110,7 @@ class CognitoEntity(Entity):
             if 'UsernameExistsException' in str(e):
                 raise DuplicateEntityException()
             if 'InvalidPasswordException' in str(e):
-                raise InvalidPasswordFormatException()
+                raise InvalidPasswordFormatException('Password does not meet security requirements')
             else:
                 print(json.dumps({'exception': str(e)}))
                 raise
