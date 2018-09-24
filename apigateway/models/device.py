@@ -22,7 +22,6 @@ class Device(IotEntity):
 
     @property
     def push_notifications_endpoint(self):
-        print(self.get())
         return self.get()['push_notifications']['endpoint']
 
     @property
@@ -37,7 +36,7 @@ class Device(IotEntity):
         if not self.push_notifications_enabled:
             raise UnauthorizedException(f'Push notifications disabled for device {self.id}')
 
-        print('Sending notification to endpoint {}'.format(self.push_notifications_endpoint))
+        print(f'Sending notification "{message}" to endpoint {self.push_notifications_endpoint}')
         payload = {
             'default': 'Your plan is ready!',
             'GCM': {

@@ -882,4 +882,4 @@ def handle_user_notify(user_id):
             statuses[device.id] = {'success': False, 'message': str(e)}
 
     return statuses, 200
-	
+
