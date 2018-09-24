@@ -9,13 +9,13 @@ class Entity:
 
     def __init__(self, primary_key):
         self._primary_key = primary_key
-
         self._primary_key_fields = list(primary_key.keys())
+
         self._fields = {}
-        schema = self.schema()
-        self._load_fields(schema)
-        print(self._fields)
+        self._load_fields(self.schema())
+
         self._exists = None
+        self._attributes = None
 
     def _load_fields(self, schema, parent='', parent_required=True):
         for field, config in schema['properties'].items():
@@ -124,16 +124,17 @@ class Entity:
         return self._exists
 
     def get(self):
-        fetch_result = self._fetch()
-        print(self.get_fields(primary_key=False))
+        if self._attributes is None:
+            self._hydrate(self._fetch())
+        return unflatten({**self._attributes, **self.primary_key})
 
-        ret = self.primary_key
+    def _hydrate(self, fetch_result):
+        self._attributes = {}
         for key in self.get_fields(primary_key=False):
             if key in fetch_result:
-                ret[key] = self.cast(key, fetch_result[key])
+                self._attributes[key] = self.cast(key, fetch_result[key])
             else:
-                ret[key] = self._fields[key]['default']
-        return unflatten(ret)
+                self._attributes[key] = self._fields[key]['default']
 
     @abstractmethod
     def _fetch(self):

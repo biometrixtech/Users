@@ -33,7 +33,7 @@ def handle_device_register(device_id):
             device_id,
             device_type,
             request.json['push_notifications']['token'],
-            old_endpoint_arn=thing_attributes.get('push_notifications_endpoint', None),
+            old_endpoint_arn=thing_attributes.get('push_notifications.endpoint', thing_attributes.get('push_notifications_endpoint', None)),
             enabled=request.json['push_notifications']['enabled'],
             owner_id=owner_id,
         )
@@ -89,7 +89,7 @@ def handle_device_patch(device_id):
                 device_id,
                 existing_attributes['device_type'],
                 request.json['push_notifications']['token'],
-                old_endpoint_arn=existing_attributes.get('push_notifications_endpoint', None),
+                old_endpoint_arn=existing_attributes.get('push_notifications.endpoint', existing_attributes.get('push_notifications_endpoint', None)),
                 enabled=request.json['push_notifications']['enabled'],
                 owner_id=owner_id
             )
@@ -151,14 +151,16 @@ def create_iot_keys(device_id):
 
 def delete_push_notification_settings(device_id):
     device_attributes = iot_client.describe_thing(thingName=device_id)['attributes']
-    if 'push_notifications_endpoint' in device_attributes:
-        sns_client.delete_endpoint(EndpointArn=device_attributes['push_notifications_endpoint'])
+    if 'push_notifications.endpoint' in device_attributes or 'push_notifications_endpoint' in device_attributes:
+        sns_client.delete_endpoint(EndpointArn=device_attributes.get('push_notifications.endpoint', device_attributes['push_notifications_endpoint']))
         iot_client.update_thing(
             thingName=device_id,
             attributePayload={
                 'attributes': {
                     'push_notifications_enabled': None,
-                    'push_notifications_endpoint': None
+                    'push_notifications_endpoint': None,
+                    'push_notifications.enabled': None,
+                    'push_notifications.endpoint': None,
                 },
                 'merge': True
             }
@@ -195,8 +197,10 @@ def update_push_notification_settings(device_id, device_type, token, old_endpoin
         thingName=device_id,
         attributePayload={
             'attributes': {
-                'push_notifications_enabled': '1' if enabled else '0',
-                'push_notifications_endpoint': res['EndpointArn']
+                'push_notifications.enabled': '1' if enabled else '0',
+                'push_notifications.endpoint': res['EndpointArn'],
+                'push_notifications_enabled': None,
+                'push_notifications_endpoint': None,
             },
             'merge': True
         }

@@ -168,6 +168,37 @@ Resources:
             ProvisionedThroughput:
                 ReadCapacityUnits: { Ref: "DynamodbReadCapacity" }
                 WriteCapacityUnits: { Ref: "DynamodbWriteCapacity" }
+            Tags:
+              - { Key: "Name", Value: { "Fn::Sub": "users-${Environment}-users" } }
+              - { Key: "Management", Value: "managed" }
+              - { Key: "Project", Value: "users" }
+              - { Key: "Environment", Value: { Ref: "Environment" } }
+              - { Key: "Service", Value: "database" }
+        DeletionPolicy : "Retain"
+
+    PushNotificationsTable:
+        Type: "AWS::DynamoDB::Table"
+        Properties:
+            TableName: { "Fn::Sub": "users-${Environment}-pushnotifications" }
+            AttributeDefinitions:
+              - { AttributeName: "user_id", AttributeType: "S" }
+              - { AttributeName: "message_hash", AttributeType: "S" }
+            KeySchema:
+              - { AttributeName: "user_id", KeyType: "HASH" }
+              - { AttributeName: "message_hash", KeyType: "RANGE" }
+            ProvisionedThroughput:
+                ReadCapacityUnits: { Ref: "DynamodbReadCapacity" }
+                WriteCapacityUnits: { Ref: "DynamodbWriteCapacity" }
+            Tags:
+              - { Key: "Name", Value: { "Fn::Sub": "users-${Environment}-pushnotifications" } }
+              - { Key: "Management", Value: "managed" }
+              - { Key: "Project", Value: "users" }
+              - { Key: "Environment", Value: { Ref: "Environment" } }
+              - { Key: "Service", Value: "pushnotifications" }
+            TimeToLiveSpecification:
+                Enabled: true
+                AttributeName: 'expires_timestamp'
+
         DeletionPolicy : "Retain"
 
     ##########################################################################################################
@@ -230,8 +261,8 @@ Resources:
                             if len(things):
                                 for thing in things:
                                     device_id = thing['thingName']
-                                    sns_endpoint = thing['attributes'].get('push_notifications_endpoint', None)
-                                    sns_enabled = thing['attributes'].get('push_notifications_enabled', True)
+                                    sns_endpoint = thing['attributes'].get('push_notifications.endpoint', thing['attributes'].get('push_notifications_endpoint', None))
+                                    sns_enabled = thing['attributes'].get('push_notifications.enabled', True)
                                     if sns_endpoint is not None:
                                         if sns_enabled:
                                             print('Sending notification to endpoint {}'.format(sns_endpoint))
@@ -579,6 +610,8 @@ Resources:
                         Resource:
                           - { "Fn::Sub": "${UsersTable.Arn}" }
                           - { "Fn::Sub": "${UsersTable.Arn}/*" }
+                          - { "Fn::Sub": "${PushNotificationsTable.Arn}" }
+                          - { "Fn::Sub": "${PushNotificationsTable.Arn}/*" }
                       - Action:
                           - "iot:AddThingToThingGroup"
                           - "iot:AttachPrincipalPolicy"
@@ -635,6 +668,7 @@ Resources:
                     USERS_DYNAMODB_TABLE_NAME: { Ref: "UsersTable" }
                     USERS_COGNITO_USER_POOL_ID: { Ref: "UsersCognitoUserPool" }
                     USERS_COGNITO_USER_POOL_CLIENT_ID: { Ref: "UsersCognitoUserPoolClient" }
+                    PUSHNOTIFICATIONS_DYNAMODB_TABLE_NAME: { Ref: "PushNotificationsTable" }
             Handler: "apigateway.handler"
             Runtime: "python3.6"
             Timeout: "30"

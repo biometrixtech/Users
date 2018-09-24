@@ -1,16 +1,21 @@
-from query_postgres import query_postgres
 from aws_xray_sdk.core import xray_recorder
+from botocore.exceptions import ClientError
 from flask import Blueprint, request
+import boto3
+import hashlib
+import time
+import os
 
 from decorators import authentication_required, body_required, self_authentication_required
-from exceptions import DuplicateEntityException, UnauthorizedException, NoSuchEntityException, \
-    ForbiddenException
+from exceptions import DuplicateEntityException, UnauthorizedException, NoSuchEntityException, ForbiddenException, ApplicationException
 from utils import ftin_to_metres, lb_to_kg
 from models.user import User
 from models.user_data import UserData
+from models.device import Device
+from query_postgres import query_postgres
 from utils import nowdate
-import os
 
+push_notifications_table = boto3.resource('dynamodb').Table(os.environ['PUSHNOTIFICATIONS_DYNAMODB_TABLE_NAME'])
 user_app = Blueprint('user', __name__)
 
 
@@ -183,3 +188,44 @@ def _attempt_cognito_migration(user, email, password):
 
     # And login as normal
     return user.login(password=password)
+
+
+@user_app.route('/<uuid:user_id>/notify', methods=['POST'])
+@authentication_required
+@body_required({'message': str})
+@xray_recorder.capture('routes.user.notify')
+def handle_user_notify(user_id):
+    devices = Device.get_many('owner_id', user_id)
+
+    if len(devices) == 0:
+        return {'message': f'No devices registered for user {user_id}'}, 540
+
+    message = request.json['message']
+    message_digest = hashlib.sha512(message.encode()).hexdigest()
+    now_time = int(time.time())
+
+    try:
+        push_notifications_table.put_item(
+            Item={
+                'user_id': user_id,
+                'message_hash': message_digest,
+                'expiry_timestamp': now_time + 30,
+            },
+            ConditionExpression='attribute_not_exists(user_id) OR expiry_timestamp < :expiry_timestamp',
+            ExpressionAttributeValues={':expiry_timestamp': now_time}
+        )
+    except ClientError as e:
+        if 'ConditionalCheckFailedException' in str(e):
+            return {'message': 'An identical message has already been sent to this user recently'}, 429
+        raise e
+
+    statuses = {}
+    for device in devices:
+        try:
+            device.send_push_notification(message)
+            statuses[device.id] = {'success': True, 'message': 'Success'}
+        except ApplicationException as e:
+            statuses[device.id] = {'success': False, 'message': str(e)}
+
+    return statuses, 200
+
