@@ -40,7 +40,7 @@ class Device(IotEntity):
         print(f'Sending notification "{message}" to endpoint {self.push_notifications_endpoint}')
         payload = {
             'default': message,
-            'GCM': {
+            'GCM': json.encode({
                 "data": {
                     "message": message,
                     "biometrix": {
@@ -50,8 +50,8 @@ class Device(IotEntity):
                 },
                 "time_to_live": 3600,
                 "collapse_key": "YOUR_CUSTOM_CATEGORY"
-            },
-            "APNS": {
+            }),
+            "APNS": json.encode({
                 "aps": {
                     "alert": message,
                     "sound": "default",
@@ -63,8 +63,8 @@ class Device(IotEntity):
                     "hello": "world",
                     "theanswer": 42,
                 }
-            },
-            "APNS_SANDBOX": {
+            }),
+            "APNS_SANDBOX": json.encode({
                 "aps": {
                     "alert": message,
                     "sound": "default",
@@ -76,7 +76,7 @@ class Device(IotEntity):
                     "hello": "world",
                     "theanswer": 42,
                 }
-            }
+            })
         }
         try:
             sns_client.publish(TargetArn=self.push_notifications_endpoint, Message=json.dumps(payload), MessageStructure='json')
