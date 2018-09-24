@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.orm.exc import NoResultFound
 import jwt
 
-from decorators import authentication_required
+from decorators import authentication_required, body_required
 from exceptions import InvalidSchemaException, NoSuchEntityException, UnauthorizedException, DuplicateEntityException, \
                        ApplicationException, InvalidPasswordFormatException
 from flask_app import bcrypt
