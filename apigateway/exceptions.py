@@ -48,17 +48,16 @@ class ValueNotFoundInDatabase(ApplicationException):
         super().__init__(404, 'ValueNotFoundInDatabase', message)
 
 
-class InvalidPasswordFormatException(ApplicationException):
-    def __init__(self, message=''):
-        super().__init__(404, 'InvalidPasswordFormat', message)
-
-
 class DuplicateEntityException(ApplicationException):
     def __init__(self, message='Duplicate Entity'):
         super().__init__(409, 'DuplicateEntity', message)
 
 
+class InvalidPasswordFormatException(ApplicationException):
+    def __init__(self, message=''):
+        super().__init__(422, 'InvalidPasswordFormat', message)
+
+
 class ImmutableFieldUpdatedException(ApplicationException):
     def __init__(self, message=''):
-        super().__init__(404, 'InvalidPasswordFormat', message)
         super().__init__(422, 'ImmutableFieldUpdated', message)
