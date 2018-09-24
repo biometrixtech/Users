@@ -174,8 +174,8 @@ def _attempt_cognito_migration(user, email, password):
     check_postgres = query_postgres(
         "SELECT id, password_digest=crypt(%s, password_digest) AS password_match FROM users WHERE email=%s",
         [password, email]
-    )
-    print(check_postgres)
+    )[0]
+
     if not check_postgres['password_match']:
         raise UnauthorizedException('Password does not match in Postgres')
 
