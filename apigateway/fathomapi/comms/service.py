@@ -16,6 +16,9 @@ class Service:
 
         return invoke_apigateway_sync(self.name, self.version, method, endpoint, body, headers)
 
+    def call_lambda_sync(self, function_name, payload=None):
+        return invoke_lambda_sync(f'{self.name}-{{ENVIRONMENT}}-{function_name}', self.version, payload)
+
 
 @xray_recorder.capture('fathomapi.comms.service._get_service_token')
 def _get_service_token():

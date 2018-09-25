@@ -8,7 +8,7 @@ import os
 
 from fathomapi.comms.service import Service
 from fathomapi.comms.legacy import query_postgres_sync
-from decorators import authentication_required, body_required, self_authentication_required
+from fathomapi.utils.decorators import require
 from exceptions import DuplicateEntityException, UnauthorizedException, NoSuchEntityException, ForbiddenException, ApplicationException
 from utils import ftin_to_metres, lb_to_kg
 from models.user import User
@@ -21,7 +21,7 @@ user_app = Blueprint('user', __name__)
 
 
 @user_app.route('/login', methods=['POST'])  # TODO was /sign_in
-@body_required({'personal_data': {'email': str}, 'password': str})
+@require.body({'personal_data': {'email': str}, 'password': str})
 @xray_recorder.capture('routes.user.login')
 def user_login():
     user = User(request.json['personal_data']['email'])
@@ -52,7 +52,7 @@ def user_login():
 
 
 @user_app.route('/', methods=['POST'])
-@body_required({'personal_data': {'email': str}, 'password': str})
+@require.body({'personal_data': {'email': str}, 'password': str})
 @xray_recorder.capture('routes.user.post')
 def create_user():
     """
@@ -117,7 +117,7 @@ def metricise_values():
 
 
 @user_app.route('/<uuid:user_id>/authorize', methods=['POST'])
-@body_required({'session_token': str})
+@require.body({'session_token': str})
 @xray_recorder.capture('routes.user.authorise')
 def handle_user_authorise(user_id):
     auth = User(user_id).login(token=request.json['session_token'])
@@ -125,7 +125,7 @@ def handle_user_authorise(user_id):
 
 
 @user_app.route('/<uuid:user_id>/logout', methods=['POST'])
-@self_authentication_required
+@require.authenticated.self
 @xray_recorder.capture('routes.user.logout')
 def handle_user_logout(user_id):
     User(user_id).logout()
@@ -133,8 +133,8 @@ def handle_user_logout(user_id):
 
 
 @user_app.route('/<uuid:user_id>', methods=['PATCH'])  # TODO This was PUT
-@authentication_required
-@body_required({})
+@require.authenticated.any
+@require.body({})
 @xray_recorder.capture('routes.user.patch')
 def update_user(user_id):
     xray_recorder.current_segment().put_annotation('user_id', user_id)
@@ -150,7 +150,7 @@ def update_user(user_id):
 
 
 @user_app.route('/<uuid:user_id>', methods=['DELETE'])
-@authentication_required
+@require.authenticated.any
 @xray_recorder.capture('routes.user.delete')
 def handle_delete_user(user_id):
     User(user_id).delete()
@@ -158,7 +158,7 @@ def handle_delete_user(user_id):
 
 
 @user_app.route('/<uuid:user_id>', methods=['GET'])
-@authentication_required
+@require.authenticated.any
 @xray_recorder.capture('routes.user.get')
 def handle_user_get(user_id):
     return {'user': User(user_id).get()}
@@ -198,14 +198,18 @@ def _attempt_cognito_migration(user, email, password):
     res = user.login(password=password)
 
     # update mongo collections to the new user_id
-    Service('plans', '1_0').call_apigateway_sync('PATCH', 'misc/cognito_migration', {"legacy_user_id": check_postgres['id'], "user_id": user.id})
+    Service('plans', '1_0').call_apigateway_sync(
+        'PATCH',
+        '/misc/cognito_migration',
+        {"legacy_user_id": check_postgres['id'], "user_id": user.id}
+    )
 
     return res
 
 
 @user_app.route('/<uuid:user_id>/notify', methods=['POST'])
-@authentication_required
-@body_required({'message': str})
+@require.authenticated.any
+@require.body({'message': str})
 @xray_recorder.capture('routes.user.notify')
 def handle_user_notify(user_id):
     devices = Device.get_many('owner_id', user_id)

@@ -5,10 +5,9 @@ import json
 import os
 from botocore.exceptions import ClientError
 
-from decorators import authentication_required, authenticate_user_jwt, body_required
+from fathomapi.utils.decorators import require
 from exceptions import InvalidSchemaException, NoSuchEntityException
 from flask_app import UuidConverter
-from utils import validate_uuid4
 
 
 device_app = Blueprint('device', __name__)
@@ -17,12 +16,12 @@ sns_client = boto3.client('sns')
 
 
 @device_app.route('/<uuid:device_id>', methods=['POST'])
-@authentication_required
-@body_required({'device_type': str, 'push_notifications': [None, {'token': str, 'enabled': bool}]})
+@require.authenticated.any  # Adds principal_id to function call
+@require.body({'device_type': str, 'push_notifications': [None, {'token': str, 'enabled': bool}]})
 @xray_recorder.capture('routes.device.register')
-def handle_device_register(device_id):
+def handle_device_register(device_id, principal_id=None):
     device_type = request.json['device_type']
-    owner_id = authenticate_user_jwt(request.headers['Authorization'])
+    owner_id = principal_id
 
     thing_attributes = get_or_create_thing(device_id, device_type, owner_id)
 
@@ -53,8 +52,8 @@ def handle_device_register(device_id):
 
 
 @device_app.route('/<uuid:device_id>', methods=['PATCH'])
-@authentication_required
-@body_required({'owner_id': [None, UuidConverter], 'push_notifications': [None, {'token': str, 'enabled': bool}]})
+@require.authenticated.any
+@require.body({'owner_id': [None, UuidConverter], 'push_notifications': [None, {'token': str, 'enabled': bool}]})
 @xray_recorder.capture('routes.device.affiliate')
 def handle_device_patch(device_id):
     existing_attributes = get_or_create_thing(

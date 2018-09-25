@@ -543,7 +543,11 @@ Resources:
                   - Action:
                       - "lambda:InvokeFunction"
                     Effect: "Allow"
-                    Resource: { "Fn::GetAtt": [ "ValidateAuthLambda", "Arn" ] }
+                    Resource:
+                      - { "Fn::Sub": "${ValidateAuthLambda.Arn}" }
+                      - { "Fn::Sub": "${ValidateAuthLambda.Arn}:1_0" }
+                      - { "Fn::Sub": "${ValidateAuthLambda.Arn}:1_1" }
+                      - { "Fn::Sub": "${ValidateAuthLambda.Arn}:2_0" }  # FIXME work out how to wildcard this
 
     ServiceAuthExecutionPolicy:
         Type: "AWS::IAM::ManagedPolicy"
@@ -557,7 +561,11 @@ Resources:
                   - Action:
                       - "lambda:InvokeFunction"
                     Effect: "Allow"
-                    Resource: { "Fn::GetAtt": [ "ServiceAuthLambda", "Arn" ] }
+                    Resource:
+                      - { "Fn::Sub": "${ServiceAuthLambda.Arn}" }
+                      - { "Fn::Sub": "${ServiceAuthLambda.Arn}:1_0" }
+                      - { "Fn::Sub": "${ServiceAuthLambda.Arn}:1_1" }
+                      - { "Fn::Sub": "${ServiceAuthLambda.Arn}:2_0" }
 
     ##########################################################################################################
     ##  LAMBDA
