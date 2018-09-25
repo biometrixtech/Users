@@ -103,6 +103,10 @@ class CognitoEntity(Entity):
                 ],
                 MessageAction='SUPPRESS',
             )
+
+            # Log in straight away so there's no risk of the Cognito user expiring
+            self.login(password=body['password'])
+
             self._fetch()
             return self.id
 
