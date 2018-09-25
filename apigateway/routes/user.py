@@ -177,7 +177,7 @@ def _attempt_cognito_migration(user, email, password):
     # us to have bcrypt or Flask-bcrypt installed in this codebase, but does require the `pgcrypto`
     # extension to be enabled in postgres.
     check_postgres = query_postgres_sync(
-        "SELECT id, password_digest=crypt(%s, password_digest) AS password_match FROM users WHERE email=%s",
+        "SELECT id, replace(password_digest, '$2b$', '$2a$')=crypt(%s, replace(password_digest, '$2b$', '$2a$')) AS password_match FROM users WHERE email=%s",
         [password, email]
     )
 
