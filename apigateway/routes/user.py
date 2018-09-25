@@ -30,7 +30,7 @@ def user_login():
     try:
         authorisation = user.login(password=request.json['password'])
     except UnauthorizedException as e:
-        if user_record['migrated_date'] is not None:
+        if user_record['migrated_date'] is not None and user_record['migrated_date'] != 'completed':
             # Try migrating them
             try:
                 authorisation = _attempt_cognito_migration(
@@ -191,9 +191,6 @@ def _attempt_cognito_migration(user, email, password):
         password
     )
 
-    # Record the date
-    user.patch({'migrated_date': nowdate()})
-
     # And login as normal
     res = user.login(password=password)
 
@@ -203,6 +200,9 @@ def _attempt_cognito_migration(user, email, password):
         '/misc/cognito_migration',
         {"legacy_user_id": check_postgres['id'], "user_id": user.id}
     )
+
+    # Mark migration as completed
+    user.patch({'migrated_date': 'completed'})
 
     return res
 
