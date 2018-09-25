@@ -37,7 +37,10 @@ def invoke_apigateway_sync(service, version, method, endpoint, body=None, header
     """
     url = f"http://apis.{os.environ['ENVIRONMENT']}.fathomai.com/{service}/{version}/{endpoint}"
 
-    all_headers = {'Content-Type': 'application/json'}
+    all_headers = {
+        'Content-Type': 'application/json',
+        'User-Agent': 'Fathomai API {SERVICE}:{AWS_LAMBDA_FUNCTION_VERSION}'.format(**os.environ)
+    }
     all_headers.update(headers or {})
 
     response = requests.request(method, url, data=json.dumps(body), headers=headers)
