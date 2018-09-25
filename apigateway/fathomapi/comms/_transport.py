@@ -43,7 +43,7 @@ def invoke_apigateway_sync(service, version, method, endpoint, body=None, header
     }
     all_headers.update(headers or {})
 
-    response = requests.request(method, url, data=json.dumps(body), headers=headers)
+    response = requests.request(method, url, data=json.dumps(body), headers=all_headers)
 
     # TODO validation
     return response.json()
