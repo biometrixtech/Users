@@ -156,10 +156,10 @@ def delete_push_notification_settings(device_id):
             thingName=device_id,
             attributePayload={
                 'attributes': {
-                    'push_notifications_enabled': None,
-                    'push_notifications_endpoint': None,
-                    'push_notifications.enabled': None,
-                    'push_notifications.endpoint': None,
+                    'push_notifications_enabled': '',
+                    'push_notifications_endpoint': '',
+                    'push_notifications.enabled': '',
+                    'push_notifications.endpoint': '',
                 },
                 'merge': True
             }
@@ -198,8 +198,8 @@ def update_push_notification_settings(device_id, device_type, token, old_endpoin
             'attributes': {
                 'push_notifications.enabled': '1' if enabled else '0',
                 'push_notifications.endpoint': res['EndpointArn'],
-                'push_notifications_enabled': None,
-                'push_notifications_endpoint': None,
+                'push_notifications_enabled': '',
+                'push_notifications_endpoint': '',
             },
             'merge': True
         }
