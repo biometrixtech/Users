@@ -5,16 +5,15 @@ import boto3
 import hashlib
 import time
 import os
-import json
-import requests
 
+from fathomapi.comms.service import Service
+from fathomapi.comms.legacy import query_postgres_sync
 from decorators import authentication_required, body_required, self_authentication_required
 from exceptions import DuplicateEntityException, UnauthorizedException, NoSuchEntityException, ForbiddenException, ApplicationException
 from utils import ftin_to_metres, lb_to_kg
 from models.user import User
 from models.user_data import UserData
 from models.device import Device
-from query_postgres import query_postgres
 from utils import nowdate
 
 push_notifications_table = boto3.resource('dynamodb').Table(os.environ['PUSHNOTIFICATIONS_DYNAMODB_TABLE_NAME'])
@@ -39,7 +38,8 @@ def user_login():
                     request.json['personal_data']['email'],
                     request.json['password']
                 )
-            except Exception:
+            except Exception as e2:
+                print(e2)
                 # Raise the original error
                 raise e
         else:
@@ -165,16 +165,21 @@ def handle_user_get(user_id):
 
 
 def _attempt_cognito_migration(user, email, password):
+    print('Attempting cognito migration')
+
     # Check that we can still log in with the migration default password
-    temp_authorisation = user.login(password=os.environ['MIGRATION_DEFAULT_PASSWORD'])
+    try:
+        temp_authorisation = user.login(password=os.environ['MIGRATION_DEFAULT_PASSWORD'])
+    except UnauthorizedException:
+        raise UnauthorizedException('Could not log in with migration default password')
 
     # Check that the supplied password matches the one in Cognito.  Note that this does not require
     # us to have bcrypt or Flask-bcrypt installed in this codebase, but does require the `pgcrypto`
     # extension to be enabled in postgres.
-    check_postgres = query_postgres(
+    check_postgres = query_postgres_sync(
         "SELECT id, password_digest=crypt(%s, password_digest) AS password_match FROM users WHERE email=%s",
         [password, email]
-    )[0]
+    )
 
     if not check_postgres['password_match']:
         raise UnauthorizedException('Password does not match in Postgres')
@@ -193,16 +198,10 @@ def _attempt_cognito_migration(user, email, password):
     res = user.login(password=password)
 
     # update mongo collections to the new user_id
-    url = "http://apis.{env}.fathomai.com/plans/1_0/misc/cognito_migration"
-    body = {"legacy_user_id": check_postgres['id'],
-            "user_id": user_id}
-    headers = {
-            'Content-Type': "application/json"
-            }
-
-    response = requests.request("PATCH", url, data=json.dumps(body), headers=headers)
+    Service('plans', '1_0').call_apigateway_sync('PATCH', {"legacy_user_id": check_postgres['id'], "user_id": user.id})
 
     return res
+
 
 @user_app.route('/<uuid:user_id>/notify', methods=['POST'])
 @authentication_required
