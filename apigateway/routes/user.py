@@ -197,7 +197,7 @@ def _attempt_cognito_migration(user, email, password):
     # update mongo collections to the new user_id
     Service('plans', '1_0').call_apigateway_sync(
         'PATCH',
-        '/misc/cognito_migration',
+        'misc/cognito_migration',
         {"legacy_user_id": check_postgres['id'], "user_id": user.id}
     )
 
