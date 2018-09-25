@@ -2,7 +2,7 @@ import boto3
 import json
 import os
 
-from ._dynamodb_entity import DynamodbEntity
+from fathomapi.models.dynamodb_entity import DynamodbEntity
 
 
 class UserData(DynamodbEntity):
