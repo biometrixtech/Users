@@ -3,15 +3,27 @@ from flask import Blueprint
 import datetime
 import random
 
+from fathomapi.api.config import Config
 from fathomapi.comms.service import Service
+from fathomapi.utils.decorators import require
 
-user_app = Blueprint('misc', __name__)
+misc_app = Blueprint('misc', __name__)
 
 
-@user_app.route('/activeusers', methods=['POST'])
+@misc_app.route('/dailycron', methods=['POST'])
+@xray_recorder.capture('routes.misc.dailycron')
+def handle_dailycron():
+    # This route will be called daily via a CloudWatch Scheduled Event.
+    Service('users', Config.get('API_VERSION')).call_apigateway_sync('POST', '/misc/activeusers')
+    
+    return {'status': 'Success'}, 200
+
+
+@misc_app.route('/activeusers', methods=['POST'])
+@require.authenticated.service
 @xray_recorder.capture('routes.misc.activeusers')
-def user_login():
-    # This route will be called daily via a CloudWatch Scheduled Event.  It should scan to find users which meet
+def handle_activeusers():
+    # This route will be invoked daily.  It should scan to find users which meet
     # some definition of 'active', and for each one should push to the plans service with them
 
     # TODO
