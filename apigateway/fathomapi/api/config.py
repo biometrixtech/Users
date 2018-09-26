@@ -1,9 +1,10 @@
+import collections
 import os
 
 from ..comms._transport import get_secretsmanager_secret
 
 
-class Config:
+class Config(collections.Mapping):
 
     _config = {}
 
@@ -32,8 +33,11 @@ class Config:
         secret_name = '/'.join([cls.get('SERVICE'), cls.get('ENVIRONMENT'), key])
         return get_secretsmanager_secret(secret_name)
 
-    def __call__(self, key):
-        return self.get(key)
-
     def __iter__(self):
         return {k: v for k, v in self._config.items()}
+
+    def __getitem__(self, key):
+        return self.get(key)
+
+    def __len__(self):
+        return len(self._config)

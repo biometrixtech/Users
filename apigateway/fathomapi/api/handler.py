@@ -1,6 +1,4 @@
 import json
-import os
-import re
 
 from ..utils.xray import xray_recorder, TraceHeader
 from .config import Config
@@ -8,33 +6,28 @@ from .flask_app import app
 
 
 def handler(event, context):
-    if os.environ['ENVIRONMENT'] != 'production':
+    if Config.get('ENVIRONMENT') != 'production':
         print(json.dumps(event))
 
-    # Strip mount point and version information from the path
-    path_match = re.match(f'^/(?P<mount>({os.environ["SERVICE"]}|v1))?(/(?P<version>(\d+([._]\d+([._]\d+(-\w+([._]\d+)?)?)?)?)|latest))?(?P<path>/.+?)/?$', event['path'])
-    if path_match is None:
-        raise Exception('Invalid path')
-    event['path'] = path_match.groupdict()['path']
-    api_version = path_match.groupdict()['version']
-    Config.set('API_VERSION', api_version)
+    Config.set('API_VERSION', event['stageVariables']['LambdaAlias'])
 
     # Pass tracing info to X-Ray
+    xray_trace_name = f"{Config.get('SERVICE')}.{Config.get('ENVIRONMENT')}.fathomai.com"
     if 'X-Amzn-Trace-Id-Safe' in event['headers']:
         xray_trace = TraceHeader.from_header_str(event['headers']['X-Amzn-Trace-Id-Safe'])
         xray_recorder.begin_segment(
-            name='{SERVICE}.{ENVIRONMENT}.fathomai.com'.format(**os.environ),
+            name=xray_trace_name,
             traceid=xray_trace.root,
             parent_id=xray_trace.parent
         )
     else:
-        xray_recorder.begin_segment(name='{SERVICE}.{ENVIRONMENT}.fathomai.com'.format(**os.environ))
+        xray_recorder.begin_segment(name=xray_trace_name)
 
-    xray_recorder.current_segment().put_http_meta('url', f"https://{event['headers']['Host']}/{os.environ['SERVICE']}/{api_version}{event['path']}")
+    xray_recorder.current_segment().put_http_meta('url', f"https://{event['headers']['Host']}/{Config.get('SERVICE')}/{Config.get('API_VERSION')}{event['path']}")
     xray_recorder.current_segment().put_http_meta('method', event['httpMethod'])
     xray_recorder.current_segment().put_http_meta('user_agent', event['headers']['User-Agent'])
-    xray_recorder.current_segment().put_annotation('environment', os.environ['ENVIRONMENT'])
-    xray_recorder.current_segment().put_annotation('version', str(api_version))
+    xray_recorder.current_segment().put_annotation('environment', Config.get('ENVIRONMENT'))
+    xray_recorder.current_segment().put_annotation('version', str(Config.get('API_VERSION')))
 
     ret = app(event, context)
     ret['headers'].update({
@@ -54,6 +47,6 @@ def handler(event, context):
     xray_recorder.current_segment().apply_status_code(ret['statusCode'])
     xray_recorder.end_segment()
 
-    if os.environ['ENVIRONMENT'] != 'production':
+    if Config.get('ENVIRONMENT') != 'production':
         print(json.dumps(ret))
     return ret

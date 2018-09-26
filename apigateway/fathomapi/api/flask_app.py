@@ -1,5 +1,15 @@
-from flask import Response, jsonify
-from flask_lambda import FlaskLambda
+# Copyright 2016 Matt Martz, 2018 Stephen Poole
+# All Rights Reserved.
+#
+# This file contains code from the Flask-Lambda library (https://github.com/sivel/flask-lambda)
+# released under the Apache License, Version 2.0 (the "License").
+#
+# Remaining code Copyright Melon Software Ltd, used under license
+
+from flask import Flask, Response, jsonify
+from io import StringIO
+from urllib.parse import urlencode
+from werkzeug.wrappers import BaseRequest
 import json
 import sys
 import traceback
@@ -7,6 +17,77 @@ import traceback
 from .converters import UuidConverter
 from ..utils.exceptions import ApplicationException
 from ..utils.serialisable import json_serialise
+
+
+class LambdaResponse(object):
+    def __init__(self):
+        self.status = None
+        self.response_headers = None
+
+    def start_response(self, status, response_headers, exc_info=None):
+        self.status = int(status[:3])
+        self.response_headers = dict(response_headers)
+
+
+class FlaskLambda(Flask):
+    def __call__(self, event, context):
+        if 'httpMethod' not in event:
+            # In this "context" `event` is `environ` and
+            # `context` is `start_response`, meaning the request didn't
+            # occur via API Gateway and Lambda
+            return super(FlaskLambda, self).__call__(event, context)
+
+        response = LambdaResponse()
+
+        body = next(self.wsgi_app(
+            self._make_environ(event),
+            response.start_response
+        ))
+
+        return {
+            'statusCode': response.status,
+            'headers': response.response_headers,
+            'body': body
+        }
+
+    @staticmethod
+    def _make_environ(event):
+        environ = {}
+
+        for header_name, header_value in event['headers'].items():
+            header_name = header_name.replace('-', '_').upper()
+            if header_name in ['CONTENT_TYPE', 'CONTENT_LENGTH']:
+                environ[header_name] = header_value
+            else:
+                environ[('HTTP_%s' % header_name)] = header_value
+
+        qs = event['queryStringParameters']
+
+        environ['REQUEST_METHOD'] = event['httpMethod']
+        environ['PATH_INFO'] = event['pathParameters']['endpoint']
+        environ['QUERY_STRING'] = urlencode(qs) if qs else ''
+        environ['REMOTE_ADDR'] = event['requestContext']['identity']['sourceIp']
+        environ['HOST'] = '%(HTTP_HOST)s:%(HTTP_X_FORWARDED_PORT)s' % environ
+        environ['SCRIPT_NAME'] = ''
+
+        environ['SERVER_PORT'] = environ['HTTP_X_FORWARDED_PORT']
+        environ['SERVER_PROTOCOL'] = 'HTTP/1.1'
+
+        environ['CONTENT_LENGTH'] = str(
+            len(event['body']) if event['body'] else ''
+        )
+
+        environ['wsgi.url_scheme'] = environ['HTTP_X_FORWARDED_PROTO']
+        environ['wsgi.input'] = StringIO(event['body'] or '')
+        environ['wsgi.version'] = (1, 0)
+        environ['wsgi.errors'] = sys.stderr
+        environ['wsgi.multithread'] = False
+        environ['wsgi.run_once'] = True
+        environ['wsgi.multiprocess'] = False
+
+        BaseRequest(environ)
+
+        return environ
 
 
 class ApiResponse(Response):
