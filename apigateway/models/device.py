@@ -4,7 +4,7 @@ import json
 import os
 
 from fathomapi.models.iot_entity import IotEntity
-from exceptions import NoSuchEntityException, UnauthorizedException
+from fathomapi.utils.exceptions import NoSuchEntityException, UnauthorizedException
 
 sns_client = boto3.client('sns')
 

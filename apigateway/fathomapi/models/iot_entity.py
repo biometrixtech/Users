@@ -1,8 +1,9 @@
-from ._entity import Entity
 from abc import abstractmethod
 from botocore.exceptions import ClientError
-from exceptions import NoSuchEntityException
 import boto3
+
+from ._entity import Entity
+from ..utils.exceptions import NoSuchEntityException
 
 
 iot_client = boto3.client('iot')

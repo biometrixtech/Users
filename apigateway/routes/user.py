@@ -9,7 +9,8 @@ import os
 from fathomapi.comms.service import Service
 from fathomapi.comms.legacy import query_postgres_sync
 from fathomapi.utils.decorators import require
-from exceptions import DuplicateEntityException, UnauthorizedException, NoSuchEntityException, ForbiddenException, ApplicationException
+from fathomapi.utils.exceptions import DuplicateEntityException, UnauthorizedException, NoSuchEntityException, ForbiddenException, ApplicationException
+
 from utils import ftin_to_metres, lb_to_kg
 from models.user import User
 from models.user_data import UserData

@@ -9,7 +9,7 @@ import datetime
 
 from ..utils.formatters import format_datetime
 
-from exceptions import NoSuchEntityException, DuplicateEntityException, NoUpdatesException
+from ..utils.exceptions import NoSuchEntityException, DuplicateEntityException, NoUpdatesException
 
 
 class DynamodbEntity(Entity):

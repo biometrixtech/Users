@@ -1,8 +1,8 @@
 from flask import request
 from werkzeug.routing import BaseConverter, ValidationError
 from functools import wraps
-from exceptions import UnauthorizedException, InvalidSchemaException
 
+from .exceptions import UnauthorizedException, InvalidSchemaException, ForbiddenException
 from ..comms.service import Service
 
 
@@ -47,6 +47,21 @@ class require:
                 principal_id = _authenticate_user(request.headers['Authorization'])
                 if len(args) == 0 or args[0] is None or args[0] != principal_id:
                     raise UnauthorizedException("You may only execute this action on yourself")
+                return decorated_function(*args, **kwargs)
+            return wrapper
+
+        @staticmethod
+        def service(decorated_function):
+            """
+            Decorator to require a JWT token to be passed, and for the principal_id of the JWT to be the 'magic' value.
+            """
+            @wraps(decorated_function)
+            def wrapper(*args, **kwargs):
+                if 'Authorization' not in request.headers:
+                    raise UnauthorizedException("Unauthorized")
+                principal_id = _authenticate_user(request.headers['Authorization'])
+                if principal_id != '00000000-0000-4000-8000-000000000000':
+                    raise ForbiddenException("This endpoint may only be called internally")
                 return decorated_function(*args, **kwargs)
             return wrapper
 

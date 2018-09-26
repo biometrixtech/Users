@@ -1,8 +1,9 @@
-import boto3
-import os
-import json
 from botocore.exceptions import ClientError
-from exceptions import ApplicationException
+import boto3
+import json
+import os
+
+from fathomapi.utils.exceptions import ApplicationException
 
 
 def get_secret(secret_name):

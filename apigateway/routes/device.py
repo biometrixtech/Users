@@ -5,12 +5,13 @@ import json
 import os
 from botocore.exceptions import ClientError
 
+from fathomapi.api.converters import UuidConverter
 from fathomapi.utils.decorators import require
-from exceptions import InvalidSchemaException, NoSuchEntityException
-from flask_app import UuidConverter
+from fathomapi.utils.exceptions import InvalidSchemaException, NoSuchEntityException
 
 
 device_app = Blueprint('device', __name__)
+
 iot_client = boto3.client('iot')
 sns_client = boto3.client('sns')
 

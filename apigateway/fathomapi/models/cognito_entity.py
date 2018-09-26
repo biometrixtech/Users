@@ -1,10 +1,11 @@
 from ._entity import Entity
 from abc import abstractmethod
 from botocore.exceptions import ClientError, ParamValidationError
-from exceptions import NoSuchEntityException, DuplicateEntityException, InvalidPasswordFormatException, UnauthorizedException
 import boto3
 import datetime
 import json
+
+from fathomapi.utils.exceptions import NoSuchEntityException, DuplicateEntityException, InvalidPasswordFormatException, UnauthorizedException
 
 
 cognito_client = boto3.client('cognito-idp')

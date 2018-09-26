@@ -1,8 +1,6 @@
 import json
 import os
 import re
-import sys
-import traceback
 
 # Load config
 from config import load_secrets
@@ -17,49 +15,13 @@ from aws_xray_sdk.core.models.trace_header import TraceHeader
 patch_all()
 os.environ['LAMBDA_TASK_ROOT'] = lambda_task_root_key
 
-from exceptions import ApplicationException
-from aws_xray_sdk.core import patch_all
-patch_all()
-
 # Load Flask and routes
-from flask_app import app
+from fathomapi.api._flask_app import app
+
 from routes.user import user_app as user_routes
 app.register_blueprint(user_routes, url_prefix='/user')
 from routes.device import device_app as device_routes
 app.register_blueprint(device_routes, url_prefix='/device')
-
-
-@app.errorhandler(500)
-def handle_server_error(e):
-    tb = sys.exc_info()[2]
-    return {'message': str(e.with_traceback(tb))}, 500, {'Status': type(e).__name__}
-
-
-@app.errorhandler(400)
-def handle_bad_request(_):
-    return {"message": "Request not formed properly. Please check params or data."}, 400, {'Status': 'BadRequest'}
-
-
-@app.errorhandler(401)
-def handle_unauthorized(_):
-    return {"message": "Unauthorized. Please check the email/password or authorization token."}, 401, \
-           {'Status': 'Unauthorized'}
-
-
-@app.errorhandler(404)
-def handle_unrecognised_endpoint(_):
-    return {"message": "You must specify an endpoint"}, 404, {'Status': 'UnrecognisedEndpoint'}
-
-
-@app.errorhandler(405)
-def handle_unrecognised_method(_):
-    return {"message": "The given method is not supported for this endpoint"}, 405, {'Status': 'UnsupportedMethod'}
-
-
-@app.errorhandler(ApplicationException)
-def handle_application_exception(e):
-    traceback.print_exception(*sys.exc_info())
-    return {'message': e.message}, e.status_code, {'Status': e.status_code_text}
 
 
 def handler(event, context):
