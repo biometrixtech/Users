@@ -1,10 +1,12 @@
 from aws_xray_sdk.core import xray_recorder
 import boto3
+import datetime
 import json
 import requests
 import os
 
 _lambda_client = boto3.client('lambda')
+_sqs_client = boto3.client('sqs')
 
 
 @xray_recorder.capture('fathomapi.comms._transport.invoke_lambda_sync')
@@ -47,3 +49,12 @@ def invoke_apigateway_sync(service, version, method, endpoint, body=None, header
 
     # TODO validation
     return response.json()
+
+
+@xray_recorder.capture('fathomapi.comms._transport.push_sqs_sync')
+def push_sqs_sync(queue_name, payload, execute_at):
+    _sqs_client.send_message(
+        QueueUrl=f'https://sqs.{{AWS_REGION}}.amazonaws.com/{{AWS_ACCOUNT_ID}}/{queue_name}'.format(**os.environ),
+        MessageBody=json.dumps(payload),
+        DelaySeconds=max(0, min(int((execute_at - datetime.datetime.now()).total_seconds()), 15*60)),
+    )
