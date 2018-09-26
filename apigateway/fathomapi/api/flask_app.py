@@ -54,6 +54,7 @@ class FlaskLambda(Flask):
     def _make_environ(event):
         environ = {
             'HOST': 'apigateway:443',
+            'HTTP_HOST': 'apigateway:443',
             'HTTP_X_FORWARDED_PORT': '443',
             'SCRIPT_NAME': '',
             'SERVER_PORT': '443',
