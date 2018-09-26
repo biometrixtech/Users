@@ -52,7 +52,13 @@ class FlaskLambda(Flask):
 
     @staticmethod
     def _make_environ(event):
-        environ = {}
+        environ = {
+            'HOST': 'apigateway:443',
+            'HTTP_X_FORWARDED_PORT': '443',
+            'SCRIPT_NAME': '',
+            'SERVER_PORT': '443',
+            'SERVER_PROTOCOL': 'HTTP/1.1',
+        }
 
         for header_name, header_value in event['headers'].items():
             header_name = header_name.replace('-', '_').upper()
@@ -61,23 +67,18 @@ class FlaskLambda(Flask):
             else:
                 environ[('HTTP_%s' % header_name)] = header_value
 
-        qs = event['queryStringParameters']
+        qs = event.get('queryStringParameters', None)
 
         environ['REQUEST_METHOD'] = event['httpMethod']
         environ['PATH_INFO'] = event['pathParameters']['endpoint']
         environ['QUERY_STRING'] = urlencode(qs) if qs else ''
-        environ['REMOTE_ADDR'] = event['requestContext']['identity']['sourceIp']
-        environ['HOST'] = '%(HTTP_HOST)s:%(HTTP_X_FORWARDED_PORT)s' % environ
-        environ['SCRIPT_NAME'] = ''
-
-        environ['SERVER_PORT'] = environ['HTTP_X_FORWARDED_PORT']
-        environ['SERVER_PROTOCOL'] = 'HTTP/1.1'
+        environ['REMOTE_ADDR'] = event.get('requestContext', {}).get('identity', {}).get('sourceIp', '0.0.0.0')
 
         environ['CONTENT_LENGTH'] = str(
             len(event['body']) if event['body'] else ''
         )
 
-        environ['wsgi.url_scheme'] = environ['HTTP_X_FORWARDED_PROTO']
+        environ['wsgi.url_scheme'] = 'https'
         environ['wsgi.input'] = StringIO(event['body'] or '')
         environ['wsgi.version'] = (1, 0)
         environ['wsgi.errors'] = sys.stderr
