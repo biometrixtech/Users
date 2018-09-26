@@ -4,7 +4,7 @@ import os
 
 from fathomapi.models.cognito_entity import CognitoEntity
 from models.user_data import UserData
-from utils import metres_to_ftin
+from utils import metres_to_ftin, kg_to_lb
 
 cognito_client = boto3.client('cognito-idp')
 
@@ -46,7 +46,7 @@ class User(CognitoEntity):
     @staticmethod
     def _munge_response(ret):
         ret['biometric_data']['height']['ft_in'] = metres_to_ftin(ret['biometric_data']['height']['m'])
-        ret['biometric_data']['mass']['lb'] = metres_to_ftin(ret['biometric_data']['mass']['kg'])
+        ret['biometric_data']['mass']['lb'] = kg_to_lb(ret['biometric_data']['mass']['kg'])
         if 'email' in ret:
             del ret['email']
         return ret
