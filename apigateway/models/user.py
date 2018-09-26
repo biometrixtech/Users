@@ -1,7 +1,7 @@
 import boto3
 import json
-import os
 
+from fathomapi.api.config import Config
 from fathomapi.models.cognito_entity import CognitoEntity
 from models.user_data import UserData
 from utils import metres_to_ftin, kg_to_lb
@@ -24,11 +24,11 @@ class User(CognitoEntity):
         
     @property
     def user_pool_id(self):
-        return os.environ['USERS_COGNITO_USER_POOL_ID']
+        return Config.get('USERS_COGNITO_USER_POOL_ID')
     
     @property
     def user_pool_client_id(self):
-        return os.environ['USERS_COGNITO_USER_POOL_CLIENT_ID']
+        return Config.get('USERS_COGNITO_USER_POOL_CLIENT_ID')
 
     def get(self):
         ret = super().get()

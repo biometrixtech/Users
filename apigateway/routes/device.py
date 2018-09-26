@@ -2,9 +2,9 @@ from aws_xray_sdk.core import xray_recorder
 from flask import Blueprint, request
 import boto3
 import json
-import os
 from botocore.exceptions import ClientError
 
+from fathomapi.api.config import Config
 from fathomapi.api.converters import UuidConverter
 from fathomapi.utils.decorators import require
 from fathomapi.utils.exceptions import InvalidSchemaException, NoSuchEntityException
@@ -115,7 +115,7 @@ def get_or_create_thing(device_id, device_type, owner_id):
             }
             iot_client.create_thing(
                 thingName=device_id,
-                thingTypeName='users-{ENVIRONMENT}-device'.format(**os.environ),
+                thingTypeName=f'users-{Config.get("ENVIRONMENT")}-device',
                 attributePayload={'attributes': attributes}
             )
             return attributes
@@ -132,12 +132,12 @@ def create_iot_keys(device_id):
     )
 
     iot_client.add_thing_to_thing_group(
-        thingGroupName='users-{ENVIRONMENT}-device'.format(**os.environ),
+        thingGroupName='users-{Config.get("ENVIRONMENT")}-device',
         thingName=device_id,
     )
 
     iot_client.attach_principal_policy(
-        policyName=os.environ['IOT_POLICY_NAME'],
+        policyName=Config.get('IOT_POLICY_NAME'),
         principal=certificate_response['certificateArn']
     )
 
@@ -177,9 +177,9 @@ def update_push_notification_settings(device_id, device_type, token, old_endpoin
         custom_user_data['UserId'] = owner_id
 
     if device_type == 'ios':
-        application_arn = os.environ['SNS_APPLICATION_ARN_IOS']
+        application_arn = Config.get('SNS_APPLICATION_ARN_IOS')
     elif device_type == 'android':
-        application_arn = os.environ['SNS_APPLICATION_ARN_ANDROID']
+        application_arn = Config.get('SNS_APPLICATION_ARN_ANDROID')
     else:
         raise InvalidSchemaException('device_type must be either ios or android')
 

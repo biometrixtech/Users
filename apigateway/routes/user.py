@@ -4,7 +4,6 @@ from flask import Blueprint, request
 import boto3
 import hashlib
 import time
-import os
 
 from fathomapi.api.config import Config
 from fathomapi.comms.service import Service
@@ -18,7 +17,7 @@ from models.user_data import UserData
 from models.device import Device
 from utils import nowdate
 
-push_notifications_table = boto3.resource('dynamodb').Table(os.environ['PUSHNOTIFICATIONS_DYNAMODB_TABLE_NAME'])
+push_notifications_table = boto3.resource('dynamodb').Table(Config.get('PUSHNOTIFICATIONS_DYNAMODB_TABLE_NAME'))
 user_app = Blueprint('user', __name__)
 
 

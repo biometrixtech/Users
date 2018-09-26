@@ -1,8 +1,8 @@
 from botocore.exceptions import ClientError
 import boto3
 import json
-import os
 
+from fathomapi.api.config import Config
 from fathomapi.models.iot_entity import IotEntity
 from fathomapi.utils.exceptions import NoSuchEntityException, UnauthorizedException
 
@@ -18,7 +18,7 @@ class Device(IotEntity):
         
     @property
     def thing_type(self):
-        return os.environ['DEVICES_THING_TYPE']
+        return Config.get('DEVICES_THING_TYPE')
 
     @property
     def push_notifications_endpoint(self):
