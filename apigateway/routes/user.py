@@ -6,6 +6,7 @@ import hashlib
 import time
 import os
 
+from fathomapi.api.config import Config
 from fathomapi.comms.service import Service
 from fathomapi.comms.legacy import query_postgres_sync
 from fathomapi.utils.decorators import require
@@ -170,7 +171,7 @@ def _attempt_cognito_migration(user, email, password):
 
     # Check that we can still log in with the migration default password
     try:
-        temp_authorisation = user.login(password=os.environ['MIGRATION_DEFAULT_PASSWORD'])
+        temp_authorisation = user.login(password=Config.get('MIGRATION_DEFAULT_PASSWORD'))
     except UnauthorizedException:
         raise UnauthorizedException('Could not log in with migration default password')
 
@@ -188,7 +189,7 @@ def _attempt_cognito_migration(user, email, password):
     # Change the password in cognito
     user.change_password(
         temp_authorisation['jwt'],
-        os.environ['MIGRATION_DEFAULT_PASSWORD'],
+        Config.get('MIGRATION_DEFAULT_PASSWORD'),
         password
     )
 

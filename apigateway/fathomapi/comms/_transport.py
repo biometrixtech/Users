@@ -1,9 +1,12 @@
 from aws_xray_sdk.core import xray_recorder
+from botocore.exceptions import ClientError
 import boto3
 import datetime
 import json
 import requests
 import os
+
+from ..utils.exceptions import ApplicationException
 
 _lambda_client = boto3.client('lambda')
 _sqs_client = boto3.client('sqs')
@@ -58,3 +61,17 @@ def push_sqs_sync(queue_name, payload, execute_at):
         MessageBody=json.dumps(payload),
         DelaySeconds=max(0, min(int((execute_at - datetime.datetime.now()).total_seconds()), 15*60)),
     )
+
+
+@xray_recorder.capture('fathomapi.comms._transport.get_secretsmanager_secret')
+def get_secretsmanager_secret(secret_name):
+    client = boto3.client('secretsmanager')
+    try:
+        get_secret_value_response = client.get_secret_value(SecretId=secret_name)
+    except ClientError as e:
+        raise ApplicationException('SecretsManagerError', json.dumps(e.response), 500)
+    else:
+        if 'SecretString' in get_secret_value_response:
+            return json.loads(get_secret_value_response['SecretString'])
+        else:
+            return get_secret_value_response['SecretBinary']

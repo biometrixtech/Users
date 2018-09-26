@@ -1,12 +1,12 @@
 from flask import Response, jsonify
 from flask_lambda import FlaskLambda
-from serialisable import json_serialise
 import json
 import sys
 import traceback
 
 from .converters import UuidConverter
 from ..utils.exceptions import ApplicationException
+from ..utils.serialisable import json_serialise
 
 
 class ApiResponse(Response):
