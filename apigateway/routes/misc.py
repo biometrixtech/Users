@@ -15,7 +15,7 @@ misc_app = Blueprint('misc', __name__)
 def handle_dailycron():
     # This route will be called daily via a CloudWatch Scheduled Event.
     Service('users', Config.get('API_VERSION')).call_apigateway_sync('POST', '/misc/activeusers')
-    
+
     return {'status': 'Success'}, 200
 
 
