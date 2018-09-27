@@ -1,0 +1,134 @@
+{
+    "$schema": "http://json-schema.org/schema#",
+    "id": "http://schema.fathomai.com/schemas/user_data.json",
+    "description": "UserData",
+    "type": "object",
+    "properties": {
+        "agreed_privacy_policy": {
+            "type": "bool"
+        },
+        "agreed_terms_of_use": {
+            "type": "bool"
+        },
+        "id": {
+            "description": "The user id",
+            "type": "string",
+            "readonly": true
+        },
+        "biometric_data": {
+            "type": "object",
+            "description": "Biometric data",
+            "properties": {
+                "height": {
+                    "type": "object",
+                    "properties": {
+                        "m": {
+                            "type": "number",
+                            "description": "Height in metres"
+                        }
+                    },
+                    "required": [ "m" ],
+                    "description": "Height"
+                },
+                "sex": {
+                    "enum": [ "male", "female", "other" ]
+                },
+                "mass": {
+                    "type": "object",
+                    "properties": {
+                        "kg": {
+                            "type": "number",
+                            "description": "Mass in kilograms"
+                        }
+                    },
+                    "required": [ "kg" ],
+                    "description": "Mass"
+                }
+            },
+            "required": [
+                "height",
+                "mass",
+                "sex"
+            ],
+            "additionalProperties": false
+        },
+        "cleared_to_play": {
+            "type": "bool"
+        },
+        "created_date": {
+            "description": "The date the user was created",
+            "type": "string",
+            "readonly": true
+        },
+        "injury_status": {
+            "enum": [ "healthy", "injured", "healthy_chronically_injured" ]
+        },
+        "migrated_date": {
+            "description": "The date the user logged in after postgres-to-cognito migration",
+            "type": "string"
+        },
+        "mobile_udid": {
+            "type": "string"
+        },
+        "onboarding_status": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
+        "personal_data": {
+            "type": "object",
+            "properties": {
+                "account_status": {
+                    "enum": [ "active", "pending", "past_due", "expired" ]
+                },
+                "account_type": {
+                    "enum": [ "free", "paid" ]
+                },
+                "birth_date": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string",
+                    "readonly": true
+                },
+                "first_name": {
+                    "type": "string"
+                },
+                "last_name": {
+                    "type": "string"
+                },
+                "zip_code": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "birth_date",
+                "email",
+                "first_name",
+                "last_name"
+            ]
+        },
+        "sensor_pid": {
+            "type": "string"
+        },
+        "system_type": {
+            "enum": [ "1-sensor", "3-sensor" ]
+        },
+        "updated_date": {
+            "description": "The date the user was last updated",
+            "type": "string"
+        }
+    },
+    "required": [
+        "agreed_privacy_policy",
+        "agreed_terms_of_use",
+        "biometric_data",
+        "personal_data",
+        "cleared_to_play",
+        "system_type",
+        "injury_status",
+        "onboarding_status"
+    ],
+    "additionalProperties": false
+}
