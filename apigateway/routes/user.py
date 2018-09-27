@@ -4,23 +4,25 @@ from flask import Blueprint, request
 import boto3
 import hashlib
 import time
-import os
 
-from decorators import authentication_required, body_required, self_authentication_required
-from exceptions import DuplicateEntityException, UnauthorizedException, NoSuchEntityException, ForbiddenException, ApplicationException
+from fathomapi.api.config import Config
+from fathomapi.comms.service import Service
+from fathomapi.comms.legacy import query_postgres_sync
+from fathomapi.utils.decorators import require
+from fathomapi.utils.exceptions import DuplicateEntityException, UnauthorizedException, NoSuchEntityException, ForbiddenException, ApplicationException
+
 from utils import ftin_to_metres, lb_to_kg
 from models.user import User
 from models.user_data import UserData
 from models.device import Device
-from query_postgres import query_postgres
 from utils import nowdate
 
-push_notifications_table = boto3.resource('dynamodb').Table(os.environ['PUSHNOTIFICATIONS_DYNAMODB_TABLE_NAME'])
+push_notifications_table = boto3.resource('dynamodb').Table(Config.get('PUSHNOTIFICATIONS_DYNAMODB_TABLE_NAME'))
 user_app = Blueprint('user', __name__)
 
 
 @user_app.route('/login', methods=['POST'])  # TODO was /sign_in
-@body_required({'personal_data': {'email': str}, 'password': str})
+@require.body({'personal_data': {'email': str}, 'password': str})
 @xray_recorder.capture('routes.user.login')
 def user_login():
     user = User(request.json['personal_data']['email'])
@@ -29,7 +31,7 @@ def user_login():
     try:
         authorisation = user.login(password=request.json['password'])
     except UnauthorizedException as e:
-        if user_record['migrated_date'] is not None:
+        if user_record['migrated_date'] is not None and user_record['migrated_date'] != 'completed':
             # Try migrating them
             try:
                 authorisation = _attempt_cognito_migration(
@@ -37,7 +39,8 @@ def user_login():
                     request.json['personal_data']['email'],
                     request.json['password']
                 )
-            except Exception:
+            except Exception as e2:
+                print(e2)
                 # Raise the original error
                 raise e
         else:
@@ -50,7 +53,7 @@ def user_login():
 
 
 @user_app.route('/', methods=['POST'])
-@body_required({'personal_data': {'email': str}, 'password': str})
+@require.body({'personal_data': {'email': str}, 'password': str})
 @xray_recorder.capture('routes.user.post')
 def create_user():
     """
@@ -115,7 +118,7 @@ def metricise_values():
 
 
 @user_app.route('/<uuid:user_id>/authorize', methods=['POST'])
-@body_required({'session_token': str})
+@require.body({'session_token': str})
 @xray_recorder.capture('routes.user.authorise')
 def handle_user_authorise(user_id):
     auth = User(user_id).login(token=request.json['session_token'])
@@ -123,7 +126,7 @@ def handle_user_authorise(user_id):
 
 
 @user_app.route('/<uuid:user_id>/logout', methods=['POST'])
-@self_authentication_required
+@require.authenticated.self
 @xray_recorder.capture('routes.user.logout')
 def handle_user_logout(user_id):
     User(user_id).logout()
@@ -131,8 +134,8 @@ def handle_user_logout(user_id):
 
 
 @user_app.route('/<uuid:user_id>', methods=['PATCH'])  # TODO This was PUT
-@authentication_required
-@body_required({})
+@require.authenticated.any
+@require.body({})
 @xray_recorder.capture('routes.user.patch')
 def update_user(user_id):
     xray_recorder.current_segment().put_annotation('user_id', user_id)
@@ -148,7 +151,7 @@ def update_user(user_id):
 
 
 @user_app.route('/<uuid:user_id>', methods=['DELETE'])
-@authentication_required
+@require.authenticated.any
 @xray_recorder.capture('routes.user.delete')
 def handle_delete_user(user_id):
     User(user_id).delete()
@@ -156,43 +159,59 @@ def handle_delete_user(user_id):
 
 
 @user_app.route('/<uuid:user_id>', methods=['GET'])
-@authentication_required
+@require.authenticated.any
 @xray_recorder.capture('routes.user.get')
 def handle_user_get(user_id):
     return {'user': User(user_id).get()}
 
 
 def _attempt_cognito_migration(user, email, password):
+    print('Attempting cognito migration')
+
     # Check that we can still log in with the migration default password
-    temp_authorisation = user.login(password=os.environ['MIGRATION_DEFAULT_PASSWORD'])
+    try:
+        temp_authorisation = user.login(password=Config.get('MIGRATION_DEFAULT_PASSWORD'))
+    except UnauthorizedException:
+        raise UnauthorizedException('Could not log in with migration default password')
 
     # Check that the supplied password matches the one in Cognito.  Note that this does not require
     # us to have bcrypt or Flask-bcrypt installed in this codebase, but does require the `pgcrypto`
     # extension to be enabled in postgres.
-    check_postgres = query_postgres(
-        "SELECT id, password_digest=crypt(%s, password_digest) AS password_match FROM users WHERE email=%s",
+    check_postgres = query_postgres_sync(
+        "SELECT id, replace(password_digest, '$2b$', '$2a$')=crypt(%s, replace(password_digest, '$2b$', '$2a$')) AS password_match FROM users WHERE email=%s",
         [password, email]
-    )
+    )[0]
+
     if not check_postgres['password_match']:
         raise UnauthorizedException('Password does not match in Postgres')
 
     # Change the password in cognito
     user.change_password(
-        temp_authorisation['AccessToken'],
-        os.environ['MIGRATION_DEFAULT_PASSWORD'],
+        temp_authorisation['jwt'],
+        Config.get('MIGRATION_DEFAULT_PASSWORD'),
         password
     )
 
-    # Record the date
-    user.patch({'migrated_date': nowdate()})
-
     # And login as normal
-    return user.login(password=password)
+    res = user.login(password=password)
+
+    # update mongo collections to the new user_id
+    Service('plans', '1_0').call_apigateway_sync(
+        method='PATCH',
+        endpoint='misc/cognito_migration',
+        body={"legacy_user_id": check_postgres['id'], "user_id": user.id},
+        headers={'Content-Type': "application/json"}
+    )
+
+    # Mark migration as completed
+    user.patch({'migrated_date': 'completed'})
+
+    return res
 
 
 @user_app.route('/<uuid:user_id>/notify', methods=['POST'])
-@authentication_required
-@body_required({'message': str})
+@require.authenticated.any
+@require.body({'message': str})
 @xray_recorder.capture('routes.user.notify')
 def handle_user_notify(user_id):
     devices = Device.get_many('owner_id', user_id)

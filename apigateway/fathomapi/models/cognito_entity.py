@@ -1,10 +1,11 @@
 from ._entity import Entity
 from abc import abstractmethod
 from botocore.exceptions import ClientError, ParamValidationError
-from exceptions import NoSuchEntityException, DuplicateEntityException, InvalidPasswordFormatException, UnauthorizedException
 import boto3
 import datetime
 import json
+
+from fathomapi.utils.exceptions import NoSuchEntityException, DuplicateEntityException, InvalidPasswordFormatException, UnauthorizedException
 
 
 cognito_client = boto3.client('cognito-idp')
@@ -103,6 +104,10 @@ class CognitoEntity(Entity):
                 ],
                 MessageAction='SUPPRESS',
             )
+
+            # Log in straight away so there's no risk of the Cognito user expiring
+            self.login(password=body['password'])
+
             self._fetch()
             return self.id
 
@@ -110,7 +115,7 @@ class CognitoEntity(Entity):
             if 'UsernameExistsException' in str(e):
                 raise DuplicateEntityException()
             if 'InvalidPasswordException' in str(e):
-                raise InvalidPasswordFormatException()
+                raise InvalidPasswordFormatException('Password does not meet security requirements')
             else:
                 print(json.dumps({'exception': str(e)}))
                 raise

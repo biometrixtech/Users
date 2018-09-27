@@ -8,6 +8,7 @@ sample_data.py
 __pycache__
 apigateway/*
 !apigateway/*.py
+!apigateway/fathomapi
 !apigateway/pip_requirements
 !apigateway/routes
 !apigateway/models

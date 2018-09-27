@@ -3,11 +3,13 @@ from abc import abstractmethod
 from boto3.dynamodb.conditions import Key, ConditionExpressionBuilder
 from botocore.exceptions import ClientError
 from decimal import Decimal
-from dynamodbupdate import DynamodbUpdate
 from functools import reduce
 from operator import iand
+import datetime
 
-from exceptions import NoSuchEntityException, DuplicateEntityException, NoUpdatesException
+from ..utils.formatters import format_datetime
+
+from ..utils.exceptions import NoSuchEntityException, DuplicateEntityException, NoUpdatesException
 
 
 class DynamodbEntity(Entity):
@@ -27,7 +29,7 @@ class DynamodbEntity(Entity):
         body = flatten(body)
 
         try:
-            upsert = DynamodbUpdate()
+            upsert = self.DynamodbUpdate()
             for key in self.get_fields(immutable=None if create else False, primary_key=False):
                 if key in body:
                     if self._fields[key]['type'] in ['list', 'object']:
@@ -37,9 +39,11 @@ class DynamodbEntity(Entity):
                     else:
                         upsert.set(key, body[key])
 
-            print(upsert)
             if len(upsert.parameter_values) == 0:
                 raise NoUpdatesException()
+
+            # Update updated_date, if we're updating anything else
+            upsert.set('updated_date', format_datetime(datetime.datetime.now()))
 
             self._get_dynamodb_resource().update_item(
                 Key=self.primary_key,
@@ -93,3 +97,46 @@ class DynamodbEntity(Entity):
     @staticmethod
     def _print_condition_expression(expression):
         print(ConditionExpressionBuilder().build_expression(expression, True))
+
+    class DynamodbUpdate:
+        def __init__(self):
+            self._add = set([])
+            self._set = set([])
+            self._parameter_names = []
+            self._parameter_values = {}
+            self._parameter_count = 0
+
+        def set(self, field, value):
+            key = self._register_parameter_name(field)
+            self._set.add(f'#{key} = :{key}')
+            self._parameter_values[f':{key}'] = value
+
+        def add(self, field, value):
+            key = self._register_parameter_name(field)
+            self._add.add(f'#{key} = :{key}')
+            self._parameter_values[f':{key}'] = value
+
+        @property
+        def update_expression(self):
+            set = 'SET {}'.format(', '.join(self._set)) if len(self._set) else ''
+            add = 'ADD {}'.format(', '.join(self._add)) if len(self._add) else ''
+            return set + ' ' + add
+
+        @property
+        def parameter_names(self):
+            return {f'#p{i}': n for i, n in enumerate(self._parameter_names)}
+
+        @property
+        def parameter_values(self):
+            return self._parameter_values
+
+        def _register_parameter_name(self, parameter_name):
+            self._parameter_names.append(parameter_name)
+            return 'p' + str(len(self._parameter_names) - 1)
+
+        def __str__(self):
+            return str({
+                'update_expression': self.update_expression,
+                'parameter_names': self.parameter_names,
+                'parameter_values': self.parameter_values,
+            })

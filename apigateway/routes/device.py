@@ -2,27 +2,27 @@ from aws_xray_sdk.core import xray_recorder
 from flask import Blueprint, request
 import boto3
 import json
-import os
 from botocore.exceptions import ClientError
 
-from decorators import authentication_required, authenticate_user_jwt, body_required
-from exceptions import InvalidSchemaException, NoSuchEntityException
-from flask_app import UuidConverter
-from utils import validate_uuid4
+from fathomapi.api.config import Config
+from fathomapi.api.converters import UuidConverter
+from fathomapi.utils.decorators import require
+from fathomapi.utils.exceptions import InvalidSchemaException, NoSuchEntityException
 
 
 device_app = Blueprint('device', __name__)
+
 iot_client = boto3.client('iot')
 sns_client = boto3.client('sns')
 
 
 @device_app.route('/<uuid:device_id>', methods=['POST'])
-@authentication_required
-@body_required({'device_type': str, 'push_notifications': [None, {'token': str, 'enabled': bool}]})
+@require.authenticated.any  # Adds principal_id to function call
+@require.body({'device_type': str, 'push_notifications': [None, {'token': str, 'enabled': bool}]})
 @xray_recorder.capture('routes.device.register')
-def handle_device_register(device_id):
+def handle_device_register(device_id, principal_id=None):
     device_type = request.json['device_type']
-    owner_id = authenticate_user_jwt(request.headers['Authorization'])
+    owner_id = principal_id
 
     thing_attributes = get_or_create_thing(device_id, device_type, owner_id)
 
@@ -53,8 +53,8 @@ def handle_device_register(device_id):
 
 
 @device_app.route('/<uuid:device_id>', methods=['PATCH'])
-@authentication_required
-@body_required({'owner_id': [None, UuidConverter], 'push_notifications': [None, {'token': str, 'enabled': bool}]})
+@require.authenticated.any
+@require.body({'owner_id': [None, UuidConverter], 'push_notifications': [None, {'token': str, 'enabled': bool}]})
 @xray_recorder.capture('routes.device.affiliate')
 def handle_device_patch(device_id):
     existing_attributes = get_or_create_thing(
@@ -115,7 +115,7 @@ def get_or_create_thing(device_id, device_type, owner_id):
             }
             iot_client.create_thing(
                 thingName=device_id,
-                thingTypeName='users-{ENVIRONMENT}-device'.format(**os.environ),
+                thingTypeName=f'users-{Config.get("ENVIRONMENT")}-device',
                 attributePayload={'attributes': attributes}
             )
             return attributes
@@ -132,12 +132,12 @@ def create_iot_keys(device_id):
     )
 
     iot_client.add_thing_to_thing_group(
-        thingGroupName='users-{ENVIRONMENT}-device'.format(**os.environ),
+        thingGroupName='users-{Config.get("ENVIRONMENT")}-device',
         thingName=device_id,
     )
 
     iot_client.attach_principal_policy(
-        policyName=os.environ['IOT_POLICY_NAME'],
+        policyName=Config.get('IOT_POLICY_NAME'),
         principal=certificate_response['certificateArn']
     )
 
@@ -157,10 +157,10 @@ def delete_push_notification_settings(device_id):
             thingName=device_id,
             attributePayload={
                 'attributes': {
-                    'push_notifications_enabled': None,
-                    'push_notifications_endpoint': None,
-                    'push_notifications.enabled': None,
-                    'push_notifications.endpoint': None,
+                    'push_notifications_enabled': '',
+                    'push_notifications_endpoint': '',
+                    'push_notifications.enabled': '',
+                    'push_notifications.endpoint': '',
                 },
                 'merge': True
             }
@@ -177,9 +177,9 @@ def update_push_notification_settings(device_id, device_type, token, old_endpoin
         custom_user_data['UserId'] = owner_id
 
     if device_type == 'ios':
-        application_arn = os.environ['SNS_APPLICATION_ARN_IOS']
+        application_arn = Config.get('SNS_APPLICATION_ARN_IOS')
     elif device_type == 'android':
-        application_arn = os.environ['SNS_APPLICATION_ARN_ANDROID']
+        application_arn = Config.get('SNS_APPLICATION_ARN_ANDROID')
     else:
         raise InvalidSchemaException('device_type must be either ios or android')
 
@@ -199,8 +199,8 @@ def update_push_notification_settings(device_id, device_type, token, old_endpoin
             'attributes': {
                 'push_notifications.enabled': '1' if enabled else '0',
                 'push_notifications.endpoint': res['EndpointArn'],
-                'push_notifications_enabled': None,
-                'push_notifications_endpoint': None,
+                'push_notifications_enabled': '',
+                'push_notifications_endpoint': '',
             },
             'merge': True
         }

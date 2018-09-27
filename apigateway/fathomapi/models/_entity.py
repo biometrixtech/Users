@@ -2,7 +2,7 @@ from abc import abstractmethod
 from decimal import Decimal
 from functools import reduce
 
-from exceptions import InvalidSchemaException, NoSuchEntityException, ImmutableFieldUpdatedException
+from ..utils.exceptions import InvalidSchemaException, NoSuchEntityException, ImmutableFieldUpdatedException
 
 
 class Entity:
