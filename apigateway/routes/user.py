@@ -10,7 +10,7 @@ from fathomapi.api.config import Config
 from fathomapi.comms.service import Service
 from fathomapi.comms.legacy import query_postgres_sync
 from fathomapi.utils.decorators import require
-from fathomapi.utils.exceptions import DuplicateEntityException, UnauthorizedException, NoSuchEntityException, ForbiddenException, ApplicationException
+from fathomapi.utils.exceptions import DuplicateEntityException, UnauthorizedException, NoSuchEntityException, ForbiddenException, ApplicationException, InvalidSchemaException
 
 from utils import ftin_to_metres, lb_to_kg
 from models.user import User
@@ -212,10 +212,13 @@ def _attempt_cognito_migration(user, email, password):
 
 @user_app.route('/<uuid:user_id>/notify', methods=['POST'])
 @require.authenticated.any
-@require.body({'message': str})
+@require.body({'message': str, 'call_to_action': str})
 @xray_recorder.capture('routes.user.notify')
 def handle_user_notify(user_id):
     devices = Device.get_many('owner_id', user_id)
+
+    if request.json['call_to_action'] not in ['VIEW_PLAN', 'COMPLETE_DAILY_READINESS', 'COMPLETE_ACTIVE_RECOVERY', 'COMPLETE_ACTIVE_PREP']:
+        raise InvalidSchemaException("`call_to_action` must be one of VIEW_PLAN, COMPLETE_DAILY_READINESS, COMPLETE_ACTIVE_RECOVERY, COMPLETE_ACTIVE_PREP")
 
     if len(devices) == 0:
         return {'message': f'No devices registered for user {user_id}'}, 540
