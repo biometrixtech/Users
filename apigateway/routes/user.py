@@ -3,13 +3,14 @@ from botocore.exceptions import ClientError
 from flask import Blueprint, request
 import boto3
 import hashlib
+import json
 import time
 
 from fathomapi.api.config import Config
 from fathomapi.comms.service import Service
 from fathomapi.comms.legacy import query_postgres_sync
 from fathomapi.utils.decorators import require
-from fathomapi.utils.exceptions import DuplicateEntityException, UnauthorizedException, NoSuchEntityException, ForbiddenException, ApplicationException
+from fathomapi.utils.exceptions import DuplicateEntityException, UnauthorizedException, NoSuchEntityException, ForbiddenException, ApplicationException, InvalidSchemaException
 
 from utils import ftin_to_metres, lb_to_kg
 from models.user import User
@@ -210,17 +211,24 @@ def _attempt_cognito_migration(user, email, password):
 
 
 @user_app.route('/<uuid:user_id>/notify', methods=['POST'])
-@require.authenticated.any
-@require.body({'message': str})
+@require.authenticated.service
+@require.body({'message': str, 'call_to_action': str})
 @xray_recorder.capture('routes.user.notify')
 def handle_user_notify(user_id):
     devices = Device.get_many('owner_id', user_id)
+
+    if request.json['call_to_action'] not in ['VIEW_PLAN', 'COMPLETE_DAILY_READINESS', 'COMPLETE_ACTIVE_RECOVERY', 'COMPLETE_ACTIVE_PREP']:
+        raise InvalidSchemaException("`call_to_action` must be one of VIEW_PLAN, COMPLETE_DAILY_READINESS, COMPLETE_ACTIVE_RECOVERY, COMPLETE_ACTIVE_PREP")
 
     if len(devices) == 0:
         return {'message': f'No devices registered for user {user_id}'}, 540
 
     message = request.json['message']
-    message_digest = hashlib.sha512(message.encode()).hexdigest()
+    payload = {
+        'message': message,
+        'call_to_action': request.json['call_to_action'],
+    }
+    message_digest = hashlib.sha512(json.dumps(payload).encode()).hexdigest()
     now_time = int(time.time())
 
     try:
@@ -241,7 +249,7 @@ def handle_user_notify(user_id):
     statuses = {}
     for device in devices:
         try:
-            device.send_push_notification(message)
+            device.send_push_notification(message, payload)
             statuses[device.id] = {'success': True, 'message': 'Success'}
         except ApplicationException as e:
             statuses[device.id] = {'success': False, 'message': str(e)}
