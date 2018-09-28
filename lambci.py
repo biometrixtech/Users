@@ -6,6 +6,7 @@ import json
 import os
 import subprocess
 import shutil
+import sys
 import zipfile
 
 aws_region = 'us-west-2'
@@ -42,6 +43,7 @@ def upload_lambda_bundle(local_filepath, s3_filename, pip_install=True):
     else:
         # Install pip requirements first
         if pip_install:
+            replace_in_file(os.path.join(local_filepath, 'pip_requirements'), '{GITHUB_TOKEN}', os.environ['GITHUB_TOKEN'])
             subprocess.check_call('python3 -m pip install -t {f} -r {f}/pip_requirements'.format(f=local_filepath), shell=True)
 
         # Write the version into the bundle
