@@ -28,7 +28,7 @@ class Device(IotEntity):
     def push_notifications_enabled(self):
         return self.get()['push_notifications']['enabled']
 
-    def send_push_notification(self, message):
+    def send_push_notification(self, message, payload):
         message = str(message)
 
         if self.push_notifications_endpoint is None:
@@ -43,10 +43,7 @@ class Device(IotEntity):
             'GCM': json.dumps({
                 "data": {
                     "message": message,
-                    "biometrix": {
-                        "hello": "world",
-                        "theanswer": 42,
-                    }
+                    "biometrix": payload
                 },
                 "time_to_live": 3600,
                 "collapse_key": "YOUR_CUSTOM_CATEGORY"
@@ -59,10 +56,7 @@ class Device(IotEntity):
                     "category": "YOUR_CUSTOM_CATEGORY",
                     "content-available": 1
                 },
-                "biometrix": {
-                    "hello": "world",
-                    "theanswer": 42,
-                }
+                "biometrix": payload
             }),
             "APNS_SANDBOX": json.dumps({
                 "aps": {
@@ -72,10 +66,7 @@ class Device(IotEntity):
                     "category": "YOUR_CUSTOM_CATEGORY",
                     "content-available": 1
                 },
-                "biometrix": {
-                    "hello": "world",
-                    "theanswer": 42,
-                }
+                "biometrix": payload
             })
         }
         try:

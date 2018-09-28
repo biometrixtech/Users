@@ -3,6 +3,7 @@ from botocore.exceptions import ClientError
 from flask import Blueprint, request
 import boto3
 import hashlib
+import json
 import time
 
 from fathomapi.api.config import Config
@@ -220,7 +221,11 @@ def handle_user_notify(user_id):
         return {'message': f'No devices registered for user {user_id}'}, 540
 
     message = request.json['message']
-    message_digest = hashlib.sha512(message.encode()).hexdigest()
+    payload = {
+        'message': message,
+        'call_to_action': request.json['call_to_action'],
+    }
+    message_digest = hashlib.sha512(json.dumps(payload).encode()).hexdigest()
     now_time = int(time.time())
 
     try:
@@ -241,7 +246,7 @@ def handle_user_notify(user_id):
     statuses = {}
     for device in devices:
         try:
-            device.send_push_notification(message)
+            device.send_push_notification(message, payload)
             statuses[device.id] = {'success': True, 'message': 'Success'}
         except ApplicationException as e:
             statuses[device.id] = {'success': False, 'message': str(e)}
