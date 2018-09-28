@@ -23,7 +23,7 @@ def replace_in_file(filename, old, new):
 
 def upload_cf_template(local_filepath, s3_filename):
     replace_in_file(local_filepath, 'da39a3ee5e6b4b0d3255bfef95601890afd80709', os.environ['LAMBCI_COMMIT'])
-    s3_key = 'cloudformation/{}/{}/{}'.format(os.environ["PROJECT"], os.environ["LAMBCI_COMMIT"], s3_filename)
+    s3_key = 'cloudformation/{}/{}/{}'.format(os.environ['PROJECT'], os.environ['LAMBCI_COMMIT'], s3_filename)
     print('    Uploading {} to s3://{}/{} '.format(local_filepath, s3_bucket.name, s3_key))
     s3_bucket.upload_file(local_filepath, s3_key)
 
@@ -54,7 +54,7 @@ def upload_lambda_bundle(local_filepath, s3_filename, pip_install=True):
         shutil.make_archive(local_filepath, 'zip', local_filepath)
         output_filename = local_filepath + '.zip'
 
-    s3_key = 'lambdas/{}/{}/{}'.format(os.environ["PROJECT"], os.environ["LAMBCI_COMMIT"], s3_filename)
+    s3_key = 'lambdas/{}/{}/{}'.format(os.environ['PROJECT'], os.environ['LAMBCI_COMMIT'], s3_filename)
     print('    Uploading {} to s3://{}/{}'.format(output_filename, s3_bucket.name, s3_key))
     s3_bucket.upload_file(output_filename, s3_key)
 

@@ -1,1 +1,1 @@
-git+https://{GITHUB_TOKEN}@github.com/biometrixtech/fathomapi.git
+git+ssh://git@github.com/biometrixtech/fathomapi.git@0.0.2
