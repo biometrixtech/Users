@@ -211,7 +211,7 @@ def _attempt_cognito_migration(user, email, password):
 
 
 @user_app.route('/<uuid:user_id>/notify', methods=['POST'])
-@require.authenticated.any
+@require.authenticated.service
 @require.body({'message': str, 'call_to_action': str})
 @xray_recorder.capture('routes.user.notify')
 def handle_user_notify(user_id):
