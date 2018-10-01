@@ -198,7 +198,25 @@ Resources:
             TimeToLiveSpecification:
                 Enabled: true
                 AttributeName: 'expires_timestamp'
+        DeletionPolicy : "Retain"
 
+    AccountsTable:
+        Type: "AWS::DynamoDB::Table"
+        Properties:
+            TableName: { "Fn::Sub": "users-${Environment}-accounts" }
+            AttributeDefinitions:
+              - { AttributeName: "id", AttributeType: "S" }
+            KeySchema:
+              - { AttributeName: "id", KeyType: "HASH" }
+            ProvisionedThroughput:
+                ReadCapacityUnits: { Ref: "DynamodbReadCapacity" }
+                WriteCapacityUnits: { Ref: "DynamodbWriteCapacity" }
+            Tags:
+              - { Key: "Name", Value: { "Fn::Sub": "users-${Environment}-accounts" } }
+              - { Key: "Management", Value: "managed" }
+              - { Key: "Project", Value: "users" }
+              - { Key: "Environment", Value: { Ref: "Environment" } }
+              - { Key: "Service", Value: "accounts" }
         DeletionPolicy : "Retain"
 
     ##########################################################################################################
@@ -593,11 +611,9 @@ Resources:
                     Statement:
                       - Action:
                           - "lambda:InvokeFunction"
-                          - "sqs:SendMessage"
                         Effect: "Allow"
                         Resource:
                           - { "Fn::Sub": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:users-${Environment}-apigateway-authenticate" }
-#                          - { "Fn::Sub": "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:users-${Environment}-apigateway-async" }
                       - Action:
                           - "secretsmanager:GetSecretValue"
                         Effect: "Allow"
@@ -624,6 +640,8 @@ Resources:
                           - { "Fn::Sub": "${UsersTable.Arn}/*" }
                           - { "Fn::Sub": "${PushNotificationsTable.Arn}" }
                           - { "Fn::Sub": "${PushNotificationsTable.Arn}/*" }
+                          - { "Fn::Sub": "${AccountsTable.Arn}" }
+                          - { "Fn::Sub": "${AccountsTable.Arn}/*" }
                       - Action:
                           - "iot:AddThingToThingGroup"
                           - "iot:AttachPrincipalPolicy"
@@ -682,6 +700,7 @@ Resources:
                     USERS_COGNITO_USER_POOL_ID: { Ref: "UsersCognitoUserPool" }
                     USERS_COGNITO_USER_POOL_CLIENT_ID: { Ref: "UsersCognitoUserPoolClient" }
                     PUSHNOTIFICATIONS_DYNAMODB_TABLE_NAME: { Ref: "PushNotificationsTable" }
+                    ACCOUNTS_DYNAMODB_TABLE_NAME: { Ref: "AccountsTable" }
             Handler: "apigateway.handler"
             Runtime: "python3.6"
             Timeout: "30"
