@@ -27,9 +27,13 @@ def validate_handler(event, _):
 
 def service_handler(event, _):
     load_secrets()
+    if os.environ['ENVIRONMENT'] == 'dev':
+        delta = datetime.timedelta(days=1)
+    else:
+        delta = datetime.timedelta(seconds=60)
     token = {
         'sub': '00000000-0000-4000-8000-000000000000',
-        'exp': datetime.datetime.utcnow() + datetime.timedelta(seconds=60)
+        'exp': datetime.datetime.utcnow() + delta
      }
     return {
         'token': jwt.encode(token, os.environ['SECRET_KEY_BASE'], algorithm='HS256').decode('utf-8')
