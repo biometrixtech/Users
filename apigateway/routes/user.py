@@ -84,17 +84,22 @@ def create_user():
 
     res = {'user': {}}
 
-    # This pair of operations needs to be atomic, we don't want to have the user saved in Cognito (hence their email
+    # This set of operations needs to be atomic, we don't want to have the user saved in Cognito (hence their email
     # address is 'squatted' and can't be re-registered) but their data not saved in DDB
+    progress = 0
     try:
         # Create Cognito user
         user.create(request.json)
         xray_recorder.current_segment().put_annotation('user_id', user.id)
+        progress = 1
 
         account.add_user(user.id)
+        progress = 2
 
         # Save other data in DDB
         UserData(user.id).create(request.json)
+        progress = 3
+
         res['user'] = user.get()
 
     except DuplicateEntityException:
@@ -104,8 +109,12 @@ def create_user():
     except Exception as e:
         # Rollback
         try:
-            account.remove_user(user.id)
-            user.delete()
+            if progress >= 3:
+                UserData(user.id).delete()
+            if progress >= 2:
+                account.remove_user(user.id)
+            if progress >= 1:
+                user.delete()
         except NoSuchEntityException:
             pass
         except Exception as e2:
