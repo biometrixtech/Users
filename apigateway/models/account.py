@@ -21,7 +21,7 @@ class Account(DynamodbEntity):
         self.patch({'users': [user_id]}, create=False, condition=Attr('users').size().lt(Attr('seats')))
 
     def remove_user(self, user_id):
-        raise NotImplementedError
+        self.patch({'¬users': [user_id]}, create=False)
 
     @staticmethod
     def get_from_code(code):
