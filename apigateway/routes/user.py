@@ -13,6 +13,7 @@ from fathomapi.utils.decorators import require
 from fathomapi.utils.exceptions import DuplicateEntityException, UnauthorizedException, NoSuchEntityException, ForbiddenException, ApplicationException, InvalidSchemaException
 
 from utils import ftin_to_metres, lb_to_kg
+from models.account import Account
 from models.user import User
 from models.user_data import UserData
 from models.device import Device
@@ -54,7 +55,7 @@ def user_login():
 
 
 @user_app.route('/', methods=['POST'])
-@require.body({'personal_data': {'email': str}, 'password': str})
+@require.body({'personal_data': {'email': str}, 'password': str, 'account_code': str})
 @xray_recorder.capture('routes.user.post')
 def create_user():
     """
@@ -72,6 +73,13 @@ def create_user():
     # Get the metric values for height and mass if only imperial values were given
     metricise_values()
 
+    try:
+        account = Account.get_from_code(request.json['account_code'])
+        xray_recorder.current_segment().put_annotation('account_id', account.id)
+        request.json['account_ids'] = [account.id]
+    except NoSuchEntityException:
+        raise NoSuchEntityException('Unrecognised account_code')
+
     user = User(request.json['personal_data']['email'])
 
     res = {'user': {}}
@@ -80,11 +88,13 @@ def create_user():
     # address is 'squatted' and can't be re-registered) but their data not saved in DDB
     try:
         # Create Cognito user
-        user_id = user.create(request.json)
-        xray_recorder.current_segment().put_annotation('user_id', user_id)
+        user.create(request.json)
+        xray_recorder.current_segment().put_annotation('user_id', user.id)
+
+        account.add_user(user.id)
 
         # Save other data in DDB
-        UserData(user_id).create(request.json)
+        UserData(user.id).create(request.json)
         res['user'] = user.get()
 
     except DuplicateEntityException:
@@ -94,6 +104,7 @@ def create_user():
     except Exception as e:
         # Rollback
         try:
+            account.remove_user(user.id)
             user.delete()
         except NoSuchEntityException:
             pass

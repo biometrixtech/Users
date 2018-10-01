@@ -22,3 +22,15 @@ class Account(DynamodbEntity):
 
     def remove_user(self, user_id):
         raise NotImplementedError
+
+    @staticmethod
+    def get_from_code(code):
+        """
+        Get the Account with the given signup code
+        :param str code:
+        :return: Account
+        """
+        # TODO
+        res = Account(code)
+        res.get()
+        return Account(code)

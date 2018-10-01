@@ -4,6 +4,10 @@
     "description": "UserData",
     "type": "object",
     "properties": {
+        "account_ids": {
+            "type": "array",
+            "readonly": true
+        },
         "agreed_privacy_policy": {
             "type": "bool"
         },
