@@ -33,7 +33,7 @@ def update_account(account_id):
 @xray_recorder.capture('routes.account.delete')
 def handle_delete_account(account_id):
     Account(account_id).delete()
-    return {'message': 'Success'}
+    return {'message': 'Success'}, 202
 
 
 @account_app.route('/<uuid:account_id>', methods=['GET'])
