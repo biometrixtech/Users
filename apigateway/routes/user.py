@@ -13,6 +13,7 @@ from fathomapi.utils.decorators import require
 from fathomapi.utils.exceptions import DuplicateEntityException, UnauthorizedException, NoSuchEntityException, ForbiddenException, ApplicationException, InvalidSchemaException
 
 from utils import ftin_to_metres, lb_to_kg
+from models.account import Account
 from models.user import User
 from models.user_data import UserData
 from models.device import Device
@@ -54,7 +55,7 @@ def user_login():
 
 
 @user_app.route('/', methods=['POST'])
-@require.body({'personal_data': {'email': str}, 'password': str})
+@require.body({'personal_data': {'email': str}, 'password': str, 'account_code': str})
 @xray_recorder.capture('routes.user.post')
 def create_user():
     """
@@ -72,36 +73,51 @@ def create_user():
     # Get the metric values for height and mass if only imperial values were given
     metricise_values()
 
+    try:
+        account = Account.get_from_code(request.json['account_code'])
+        xray_recorder.current_segment().put_annotation('account_id', account.id)
+        request.json['account_ids'] = [account.id]
+    except NoSuchEntityException:
+        raise NoSuchEntityException('Unrecognised account_code')
+
     user = User(request.json['personal_data']['email'])
 
-    res = {'user': {}}
-
-    # This pair of operations needs to be atomic, we don't want to have the user saved in Cognito (hence their email
+    # This set of operations needs to be atomic, we don't want to have the user saved in Cognito (hence their email
     # address is 'squatted' and can't be re-registered) but their data not saved in DDB
     try:
-        # Create Cognito user
-        user_id = user.create(request.json)
-        xray_recorder.current_segment().put_annotation('user_id', user_id)
-
-        # Save other data in DDB
-        UserData(user_id).create(request.json)
-        res['user'] = user.get()
-
-    except DuplicateEntityException:
-        # The user already exists
-        raise DuplicateEntityException('A user with that email address is already registered')
-
-    except Exception as e:
-        # Rollback
         try:
-            user.delete()
-        except NoSuchEntityException:
-            pass
-        except Exception as e2:
-            raise e2 from e
-        raise e
+            user.create(request.json)
+        except DuplicateEntityException:
+            # The user already exists
+            raise DuplicateEntityException('A user with that email address is already registered')
+        xray_recorder.current_segment().put_annotation('user_id', user.id)
 
-    res['authorization'] = user.login(password=request.json['password'])
+        try:
+            account.add_user(user.id)
+
+            try:
+                UserData(user.id).create(request.json)
+
+            except Exception:
+                try:
+                    UserData(user.id).delete()
+                except Exception as e2:
+                    print(e2)
+                raise
+        except Exception:
+            try:
+                account.remove_user(user.id)
+            except Exception as e2:
+                print(e2)
+            raise
+    except Exception:
+        user.delete()
+        raise
+
+    res = {
+        'user': user.get(),
+        'authorization': user.login(password=request.json['password']),
+    }
 
     return res, 201
 
@@ -155,7 +171,12 @@ def update_user(user_id):
 @require.authenticated.any
 @xray_recorder.capture('routes.user.delete')
 def handle_delete_user(user_id):
-    User(user_id).delete()
+    user = User(user_id)
+    account_ids = user.get()['account_ids']
+    for account_id in account_ids:
+        account = Account(account_id)
+        account.remove_user(user_id)
+    user.delete()
     return {'message': 'Success'}
 
 

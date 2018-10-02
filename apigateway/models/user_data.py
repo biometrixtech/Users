@@ -16,8 +16,3 @@ class UserData(DynamodbEntity):
 
     def _get_dynamodb_resource(self):
         return boto3.resource('dynamodb').Table(Config.get('USERS_DYNAMODB_TABLE_NAME'))
-
-    @staticmethod
-    def schema():
-        with open('schemas/user_data.json', 'r') as f:
-            return json.load(f)
