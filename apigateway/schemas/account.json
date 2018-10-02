@@ -31,7 +31,10 @@
             "type": "string"
         },
         "users": {
-            "type": "list",
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
             "description": "The users in the account",
             "readonly": true
         },

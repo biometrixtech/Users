@@ -82,46 +82,42 @@ def create_user():
 
     user = User(request.json['personal_data']['email'])
 
-    res = {'user': {}}
-
     # This set of operations needs to be atomic, we don't want to have the user saved in Cognito (hence their email
     # address is 'squatted' and can't be re-registered) but their data not saved in DDB
-    progress = 0
     try:
-        # Create Cognito user
-        user.create(request.json)
-        xray_recorder.current_segment().put_annotation('user_id', user.id)
-        progress = 1
-
-        account.add_user(user.id)
-        progress = 2
-
-        # Save other data in DDB
-        UserData(user.id).create(request.json)
-        progress = 3
-
-        res['user'] = user.get()
-
-    except DuplicateEntityException:
-        # The user already exists
-        raise DuplicateEntityException('A user with that email address is already registered')
-
-    except Exception as e:
-        # Rollback
         try:
-            if progress >= 3:
-                UserData(user.id).delete()
-            if progress >= 2:
-                account.remove_user(user.id)
-            if progress >= 1:
-                user.delete()
-        except NoSuchEntityException:
-            pass
-        except Exception as e2:
-            raise e2 from e
-        raise e
+            user.create(request.json)
+        except DuplicateEntityException:
+            # The user already exists
+            raise DuplicateEntityException('A user with that email address is already registered')
+        xray_recorder.current_segment().put_annotation('user_id', user.id)
 
-    res['authorization'] = user.login(password=request.json['password'])
+        try:
+            account.add_user(user.id)
+
+            try:
+                UserData(user.id).create(request.json)
+
+            except Exception:
+                try:
+                    UserData(user.id).delete()
+                except Exception as e2:
+                    print(e2)
+                raise
+        except Exception:
+            try:
+                account.remove_user(user.id)
+            except Exception as e2:
+                print(e2)
+            raise
+    except Exception:
+        user.delete()
+        raise
+
+    res = {
+        'user': user.get(),
+        'authorization': user.login(password=request.json['password']),
+    }
 
     return res, 201
 
@@ -175,7 +171,12 @@ def update_user(user_id):
 @require.authenticated.any
 @xray_recorder.capture('routes.user.delete')
 def handle_delete_user(user_id):
-    User(user_id).delete()
+    user = User(user_id)
+    account_ids = user.get()['account_ids']
+    for account_id in account_ids:
+        account = Account(account_id)
+        account.remove_user(user_id)
+    user.delete()
     return {'message': 'Success'}
 
 

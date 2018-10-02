@@ -6,6 +6,9 @@
     "properties": {
         "account_ids": {
             "type": "array",
+            "items": {
+                "type": "string"
+            },
             "readonly": true
         },
         "agreed_privacy_policy": {
