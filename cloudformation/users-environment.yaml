@@ -626,6 +626,7 @@ Resources:
                           - "cognito-idp:AdminInitiateAuth"
                           - "cognito-idp:AdminRespondToAuthChallenge"
                           - "cognito-idp:AdminUpdateUserAttributes"
+                          - "cognito-idp:AdminUserGlobalSignOut"
                         Effect: "Allow"
                         Resource: { "Fn::GetAtt": [ "UsersCognitoUserPool", "Arn" ] }
                       - Action:
