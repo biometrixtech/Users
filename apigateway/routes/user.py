@@ -138,7 +138,12 @@ def metricise_values():
 @require.body({'session_token': str})
 @xray_recorder.capture('routes.user.authorise')
 def handle_user_authorise(user_id):
-    auth = User(user_id).login(token=request.json['session_token'])
+    user = User(user_id)
+    auth = user.login(token=request.json['session_token'])
+
+    if 'timezone' in request.json:
+        user.patch({'timezone': request.json['timezone']})
+
     return {'authorization': auth}
 
 
