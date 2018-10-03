@@ -138,7 +138,12 @@ def metricise_values():
 @require.body({'session_token': str})
 @xray_recorder.capture('routes.user.authorise')
 def handle_user_authorise(user_id):
-    auth = User(user_id).login(token=request.json['session_token'])
+    user = User(user_id)
+    auth = user.login(token=request.json['session_token'])
+
+    if 'timezone' in request.json:
+        user.patch({'timezone': request.json['timezone']})
+
     return {'authorization': auth}
 
 
@@ -149,7 +154,7 @@ def handle_user_logout(user_id):
     User(user_id).logout()
 
     # De-affiliate all the user's devices
-    devices = Device.get_many('owner_id', user_id)
+    devices = Device.get_many(owner_id=user_id)
     for device in devices:
         device.patch({'owner_id': None})
 
@@ -243,7 +248,7 @@ def _attempt_cognito_migration(user, email, password):
 @require.body({'message': str, 'call_to_action': str})
 @xray_recorder.capture('routes.user.notify')
 def handle_user_notify(user_id):
-    devices = Device.get_many('owner_id', user_id)
+    devices = Device.get_many(owner_id=user_id)
 
     if request.json['call_to_action'] not in ['VIEW_PLAN', 'COMPLETE_DAILY_READINESS', 'COMPLETE_ACTIVE_RECOVERY', 'COMPLETE_ACTIVE_PREP']:
         raise InvalidSchemaException("`call_to_action` must be one of VIEW_PLAN, COMPLETE_DAILY_READINESS, COMPLETE_ACTIVE_RECOVERY, COMPLETE_ACTIVE_PREP")

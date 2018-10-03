@@ -122,6 +122,9 @@
         "system_type": {
             "enum": [ "1-sensor", "3-sensor" ]
         },
+        "timezone": {
+            "type": "string"
+        },
         "updated_date": {
             "description": "The date the user was last updated",
             "type": "string"
