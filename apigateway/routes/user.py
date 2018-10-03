@@ -147,6 +147,12 @@ def handle_user_authorise(user_id):
 @xray_recorder.capture('routes.user.logout')
 def handle_user_logout(user_id):
     User(user_id).logout()
+
+    # De-affiliate all the user's devices
+    devices = Device.get_many('owner_id', user_id)
+    for device in devices:
+        device.patch({'owner_id': None})
+
     return {'authorization': None}
 
 
@@ -176,6 +182,7 @@ def handle_delete_user(user_id):
     for account_id in account_ids:
         account = Account(account_id)
         account.remove_user(user_id)
+    UserData(user.id).delete()
     user.delete()
     return {'message': 'Success'}
 
