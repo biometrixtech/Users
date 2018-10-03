@@ -7,6 +7,8 @@ from fathomapi.api.config import Config
 from fathomapi.comms.service import Service
 from fathomapi.utils.decorators import require
 
+from models.user import User
+
 misc_app = Blueprint('misc', __name__)
 
 
@@ -26,8 +28,8 @@ def handle_activeusers():
     # This route will be invoked daily.  It should scan to find users which meet
     # some definition of 'active', and for each one should push to the plans service with them
 
-    # TODO
-    active_users = []
+    # TODO definition of active
+    active_users = User.get_many()
 
     plans_service = Service('plans', '1_0')
     now = datetime.datetime.now()

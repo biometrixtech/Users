@@ -17,17 +17,12 @@ class User(CognitoEntity):
     def username(self):
         return self.primary_key['email']
 
-    @staticmethod
-    def schema():
-        with open('schemas/user.json', 'r') as f:
-            return json.load(f)
-        
-    @property
-    def user_pool_id(self):
+    @classmethod
+    def user_pool_id(cls):
         return Config.get('USERS_COGNITO_USER_POOL_ID')
-    
-    @property
-    def user_pool_client_id(self):
+
+    @classmethod
+    def user_pool_client_id(cls):
         return Config.get('USERS_COGNITO_USER_POOL_CLIENT_ID')
 
     def get(self):
