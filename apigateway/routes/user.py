@@ -182,6 +182,7 @@ def handle_delete_user(user_id):
     for account_id in account_ids:
         account = Account(account_id)
         account.remove_user(user_id)
+    UserData(user.id).delete()
     user.delete()
     return {'message': 'Success'}
 
