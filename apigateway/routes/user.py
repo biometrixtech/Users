@@ -10,7 +10,8 @@ from fathomapi.api.config import Config
 from fathomapi.comms.service import Service
 from fathomapi.comms.legacy import query_postgres_sync
 from fathomapi.utils.decorators import require
-from fathomapi.utils.exceptions import DuplicateEntityException, UnauthorizedException, NoSuchEntityException, ForbiddenException, ApplicationException, InvalidSchemaException
+from fathomapi.utils.exceptions import DuplicateEntityException, UnauthorizedException, NoSuchEntityException, \
+    ForbiddenException, ApplicationException, InvalidSchemaException, NoUpdatesException
 
 from utils import ftin_to_metres, lb_to_kg
 from models.account import Account
@@ -134,6 +135,24 @@ def metricise_values():
                 request.json['biometric_data']['mass']['kg'] = lb_to_kg(mass['lb'])
 
 
+@user_app.route('/forgot_password', methods=['POST'])
+@require.body({'personal_data': {'email': str}})
+@xray_recorder.capture('routes.user.forgotpassword')
+def handle_user_forgot_password():
+    user = User(request.json['personal_data']['email'])
+    user.send_password_reset()
+    return {'message': 'Success'}, 200
+
+
+@user_app.route('/reset_password', methods=['POST'])
+@require.body({'personal_data': {'email': str}, 'confirmation_code': str, 'password': str})
+@xray_recorder.capture('routes.user.resetpassword')
+def handle_user_reset_password():
+    user = User(request.json['personal_data']['email'])
+    user.send_password_reset()
+    return {'message': 'Success'}, 200
+
+
 @user_app.route('/<uuid:user_id>/authorize', methods=['POST'])
 @require.body({'session_token': str})
 @xray_recorder.capture('routes.user.authorise')
@@ -165,7 +184,7 @@ def handle_user_logout(user_id):
 @require.authenticated.any
 @require.body({})
 @xray_recorder.capture('routes.user.patch')
-def update_user(user_id):
+def handle_user_patch(user_id):
     xray_recorder.current_segment().put_annotation('user_id', user_id)
 
     if 'role' in request.json:
@@ -181,7 +200,7 @@ def update_user(user_id):
 @user_app.route('/<uuid:user_id>', methods=['DELETE'])
 @require.authenticated.any
 @xray_recorder.capture('routes.user.delete')
-def handle_delete_user(user_id):
+def handle_user_delete(user_id):
     user = User(user_id)
     account_ids = user.get()['account_ids']
     for account_id in account_ids:
@@ -197,6 +216,21 @@ def handle_delete_user(user_id):
 @xray_recorder.capture('routes.user.get')
 def handle_user_get(user_id):
     return {'user': User(user_id).get()}
+
+
+@user_app.route('/<uuid:user_id>', methods=['POST'])
+@require.authenticated.self
+@require.body({'session_token': str, 'password': str, 'old_password': str})
+@xray_recorder.capture('routes.user.get')
+def handle_user_change_password(user_id):
+    user = User(user_id)
+
+    if request.json['password'] == request.json['old_password']:
+        raise NoUpdatesException
+
+    user.change_password(request.json['session_token'], request.json['old_password'], request.json['password'])
+
+    return {'message': 'Success'}
 
 
 def _attempt_cognito_migration(user, email, password):
@@ -221,7 +255,7 @@ def _attempt_cognito_migration(user, email, password):
 
     # Change the password in cognito
     user.change_password(
-        temp_authorisation['jwt'],
+        temp_authorisation['session_token'],
         Config.get('MIGRATION_DEFAULT_PASSWORD'),
         password
     )

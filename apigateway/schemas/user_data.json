@@ -52,11 +52,7 @@
                     "description": "Mass"
                 }
             },
-            "required": [
-                "height",
-                "mass",
-                "sex"
-            ],
+            "required": [],
             "additionalProperties": false
         },
         "cleared_to_play": {
@@ -110,10 +106,7 @@
                 }
             },
             "required": [
-                "birth_date",
-                "email",
-                "first_name",
-                "last_name"
+                "email"
             ]
         },
         "sensor_pid": {
@@ -131,14 +124,7 @@
         }
     },
     "required": [
-        "agreed_privacy_policy",
-        "agreed_terms_of_use",
-        "biometric_data",
-        "personal_data",
-        "cleared_to_play",
-        "system_type",
-        "injury_status",
-        "onboarding_status"
+        "personal_data"
     ],
     "additionalProperties": false
 }
