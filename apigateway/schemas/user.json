@@ -13,12 +13,7 @@
             "description": "Role",
             "enum": [
                 "admin" ,
-                "athlete",
-                "biometrix_admin",
-                "consumer",
-                "manager",
-                "subject",
-                "super_admin"
+                "athlete"
             ]
         },
         "password": {

@@ -6,7 +6,7 @@ from fathomapi.models.cognito_entity import CognitoEntity
 from models.user_data import UserData
 from utils import metres_to_ftin, kg_to_lb
 
-cognito_client = boto3.client('cognito-idp')
+_cognito_client = boto3.client('cognito-idp')
 
 
 class User(CognitoEntity):
@@ -46,9 +46,24 @@ class User(CognitoEntity):
             del ret['email']
         return ret
 
-    def change_password(self, access_token, old_password, new_password):
-        cognito_client.change_password(
-            AccessToken=access_token,
+    def change_password(self, session_token, old_password, new_password):
+        auth = self._login_token(session_token)
+        _cognito_client.change_password(
+            AccessToken=auth['access_token'],
             PreviousPassword=old_password,
             ProposedPassword=new_password,
+        )
+
+    def send_password_reset(self):
+        _cognito_client.forgot_password(
+            ClientId=self.user_pool_client_id(),
+            Username=self.id
+        )
+
+    def reset_password(self, confirmation_code, password):
+        _cognito_client.confirm_forgot_password(
+            ClientId=self.user_pool_client_id(),
+            Username=self.id,
+            ConfirmationCode=confirmation_code,
+            Password=password
         )
