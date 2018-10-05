@@ -34,7 +34,10 @@ def handle_activeusers():
     plans_service = Service('plans', '1_0')
     now = datetime.datetime.now()
     for user in active_users:
-        execute_at = now + datetime.timedelta(seconds=random.randint(0, 60))
-        plans_service.call_apigateway_async('POST', f'/athlete/{user.id}/active', execute_at=execute_at)
+        print(user)
+        # user_id = user['sub']
+        # body = {"timezone": timezone}
+        # execute_at = now + datetime.timedelta(seconds=random.randint(0, 60))
+        # plans_service.call_apigateway_async('POST', f'/athlete/{user.id}/active', body=body, execute_at=execute_at)
 
     return {'status': 'Success'}
