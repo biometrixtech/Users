@@ -50,7 +50,7 @@ def service_handler(event, _):
     if os.environ['ENVIRONMENT'] == 'dev':
         delta = datetime.timedelta(days=1)
     else:
-        delta = datetime.timedelta(seconds=60)
+        delta = datetime.timedelta(days=1)
 
     token = {
         "auth_time": 1538835893,
