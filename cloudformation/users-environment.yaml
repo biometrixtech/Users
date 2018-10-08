@@ -658,6 +658,7 @@ Resources:
                           - "sns:DeleteEndpoint"
                           - "sns:Publish"
                           - "sqs:ListQueues"
+                          - "sqs:SendMessage"
                         Effect: "Allow"
                         Resource: "*"
             RoleName: { "Fn::Sub": "users-${Environment}-apigateway-execute-${AWS::Region}" }
