@@ -22,8 +22,7 @@
         }
     },
     "required": [
-        "email",
-        "role"
+        "email"
     ],
     "additionalProperties": false
 }

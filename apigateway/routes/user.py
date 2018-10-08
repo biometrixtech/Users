@@ -56,7 +56,7 @@ def user_login():
 
 
 @user_app.route('/', methods=['POST'])
-@require.body({'personal_data': {'email': str}, 'password': str, 'account_code': str})
+@require.body({'personal_data': {'email': str}, 'password': str})
 @xray_recorder.capture('routes.user.post')
 def create_user():
     """
@@ -74,12 +74,15 @@ def create_user():
     # Get the metric values for height and mass if only imperial values were given
     metricise_values()
 
-    try:
-        account = Account.get_from_code(request.json['account_code'])
-        xray_recorder.current_segment().put_annotation('account_id', account.id)
-        request.json['account_ids'] = [account.id]
-    except NoSuchEntityException:
-        raise NoSuchEntityException('Unrecognised account_code')
+    if 'account_code' in request.json:
+        try:
+            account = Account.get_from_code(request.json['account_code'])
+            xray_recorder.current_segment().put_annotation('account_id', account.id)
+            request.json['account_ids'] = [account.id]
+        except NoSuchEntityException:
+            raise NoSuchEntityException('Unrecognised account_code')
+    else:
+        account = None
 
     user = User(request.json['personal_data']['email'])
 
@@ -94,7 +97,8 @@ def create_user():
         xray_recorder.current_segment().put_annotation('user_id', user.id)
 
         try:
-            account.add_user(user.id)
+            if account is not None:
+                account.add_user(user.id)
 
             try:
                 UserData(user.id).create(request.json)
