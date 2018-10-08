@@ -100,19 +100,13 @@ def create_user():
                 UserData(user.id).create(request.json)
 
             except Exception:
-                try:
-                    UserData(user.id).delete()
-                except Exception as e2:
-                    print(e2)
+                _do_without_error(lambda: UserData(user.id).delete())
                 raise
         except Exception:
-            try:
-                account.remove_user(user.id)
-            except Exception as e2:
-                print(e2)
+            _do_without_error(lambda: account.remove_user(user.id))
             raise
     except Exception:
-        user.delete()
+        _do_without_error(lambda: user.delete())
         raise
 
     res = {
@@ -121,6 +115,17 @@ def create_user():
     }
 
     return res, 201
+
+
+def _do_without_error(f):
+    """
+    Invoke a function, catching and ignoring all errors
+    :param callable f:
+    """
+    try:
+        f()
+    except Exception as e:
+        print(e)
 
 
 def metricise_values():
