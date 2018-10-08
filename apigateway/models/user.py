@@ -1,5 +1,4 @@
 import boto3
-import json
 
 from fathomapi.api.config import Config
 from fathomapi.models.cognito_entity import CognitoEntity
@@ -12,10 +11,7 @@ _cognito_client = boto3.client('cognito-idp')
 class User(CognitoEntity):
     def __init__(self, email):
         super().__init__({'email': email})
-
-    @property
-    def username(self):
-        return self.primary_key['email']
+        self._id = email
 
     @classmethod
     def user_pool_id(cls):
