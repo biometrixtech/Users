@@ -15,7 +15,7 @@ produces:
   - application/json
 
 paths:
-    /user/sign_in:
+    /user/login:
         # x-summary: Login
         post:
             description: >-
@@ -30,21 +30,28 @@ paths:
                 schema:
                     type: object
                     properties:
-                        email:
-                            type: string
-                            example: 'glitch0@fathomai.com'
-                            description: 'The email address that the user registered with.'
+                        personal_data:
+                            type: object
+                            properties:
+                                email:
+                                    type: string
+                                    example: 'glitch0@fathomai.com'
+                                    description: 'The email address that the user registered with.'
+                            required:
+                              - email
                         password:
                             type: string
                             example: 'oatcakes'
                             # minLength: 8
                             description: '__must__ be a string containing 8 or more characters, with no leading or trailing spaces.'
                     required:
-                        - email
-                        - password
+                      - personal_data
+                      - password
                     example: >-
                         {
-                            "email": "glitch0@fathomai.com",
+                            "personal_data": {
+                                 "email": "glitch0@fathomai.com"
+                            },
                             "password": "oatcakes"
                         }
             responses:
@@ -74,6 +81,86 @@ paths:
                         willing to reveal that fact (note that the Service __may__ choose
                         to reply with `400 Unauthorized` in this instance, for security
                         reasons).
+            tags:
+              - user
+
+    /user/forgot_password:
+        post:
+            description: >-
+                This endpoint can be called by a client to trigger a password reset for a user.
+            parameters:
+              - name: body
+                in: body
+                required: true
+                schema:
+                    type: object
+                    properties:
+                        personal_data:
+                            type: object
+                            properties:
+                                email:
+                                    type: string
+                                    example: 'glitch0@fathomai.com'
+                                    description: 'The email address that the user registered with.'
+                            required:
+                              - email
+                    required:
+                      - personal_data
+                    example: >-
+                        {
+                            "personal_data": {
+                                 "email": "glitch0@fathomai.com"
+                            }
+                        }
+            responses:
+                200:
+                    description: 'Success'
+                404:
+                    description: 'No such user'
+            tags:
+              - user
+
+    /user/reset_password:
+        post:
+            description: >-
+                This endpoint can be called by a client to reset a password with a confirmation code.
+            parameters:
+              - name: body
+                in: body
+                required: true
+                schema:
+                    type: object
+                    properties:
+                        personal_data:
+                            type: object
+                            properties:
+                                email:
+                                    type: string
+                                    example: 'glitch0@fathomai.com'
+                                    description: 'The email address that the user registered with.'
+                            required:
+                              - email
+                        confirmation_code:
+                            type: string
+                        password:
+                            type: string
+                    required:
+                      - personal_data
+                      - confirmation_code
+                      - password
+                    example: >-
+                        {
+                            "personal_data": {
+                                 "email": "glitch0@fathomai.com"
+                            },
+                            "confirmation_code": "123456",
+                            "password": "garibaldis"
+                        }
+            responses:
+                200:
+                    description: 'Success'
+                404:
+                    description: 'No such user'
             tags:
               - user
 
@@ -179,6 +266,41 @@ paths:
                     description: 'Logout successful'
                 401:
                     description: 'Invalid authentication'
+                404:
+                    description: 'No such user'
+            tags:
+              - user
+
+    /user/{user_id}/change_password:
+        post:
+            description: >-
+                This endpoint can be called by a client to change a user's password.
+            parameters:
+              - name: body
+                in: body
+                required: true
+                schema:
+                    type: object
+                    properties:
+                        old_password:
+                            type: string
+                        password:
+                            type: string
+                        session_token:
+                            type: string
+                    required:
+                      - old_password
+                      - password
+                      - session_token
+                    example: >-
+                        {
+                            "old_password": "oatcakes",
+                            "password": "garibaldis",
+                            "session_token": "..."
+                        }
+            responses:
+                200:
+                    description: 'Success'
                 404:
                     description: 'No such user'
             tags:
@@ -352,10 +474,18 @@ definitions:
         title: User
         type: object
         properties:
+            account_ids:
+                type: array
+                items:
+                    $ref: '#/definitions/Uuid'
+            agreed_privacy_policy:
+                type: boolean
+            agreed_terms_of_use:
+                type: boolean
             biometric_data:
                 type: object
                 properties:
-                    gender:
+                    sex:
                         $ref: '#/definitions/Gender'
                     height:
                         type: object
@@ -377,17 +507,33 @@ definitions:
                             kg:
                                 type: number
                                 minimum: 0
+            cleared_to_play:
+                type: boolean
             created_date:
                 $ref: '#/definitions/Datetime'
             deleted_date:
                 $ref: '#/definitions/Datetime'
             id:
                 $ref: '#/definitions/Uuid'
+            injury_status:
+                type: string
+            migrated_date:
+                $ref: '#/definitions/Datetime'
+            mobile_udid:
+                type: string
+            onboarding_status:
+                type: array
+                items:
+                    type: string
             organization_id:
                 $ref: '#/definitions/Uuid'
             personal_data:
                 type: object
                 properties:
+                    account_status:
+                        type: string
+                    account_type:
+                        type: string
                     birth_date:
                         $ref: '#/definitions/Date'
                     email:
@@ -396,9 +542,7 @@ definitions:
                         type: string
                     last_name:
                         type: string
-                    phone_number:
-                        type: string
-                    position:
+                    zip_code:
                         type: string
             role:
                 type: string
@@ -410,52 +554,14 @@ definitions:
                   - biometrix_admin
                   - subject
                   - consumer
+            sensor_pid:
+                type: string
+            system_type:
+                type: string
+            timezone:
+                type: string
             updated_date:
                 $ref: '#/definitions/Datetime'
-            training_status:
-                type: string
-                enum:
-                  - todo
-            teams:
-                type: array
-                items:
-                    $ref: '#/definitions/Team'
-            training_groups:
-                type: array
-                items:
-                    $ref: '#/definitions/TrainingGroup'
-
-    Team:
-        title: 'Team'
-        type: object
-        properties:
-            id:
-                $ref: '#/definitions/Uuid'
-            name:
-                type: string
-            organization_id:
-                $ref: '#/definitions/Uuid'
-            sport_id:
-                $ref: '#/definitions/Uuid'
-            created_date:
-                $ref: '#/definitions/Datetime'
-            updated_date:
-                $ref: '#/definitions/Datetime'
-            athlete_subscriptions:
-                type: integer
-                minimum: 0
-            athlete_manager_subscriptions:
-                type: integer
-                minimum: 0
-            gender:
-                $ref: '#/definitions/Gender'
-
-    TrainingGroup:
-        title: 'Training Group'
-        type: object
-        properties:
-            id:
-                $ref: '#/definitions/Uuid'
 
     Device:
         title: 'Device'
