@@ -158,7 +158,7 @@ def handle_user_forgot_password():
 @xray_recorder.capture('routes.user.resetpassword')
 def handle_user_reset_password():
     user = User(request.json['personal_data']['email'])
-    user.send_password_reset()
+    user.reset_password(request.json['confirmation_code'], request.json['password'])
     return {'message': 'Success'}, 200
 
 
