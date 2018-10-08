@@ -63,7 +63,7 @@ def service_handler(event, _):
         'iat': datetime.datetime.utcnow(),
         'sub': '00000000-0000-4000-8000-000000000000',
     }
-    return {'token': jwt.encode(token, rs256_key, algorithm='RS256')}
+    return {'token': jwt.encode(token, rs256_key, headers={'kid': rs256_key['kid']}, algorithm='RS256')}
 
 
 def get_user_id_from_request(event):
