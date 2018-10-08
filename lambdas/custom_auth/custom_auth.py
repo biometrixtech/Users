@@ -63,7 +63,6 @@ def service_handler(event, _):
         'iat': datetime.datetime.utcnow(),
         'sub': '00000000-0000-4000-8000-000000000000',
     }
-    print(json.dumps(token))
     return {'token': jwt.encode(token, rs256_key, algorithm='RS256')}
 
 
