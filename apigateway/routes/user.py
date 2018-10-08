@@ -227,10 +227,10 @@ def handle_user_get(user_id):
     return {'user': User(user_id).get()}
 
 
-@user_app.route('/<uuid:user_id>', methods=['POST'])
+@user_app.route('/<uuid:user_id>/change_password', methods=['POST'])
 @require.authenticated.self
 @require.body({'session_token': str, 'password': str, 'old_password': str})
-@xray_recorder.capture('routes.user.get')
+@xray_recorder.capture('routes.user.change_password')
 def handle_user_change_password(user_id):
     user = User(user_id)
 
