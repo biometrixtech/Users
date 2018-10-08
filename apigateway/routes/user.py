@@ -294,7 +294,7 @@ def handle_user_notify(user_id):
     if request.json['call_to_action'] == 'COMPLETE_DAILY_READINESS':
         user = User(user_id).get()
         first_name = user['personal_data']['first_name']
-        message = message.format(user_id=first_name)
+        message = message.format(first_name=first_name)
     payload = {
         'message': message,
         'call_to_action': request.json['call_to_action'],
