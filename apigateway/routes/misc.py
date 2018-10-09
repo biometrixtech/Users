@@ -39,8 +39,10 @@ def handle_activeusers():
             body = {"timezone": timezone}
         else:
             body = {"timezone": "-05:00"}
+        print(user.id, body)
         execute_at = now + datetime.timedelta(seconds=random.randint(0, 60))
-        plans_service.call_apigateway_async('POST', f'/athlete/{user.id}/active', body=body, execute_at=execute_at)
+        print(f"plans_service.call_apigateway_async('POST', f'/athlete/{user.id}/active', body=body, execute_at=execute_at))")
+        # plans_service.call_apigateway_async('POST', f'/athlete/{user.id}/active', body=body, execute_at=execute_at)
 
     return {'status': 'Success'}
 
