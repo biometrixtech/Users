@@ -36,20 +36,16 @@ def handle_activeusers():
     plans_service = Service('plans', '1_0')
     now = datetime.datetime.now()
     for user in active_users:
-        print(user.id)
         try:
             user_data = UserData(user.id).get()
         except NoSuchEntityException:
             print(f"user not found {user.id}")
             continue
-
-        print(user_data)
-        # user_data = user.get()
-        if "timezone" in user_data:
+        if "timezone" in user_data and user_data["timezone"] is not None:
             body = {"timezone": user_data["timezone"]}
         else:
             body = {"timezone": "-05:00"}
-        print(user.id, body)
+        print(body)
         execute_at = now + datetime.timedelta(seconds=random.randint(0, 60))
         print(f"plans_service.call_apigateway_async('POST', f'/athlete/{user.id}/active', body=body, execute_at=execute_at))")
         # plans_service.call_apigateway_async('POST', f'/athlete/{user.id}/active', body=body, execute_at=execute_at)
