@@ -35,6 +35,7 @@ def handle_activeusers():
 
     plans_service = Service('plans', '1_0')
     now = datetime.datetime.now()
+    count = 0
     for user in active_users:
         try:
             user_data = UserData(user.id).get()
@@ -45,10 +46,10 @@ def handle_activeusers():
             body = {"timezone": user_data["timezone"]}
         else:
             body = {"timezone": "-05:00"}
-        print(body)
         execute_at = now + datetime.timedelta(seconds=random.randint(0, 60))
-        print(f"plans_service.call_apigateway_async('POST', f'/athlete/{user.id}/active', body=body, execute_at=execute_at))")
-        # plans_service.call_apigateway_async('POST', f'/athlete/{user.id}/active', body=body, execute_at=execute_at)
+        plans_service.call_apigateway_async('POST', f'/athlete/{user.id}/active', body=body, execute_at=execute_at)
+        count += 1
+        print("users processed:", count)
 
     return {'status': 'Success'}
 
