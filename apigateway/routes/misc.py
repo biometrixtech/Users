@@ -8,6 +8,7 @@ from fathomapi.comms.service import Service
 from fathomapi.utils.decorators import require
 
 from models.user import User
+from models.user_data import UserData
 
 misc_app = Blueprint('misc', __name__)
 
@@ -35,7 +36,9 @@ def handle_activeusers():
     now = datetime.datetime.now()
     for user in active_users:
         print(user)
-        user_data = user.get()
+        user_data = UserData(user.id).get()
+        print(user_data)
+        # user_data = user.get()
         if "timezone" in user_data:
             body = {"timezone": timezone}
         else:
