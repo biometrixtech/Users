@@ -56,7 +56,7 @@ def user_login():
 
 
 @user_app.route('/', methods=['POST'])
-@require.body({'personal_data': {'email': str}, 'password': str, 'account_code': str})
+@require.body({'personal_data': {'email': str}, 'password': str})
 @xray_recorder.capture('routes.user.post')
 def create_user():
     """
@@ -74,12 +74,15 @@ def create_user():
     # Get the metric values for height and mass if only imperial values were given
     metricise_values()
 
-    try:
-        account = Account.get_from_code(request.json['account_code'])
-        xray_recorder.current_segment().put_annotation('account_id', account.id)
-        request.json['account_ids'] = [account.id]
-    except NoSuchEntityException:
-        raise NoSuchEntityException('Unrecognised account_code')
+    if 'account_code' in request.json:
+        try:
+            account = Account.get_from_code(request.json['account_code'])
+            xray_recorder.current_segment().put_annotation('account_id', account.id)
+            request.json['account_ids'] = [account.id]
+        except NoSuchEntityException:
+            raise NoSuchEntityException('Unrecognised account_code')
+    else:
+        account = None
 
     user = User(request.json['personal_data']['email'])
 
@@ -94,25 +97,20 @@ def create_user():
         xray_recorder.current_segment().put_annotation('user_id', user.id)
 
         try:
-            account.add_user(user.id)
+            if account is not None:
+                account.add_user(user.id)
 
             try:
                 UserData(user.id).create(request.json)
 
             except Exception:
-                try:
-                    UserData(user.id).delete()
-                except Exception as e2:
-                    print(e2)
+                _do_without_error(lambda: UserData(user.id).delete())
                 raise
         except Exception:
-            try:
-                account.remove_user(user.id)
-            except Exception as e2:
-                print(e2)
+            _do_without_error(lambda: account.remove_user(user.id))
             raise
     except Exception:
-        user.delete()
+        _do_without_error(lambda: user.delete())
         raise
 
     res = {
@@ -121,6 +119,17 @@ def create_user():
     }
 
     return res, 201
+
+
+def _do_without_error(f):
+    """
+    Invoke a function, catching and ignoring all errors
+    :param callable f:
+    """
+    try:
+        f()
+    except Exception as e:
+        print(e)
 
 
 def metricise_values():
@@ -149,7 +158,7 @@ def handle_user_forgot_password():
 @xray_recorder.capture('routes.user.resetpassword')
 def handle_user_reset_password():
     user = User(request.json['personal_data']['email'])
-    user.send_password_reset()
+    user.reset_password(request.json['confirmation_code'], request.json['password'])
     return {'message': 'Success'}, 200
 
 
@@ -218,10 +227,10 @@ def handle_user_get(user_id):
     return {'user': User(user_id).get()}
 
 
-@user_app.route('/<uuid:user_id>', methods=['POST'])
+@user_app.route('/<uuid:user_id>/change_password', methods=['POST'])
 @require.authenticated.self
 @require.body({'session_token': str, 'password': str, 'old_password': str})
-@xray_recorder.capture('routes.user.get')
+@xray_recorder.capture('routes.user.change_password')
 def handle_user_change_password(user_id):
     user = User(user_id)
 

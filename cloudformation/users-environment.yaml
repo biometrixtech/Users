@@ -627,6 +627,7 @@ Resources:
                           - "cognito-idp:AdminRespondToAuthChallenge"
                           - "cognito-idp:AdminUpdateUserAttributes"
                           - "cognito-idp:AdminUserGlobalSignOut"
+                          - "cognito-idp:ListUsers"
                         Effect: "Allow"
                         Resource: { "Fn::GetAtt": [ "UsersCognitoUserPool", "Arn" ] }
                       - Action:
@@ -657,6 +658,7 @@ Resources:
                           - "sns:DeleteEndpoint"
                           - "sns:Publish"
                           - "sqs:ListQueues"
+                          - "sqs:SendMessage"
                         Effect: "Allow"
                         Resource: "*"
             RoleName: { "Fn::Sub": "users-${Environment}-apigateway-execute-${AWS::Region}" }
