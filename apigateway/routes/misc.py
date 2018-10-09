@@ -34,10 +34,13 @@ def handle_activeusers():
     plans_service = Service('plans', '1_0')
     now = datetime.datetime.now()
     for user in active_users:
-        print(user)
-        # user_id = user['sub']
-        # body = {"timezone": timezone}
-        # execute_at = now + datetime.timedelta(seconds=random.randint(0, 60))
-        # plans_service.call_apigateway_async('POST', f'/athlete/{user.id}/active', body=body, execute_at=execute_at)
+        user_data = user.get()
+        if "timezone" in user_data:
+            body = {"timezone": timezone}
+        else:
+            body = {"timezone": "-05:00"}
+        execute_at = now + datetime.timedelta(seconds=random.randint(0, 60))
+        plans_service.call_apigateway_async('POST', f'/athlete/{user.id}/active', body=body, execute_at=execute_at)
 
     return {'status': 'Success'}
+
