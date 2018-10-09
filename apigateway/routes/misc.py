@@ -34,6 +34,7 @@ def handle_activeusers():
     plans_service = Service('plans', '1_0')
     now = datetime.datetime.now()
     for user in active_users:
+        print(user)
         user_data = user.get()
         if "timezone" in user_data:
             body = {"timezone": timezone}
