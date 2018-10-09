@@ -6,6 +6,7 @@ import random
 from fathomapi.api.config import Config
 from fathomapi.comms.service import Service
 from fathomapi.utils.decorators import require
+from fathomapi.utils.exceptions import NoSuchEntityException
 
 from models.user import User
 from models.user_data import UserData
@@ -35,12 +36,17 @@ def handle_activeusers():
     plans_service = Service('plans', '1_0')
     now = datetime.datetime.now()
     for user in active_users:
-        print(user)
-        user_data = UserData(user.id).get()
+        print(user.id)
+        try:
+            user_data = UserData(user.id).get()
+        except NoSuchEntityException:
+            print(f"user not found {user.id}")
+            continue
+
         print(user_data)
         # user_data = user.get()
         if "timezone" in user_data:
-            body = {"timezone": timezone}
+            body = {"timezone": user_data["timezone"]}
         else:
             body = {"timezone": "-05:00"}
         print(user.id, body)
