@@ -5,6 +5,7 @@ import uuid
 from fathomapi.utils.decorators import require
 
 from models.account import Account
+from models.account_code import AccountCodes
 
 account_app = Blueprint('account', __name__)
 
@@ -14,6 +15,7 @@ account_app = Blueprint('account', __name__)
 @require.authenticated.service
 @xray_recorder.capture('routes.account.create')
 def create_account():
+	request.json['code'] = AccountCodes().get_unused_code()
     return {'account': Account(str(uuid.uuid4())).create(request.json)}, 201
 
 

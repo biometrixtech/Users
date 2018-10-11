@@ -235,6 +235,30 @@ Resources:
               - { Key: "Service", Value: "accounts" }
         DeletionPolicy : "Retain"
 
+    AccountCodesTable:
+        Type: "AWS::DynamoDB::Table"
+        Properties:
+            TableName: { "Fn::Sub": "users-${Environment}-accountcodes" }
+            AttributeDefinitions:
+              - { AttributeName: "id", AttributeType: "S" }
+              - { AttributeName: "claimed", AttributeType: "S" }
+            KeySchema:
+              - { AttributeName: "id", KeyType: "HASH" }
+            ProvisionedThroughput:
+                ReadCapacityUnits: { Ref: "DynamodbReadCapacity" }
+                WriteCapacityUnits: { Ref: "DynamodbWriteCapacity" }
+            GlobalSecondaryIndexes:
+              - IndexName: "claimed"
+                KeySchema:
+                  - { AttributeName: "claimed", KeyType: "HASH" }
+            Tags:
+              - { Key: "Name", Value: { "Fn::Sub": "users-${Environment}-accountcodes" } }
+              - { Key: "Management", Value: "managed" }
+              - { Key: "Project", Value: "users" }
+              - { Key: "Environment", Value: { Ref: "Environment" } }
+              - { Key: "Service", Value: "accountcodes" }
+        DeletionPolicy : "Retain"
+
     ##########################################################################################################
     ##  IOT
     ##########################################################################################################
@@ -666,6 +690,8 @@ Resources:
                           - { "Fn::Sub": "${PushNotificationsTable.Arn}/*" }
                           - { "Fn::Sub": "${AccountsTable.Arn}" }
                           - { "Fn::Sub": "${AccountsTable.Arn}/*" }
+                          - { "Fn::Sub": "${AccountCodesTable.Arn}" }
+                          - { "Fn::Sub": "${AccountCodesTable.Arn}/*" }
                       - Action:
                           - "iot:AddThingToThingGroup"
                           - "iot:AttachPrincipalPolicy"
@@ -728,6 +754,7 @@ Resources:
                     USERS_COGNITO_USER_POOL_CLIENT_ID: { Ref: "UsersCognitoUserPoolClient" }
                     PUSHNOTIFICATIONS_DYNAMODB_TABLE_NAME: { Ref: "PushNotificationsTable" }
                     ACCOUNTS_DYNAMODB_TABLE_NAME: { Ref: "AccountsTable" }
+                    ACCOUNTCODES_DYNAMODB_TABLE_NAME: { Ref: "AccountCodesTable" }
             Handler: "apigateway.handler"
             Runtime: "python3.6"
             Timeout: "30"
