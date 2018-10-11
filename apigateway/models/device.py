@@ -18,11 +18,11 @@ class Device(IotEntity):
 
     @property
     def push_notifications_endpoint(self):
-        return self.get()['push_notifications']['endpoint']
+        return super().get()['push_notifications']['endpoint']
 
     @property
     def push_notifications_enabled(self):
-        return self.get()['push_notifications']['enabled']
+        return super().get()['push_notifications']['enabled']
 
     def create(self, body):
         self.validate('PUT', body)

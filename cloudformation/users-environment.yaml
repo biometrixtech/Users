@@ -57,7 +57,7 @@ Parameters:
 Mappings:
     TemplateVersion:
         Self: { Commit: "da39a3ee5e6b4b0d3255bfef95601890afd80709" }
-        Infrastructure: { Commit: "a551dec836feca4d393d9c967bbec4c7e6829b31" }
+        Infrastructure: { Commit: "7c6f66762804ded587ed4fa2085705f0a46892cd" }
 
 Metadata:
     "AWS::CloudFormation::Interface":
@@ -627,6 +627,7 @@ Resources:
                           - "cognito-idp:AdminRespondToAuthChallenge"
                           - "cognito-idp:AdminUpdateUserAttributes"
                           - "cognito-idp:AdminUserGlobalSignOut"
+                          - "cognito-idp:ListUsers"
                         Effect: "Allow"
                         Resource: { "Fn::GetAtt": [ "UsersCognitoUserPool", "Arn" ] }
                       - Action:
@@ -657,6 +658,9 @@ Resources:
                           - "sns:DeleteEndpoint"
                           - "sns:Publish"
                           - "sqs:ListQueues"
+                          - "sqs:SendMessage"
+                          - "ses:SendEmail"
+                          - "ses:SendRawEmail"
                         Effect: "Allow"
                         Resource: "*"
             RoleName: { "Fn::Sub": "users-${Environment}-apigateway-execute-${AWS::Region}" }

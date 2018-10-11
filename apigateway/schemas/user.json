@@ -13,22 +13,20 @@
             "description": "Role",
             "enum": [
                 "admin" ,
-                "athlete",
-                "biometrix_admin",
-                "consumer",
-                "manager",
-                "subject",
-                "super_admin"
+                "athlete"
             ]
         },
         "password": {
             "type": "string",
             "readonly": true
+        },
+        "email_verified": {
+            "enum": ["true", "false"]
         }
     },
     "required": [
         "email",
-        "role"
+        "password"
     ],
     "additionalProperties": false
 }
