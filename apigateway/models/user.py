@@ -23,9 +23,9 @@ class User(CognitoEntity):
     def user_pool_client_id(cls):
         return Config.get('USERS_COGNITO_USER_POOL_CLIENT_ID')
 
-    def get(self):
-        ret = super().get()
-        ret.update(UserData(ret['id']).get())
+    def get(self, include_internal_properties=False):
+        ret = super().get(include_internal_properties)
+        ret.update(UserData(ret['id']).get(include_internal_properties))
         self._munge_response(ret)
         return ret
 
@@ -67,10 +67,8 @@ class User(CognitoEntity):
         )
 
     def verify_email(self, confirmation_code):
-        if self.get()['email_confirmation_code'] == confirmation_code:
-            self._patch(
-                ['email_verified', 'email_confirmation_code'],
-                {'email_verified': 'true', 'email_confirmation_code': None}
-            )
+        if self.get(True)['_email_confirmation_code'] == confirmation_code:
+            self._patch(['email_verified'], {'email_verified': 'true'})
+            UserData(self.id).patch({'_email_confirmation_code': None})
         else:
             raise UnauthorizedException('Incorrect Confirmation Code')

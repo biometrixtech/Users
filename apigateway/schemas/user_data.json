@@ -63,6 +63,9 @@
             "type": "string",
             "readonly": true
         },
+        "_email_confirmation_code": {
+            "type": "string"
+        },
         "injury_status": {
             "enum": [ "healthy", "injured", "healthy_chronically_injured" ]
         },

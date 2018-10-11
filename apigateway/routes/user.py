@@ -74,7 +74,7 @@ def create_user():
         request.json['email_verified'] = 'true'
     else:
         request.json['email_verified'] = 'false'
-        request.json['email_confirmation_code'] = binascii.b2a_hex(os.urandom(12))
+        request.json['_email_confirmation_code'] = binascii.b2a_hex(os.urandom(12)).decode()
         if 'migrated_date' in request.json:
             del request.json['migrated_date']
 
@@ -121,11 +121,11 @@ def create_user():
         raise
 
     # Send confirmation code
-    send_ses_email(
-        request.json['personal_data']['email'],
-        'Confirm your account',
-        f'Your Fathomai email confirmation code is {request.json["email_confirmation_code"]}'
-    )
+    # send_ses_email(
+    #     request.json['personal_data']['email'],
+    #     'Confirm your account',
+    #     f'Your Fathomai email confirmation code is {request.json["_email_confirmation_code"]}'
+    # )
 
     res = {
         'user': user.get(),
@@ -169,7 +169,7 @@ def handle_user_forgot_password():
 
 @user_app.route('/reset_password', methods=['POST'])
 @require.body({'personal_data': {'email': str}, 'confirmation_code': str, 'password': str})
-@xray_recorder.capture('routes.user.resetpassword')
+@xray_recorder.capture('routes.user.reset_password')
 def handle_user_reset_password():
     user = User(request.json['personal_data']['email'])
     user.reset_password(request.json['confirmation_code'], request.json['password'])
