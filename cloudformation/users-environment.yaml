@@ -659,6 +659,8 @@ Resources:
                           - "sns:Publish"
                           - "sqs:ListQueues"
                           - "sqs:SendMessage"
+                          - "ses:SendEmail"
+                          - "ses:SendRawEmail"
                         Effect: "Allow"
                         Resource: "*"
             RoleName: { "Fn::Sub": "users-${Environment}-apigateway-execute-${AWS::Region}" }

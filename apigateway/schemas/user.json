@@ -19,10 +19,14 @@
         "password": {
             "type": "string",
             "readonly": true
+        },
+        "email_verified": {
+            "enum": ["true", "false"]
         }
     },
     "required": [
-        "email"
+        "email",
+        "password"
     ],
     "additionalProperties": false
 }

@@ -1,14 +1,17 @@
 from aws_xray_sdk.core import xray_recorder
 from botocore.exceptions import ClientError
 from flask import Blueprint, request
+import binascii
 import boto3
 import hashlib
 import json
+import os
 import time
 
 from fathomapi.api.config import Config
 from fathomapi.comms.service import Service
 from fathomapi.comms.legacy import query_postgres_sync
+from fathomapi.comms.transport import send_ses_email
 from fathomapi.utils.decorators import require
 from fathomapi.utils.exceptions import DuplicateEntityException, UnauthorizedException, NoSuchEntityException, \
     ForbiddenException, ApplicationException, InvalidSchemaException, NoUpdatesException
@@ -68,8 +71,12 @@ def create_user():
 
     if 'User-Agent' in request.headers and request.headers['User-Agent'] == 'biometrix/cognitomigrator':
         request.json['migrated_date'] = nowdate()
-    elif 'migrated_date' in request.json:
-        del request.json['migrated_date']
+        request.json['email_verified'] = 'true'
+    else:
+        request.json['email_verified'] = 'false'
+        request.json['email_confirmation_code'] = binascii.b2a_hex(os.urandom(12))
+        if 'migrated_date' in request.json:
+            del request.json['migrated_date']
 
     # Get the metric values for height and mass if only imperial values were given
     metricise_values()
@@ -112,6 +119,13 @@ def create_user():
     except Exception:
         _do_without_error(lambda: user.delete())
         raise
+
+    # Send confirmation code
+    send_ses_email(
+        request.json['personal_data']['email'],
+        'Confirm your account',
+        f'Your Fathomai email confirmation code is {request.json["email_confirmation_code"]}'
+    )
 
     res = {
         'user': user.get(),
@@ -239,6 +253,16 @@ def handle_user_change_password(user_id):
 
     user.change_password(request.json['session_token'], request.json['old_password'], request.json['password'])
 
+    return {'message': 'Success'}
+
+
+@user_app.route('/<uuid:user_id>/verify_email', methods=['POST'])
+@require.authenticated.self
+@require.body({'confirmation_code': str})
+@xray_recorder.capture('routes.user.verify_email')
+def handle_user_verify_email(user_id):
+    user = User(user_id)
+    user.verify_email(request.json['confirmation_code'])
     return {'message': 'Success'}
 
 

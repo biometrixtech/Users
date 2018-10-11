@@ -2,6 +2,8 @@ import boto3
 
 from fathomapi.api.config import Config
 from fathomapi.models.cognito_entity import CognitoEntity
+from fathomapi.utils.exceptions import UnauthorizedException
+
 from models.user_data import UserData
 from utils import metres_to_ftin, kg_to_lb
 
@@ -28,7 +30,7 @@ class User(CognitoEntity):
         return ret
 
     def patch(self, body):
-        # None of the Cognito attributes are mutable, so we just update the DDB data
+        super().patch(body)
         user_data = UserData(self.id)
         ret = user_data.patch(body)
         self._munge_response(ret)
@@ -63,3 +65,12 @@ class User(CognitoEntity):
             ConfirmationCode=confirmation_code,
             Password=password
         )
+
+    def verify_email(self, confirmation_code):
+        if self.get()['email_confirmation_code'] == confirmation_code:
+            self._patch(
+                ['email_verified', 'email_confirmation_code'],
+                {'email_verified': 'true', 'email_confirmation_code': None}
+            )
+        else:
+            raise UnauthorizedException('Incorrect Confirmation Code')
