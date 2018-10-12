@@ -31,7 +31,7 @@ def handle_activeusers():
     # TODO definition of active
     active_users = User.get_many()
 
-    plans_service = Service('plans', '1_0')
+    plans_service = Service('plans', '2_0')
     now = datetime.datetime.now()
     for user in active_users:
         execute_at = now + datetime.timedelta(seconds=random.randint(0, 60))
