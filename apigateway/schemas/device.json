@@ -16,6 +16,9 @@
                 "android"
             ]
         },
+        "owner_id": {
+            "type": "string"
+        },
         "push_notifications": {
             "type": "object",
             "properties": {
@@ -24,11 +27,12 @@
                 },
                 "enabled": {
                     "type": "bool",
-                    "default": true
+                    "default": false
                 }
             },
             "required": [
-                "token"
+                "token",
+                "enabled"
             ]
         }
     },

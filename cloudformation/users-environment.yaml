@@ -57,7 +57,7 @@ Parameters:
 Mappings:
     TemplateVersion:
         Self: { Commit: "da39a3ee5e6b4b0d3255bfef95601890afd80709" }
-        Infrastructure: { Commit: "a551dec836feca4d393d9c967bbec4c7e6829b31" }
+        Infrastructure: { Commit: "7c6f66762804ded587ed4fa2085705f0a46892cd" }
 
 Metadata:
     "AWS::CloudFormation::Interface":
@@ -198,7 +198,25 @@ Resources:
             TimeToLiveSpecification:
                 Enabled: true
                 AttributeName: 'expires_timestamp'
+        DeletionPolicy : "Retain"
 
+    AccountsTable:
+        Type: "AWS::DynamoDB::Table"
+        Properties:
+            TableName: { "Fn::Sub": "users-${Environment}-accounts" }
+            AttributeDefinitions:
+              - { AttributeName: "id", AttributeType: "S" }
+            KeySchema:
+              - { AttributeName: "id", KeyType: "HASH" }
+            ProvisionedThroughput:
+                ReadCapacityUnits: { Ref: "DynamodbReadCapacity" }
+                WriteCapacityUnits: { Ref: "DynamodbWriteCapacity" }
+            Tags:
+              - { Key: "Name", Value: { "Fn::Sub": "users-${Environment}-accounts" } }
+              - { Key: "Management", Value: "managed" }
+              - { Key: "Project", Value: "users" }
+              - { Key: "Environment", Value: { Ref: "Environment" } }
+              - { Key: "Service", Value: "accounts" }
         DeletionPolicy : "Retain"
 
     ##########################################################################################################
@@ -593,11 +611,9 @@ Resources:
                     Statement:
                       - Action:
                           - "lambda:InvokeFunction"
-                          - "sqs:SendMessage"
                         Effect: "Allow"
                         Resource:
                           - { "Fn::Sub": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:users-${Environment}-apigateway-authenticate" }
-#                          - { "Fn::Sub": "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:users-${Environment}-apigateway-async" }
                       - Action:
                           - "secretsmanager:GetSecretValue"
                         Effect: "Allow"
@@ -610,6 +626,8 @@ Resources:
                           - "cognito-idp:AdminInitiateAuth"
                           - "cognito-idp:AdminRespondToAuthChallenge"
                           - "cognito-idp:AdminUpdateUserAttributes"
+                          - "cognito-idp:AdminUserGlobalSignOut"
+                          - "cognito-idp:ListUsers"
                         Effect: "Allow"
                         Resource: { "Fn::GetAtt": [ "UsersCognitoUserPool", "Arn" ] }
                       - Action:
@@ -624,6 +642,8 @@ Resources:
                           - { "Fn::Sub": "${UsersTable.Arn}/*" }
                           - { "Fn::Sub": "${PushNotificationsTable.Arn}" }
                           - { "Fn::Sub": "${PushNotificationsTable.Arn}/*" }
+                          - { "Fn::Sub": "${AccountsTable.Arn}" }
+                          - { "Fn::Sub": "${AccountsTable.Arn}/*" }
                       - Action:
                           - "iot:AddThingToThingGroup"
                           - "iot:AttachPrincipalPolicy"
@@ -638,6 +658,9 @@ Resources:
                           - "sns:DeleteEndpoint"
                           - "sns:Publish"
                           - "sqs:ListQueues"
+                          - "sqs:SendMessage"
+                          - "ses:SendEmail"
+                          - "ses:SendRawEmail"
                         Effect: "Allow"
                         Resource: "*"
             RoleName: { "Fn::Sub": "users-${Environment}-apigateway-execute-${AWS::Region}" }
@@ -682,6 +705,7 @@ Resources:
                     USERS_COGNITO_USER_POOL_ID: { Ref: "UsersCognitoUserPool" }
                     USERS_COGNITO_USER_POOL_CLIENT_ID: { Ref: "UsersCognitoUserPoolClient" }
                     PUSHNOTIFICATIONS_DYNAMODB_TABLE_NAME: { Ref: "PushNotificationsTable" }
+                    ACCOUNTS_DYNAMODB_TABLE_NAME: { Ref: "AccountsTable" }
             Handler: "apigateway.handler"
             Runtime: "python3.6"
             Timeout: "30"

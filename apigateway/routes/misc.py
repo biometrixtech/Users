@@ -6,6 +6,10 @@ import random
 from fathomapi.api.config import Config
 from fathomapi.comms.service import Service
 from fathomapi.utils.decorators import require
+from fathomapi.utils.exceptions import NoSuchEntityException
+
+from models.user import User
+from models.user_data import UserData
 
 misc_app = Blueprint('misc', __name__)
 
@@ -26,13 +30,23 @@ def handle_activeusers():
     # This route will be invoked daily.  It should scan to find users which meet
     # some definition of 'active', and for each one should push to the plans service with them
 
-    # TODO
-    active_users = []
+    # TODO definition of active
+    active_users = User.get_many()
 
-    plans_service = Service('plans', '1_0')
+    plans_service = Service('plans', '2_0')
     now = datetime.datetime.now()
     for user in active_users:
+        try:
+            user_data = UserData(user.id).get()
+        except NoSuchEntityException:
+            print(f"user not found {user.id}")
+            continue
+        if "timezone" in user_data and user_data["timezone"] is not None:
+            body = {"timezone": user_data["timezone"]}
+        else:
+            body = {"timezone": "-05:00"}
         execute_at = now + datetime.timedelta(seconds=random.randint(0, 60))
-        plans_service.call_apigateway_async('POST', f'/athlete/{user.id}/active', execute_at=execute_at)
+        plans_service.call_apigateway_async('POST', f'/athlete/{user.id}/active', body=body, execute_at=execute_at)
 
     return {'status': 'Success'}
+
