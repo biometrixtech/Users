@@ -290,7 +290,7 @@ def _attempt_cognito_migration(user, email, password):
     # Change the password in cognito
     user.change_password(
         temp_authorisation['session_token'],
-        Config.get('MIGRATION_DEFAULT_PASSWORD'),
+        Config.get('MIGRATION_DEFAULT_PASSWORD')['password'],
         password
     )
 
