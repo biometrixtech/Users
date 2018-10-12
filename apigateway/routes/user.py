@@ -272,7 +272,7 @@ def _attempt_cognito_migration(user, email, password):
 
     # Check that we can still log in with the migration default password
     try:
-        temp_authorisation = user.login(password=Config.get('MIGRATION_DEFAULT_PASSWORD'))
+        temp_authorisation = user.login(password=Config.get('MIGRATION_DEFAULT_PASSWORD')['password'])
     except UnauthorizedException:
         raise UnauthorizedException('Could not log in with migration default password')
 
