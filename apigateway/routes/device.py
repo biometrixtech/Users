@@ -33,7 +33,7 @@ def handle_device_register(device_id, principal_id=None):
             'public_key': cert_pub,
             'private_key': cert_priv,
         }
-    }, 201
+    }, 200
 
 
 @device_app.route('/<uuid:device_id>', methods=['PATCH'])
@@ -47,7 +47,7 @@ def handle_device_patch(device_id):
     if modified:
         return {"message": "Update successful"}, 200
     else:
-        return {"message": "No updates"}, 204
+        return {"message": "No updates"}, 202
 
 
 @device_app.route('/<uuid:device_id>', methods=['GET'])
