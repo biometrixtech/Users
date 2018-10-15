@@ -844,6 +844,14 @@ Resources:
               - Arn: { "Fn::GetAtt": [ "DailySchedulerLambda", "Arn" ] }
                 Id: "target"
 
+    DailySchedulerInvokePermission:
+        Type: "AWS::Lambda::Permission"
+        Properties:
+            FunctionName: { "Fn::GetAtt": [ "DailySchedulerLambda", "Arn" ] }
+            Action: "lambda:InvokeFunction"
+            Principal: "events.amazonaws.com"
+            SourceArn: { "Fn::GetAtt": [ "DailySchedulerScheduledRule", "Arn" ] }
+
     ##########################################################################################################
     ##  OUTPUTS
     ##########################################################################################################
