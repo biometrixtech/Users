@@ -65,8 +65,8 @@ def create_user():
     """
     Creates a new user
     """
-    if 'role' in request.json and request.json['role'] != 'athlete':
-        raise ForbiddenException('Cannot create user with elevated role')
+    # if 'role' in request.json and request.json['role'] != 'athlete':
+    #     raise ForbiddenException('Cannot create user with elevated role')
     request.json['role'] = 'athlete'
 
     if 'User-Agent' in request.headers and request.headers['User-Agent'] == 'biometrix/cognitomigrator':
@@ -212,7 +212,8 @@ def handle_user_patch(user_id):
     xray_recorder.current_segment().put_annotation('user_id', user_id)
 
     if 'role' in request.json:
-        raise UnauthorizedException('Cannot elevate user role')
+    #     raise UnauthorizedException('Cannot elevate user role')
+        request.json['role'] = 'athlete'
 
     # Get the metric values for height and mass if only imperial values were given
     metricise_values()
