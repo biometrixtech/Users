@@ -138,11 +138,13 @@ Resources:
             UsernameAttributes:
               - 'email'
             UserPoolTags:
-              Name: { "Fn::Sub": "users-${Environment}-users" }
-              Management: "managed"
-              Project: "users"
-              Environment: { Ref: "Environment" }
-              Service: "users"
+                Name: { "Fn::Sub": "users-${Environment}-users" }
+                Management: "managed"
+                Project: "users"
+                Environment: { Ref: "Environment" }
+                Service: "users"
+            EmailConfiguration:
+                SourceArn: { "Fn::Sub": "arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/hello@fathomai.com" }
         DeletionPolicy : "Retain"
 
     UsersCognitoUserPoolClient:
