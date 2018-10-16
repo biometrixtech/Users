@@ -6,10 +6,14 @@ import os
 import uuid
 import boto3
 
+from aws_xray_sdk.core import xray_recorder, patch_all
+patch_all()
+
 _secretsmanager_client = boto3.client('secretsmanager')
 _secrets = {}
 
 
+@xray_recorder.capture('custom_auth.get_secret')
 def get_secret(secret_name):
     secret_name = secret_name.lower()
     global _secrets
@@ -26,6 +30,7 @@ def get_secret(secret_name):
     return _secrets[secret_name]
 
 
+@xray_recorder.capture('custom_auth.validate_handler')
 def validate_handler(event, _):
     print(event)
 
@@ -44,6 +49,7 @@ def validate_handler(event, _):
     return ret
 
 
+@xray_recorder.capture('custom_auth.service_handler')
 def service_handler(event, _):
     rs256_key = get_secret('service_jwt_key')
 
@@ -66,6 +72,7 @@ def service_handler(event, _):
     return {'token': jwt.encode(token, rs256_key, headers={'kid': rs256_key['kid']}, algorithm='RS256')}
 
 
+@xray_recorder.capture('custom_auth.get_user_id_from_request')
 def get_user_id_from_request(event):
     raw_token = event.get('authorizationToken', None)
     if not raw_token:
@@ -104,6 +111,7 @@ def get_user_id_from_request(event):
     return user_id
 
 
+@xray_recorder.capture('custom_auth.validate_uuid4')
 def validate_uuid4(uuid_string):
     try:
         val = uuid.UUID(uuid_string, version=4)
