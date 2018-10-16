@@ -145,6 +145,20 @@ Resources:
                 Service: "users"
             EmailConfiguration:
                 SourceArn: { "Fn::Sub": "arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/hello@fathomai.com" }
+            EmailVerificationSubject: 'Password Reset'
+            EmailVerificationMessage: |
+                <p>Hi,
+                <p>We have received your request for a password reset. Please enter the following 6-digit pin in the Fathom mobile app to update your password.
+                <p><b>Pin: {####}</b>
+                <p>Your new password must include:
+                <ul>
+                    <li>8-16 characters
+                    <li>at least 1 uppercase letter
+                    <li>at least 1 number
+                </ul>
+                <p>If you did not initiate this password reset, please contact us at some.email@fathomai.com.
+                <p>Thanks,
+                <p>The Fathom Team
         DeletionPolicy : "Retain"
 
     UsersCognitoUserPoolClient:
@@ -494,6 +508,7 @@ Resources:
                     Action: "sts:AssumeRole"
             ManagedPolicyArns:
               - "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+              - "arn:aws:iam::aws:policy/AWSXrayWriteOnlyAccess"
             Policies:
               - PolicyName: "default"
                 PolicyDocument:
@@ -527,6 +542,8 @@ Resources:
               - { Key: "Project", Value: "users" }
               - { Key: "Environment", Value: { Ref: "Environment" } }
               - { Key: "Service", Value: "apigateway" }
+            TracingConfig:
+                Mode: "Active"
 
     ServiceAuthLambda:
         Type: "AWS::Lambda::Function"
@@ -550,6 +567,8 @@ Resources:
               - { Key: "Project", Value: "users" }
               - { Key: "Environment", Value: { Ref: "Environment" } }
               - { Key: "Service", Value: "apigateway" }
+            TracingConfig:
+                Mode: "Active"
 
     ValidateAuthExecutionPolicy:
         Type: "AWS::IAM::ManagedPolicy"
@@ -824,7 +843,7 @@ Resources:
             Handler: "index.handler"
             MemorySize: "256"
             Runtime: "python3.6"
-            Timeout: "5"
+            Timeout: "30"
             Role: { "Fn::GetAtt" : [ "DailySchedulerExecutionRole", "Arn" ] }
             FunctionName: { "Fn::Sub": "users-${Environment}-apigateway-dailyscheduler" }
             Tags:
