@@ -843,7 +843,7 @@ Resources:
             Handler: "index.handler"
             MemorySize: "256"
             Runtime: "python3.6"
-            Timeout: "5"
+            Timeout: "30"
             Role: { "Fn::GetAtt" : [ "DailySchedulerExecutionRole", "Arn" ] }
             FunctionName: { "Fn::Sub": "users-${Environment}-apigateway-dailyscheduler" }
             Tags:
