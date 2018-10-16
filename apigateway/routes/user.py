@@ -122,11 +122,12 @@ def create_user():
         raise
 
     # Send confirmation code
-    # send_ses_email(
-    #     request.json['personal_data']['email'],
-    #     'Confirm your account',
-    #     f'Your Fathomai email confirmation code is {request.json["_email_confirmation_code"]}'
-    # )
+    if '_email_confirmation_code' in request.json:
+        send_ses_email(
+            request.json['personal_data']['email'],
+            'Confirm your account',
+            f'Your Fathomai email confirmation code is {request.json["_email_confirmation_code"]}'
+        )
 
     res = {
         'user': user.get(),

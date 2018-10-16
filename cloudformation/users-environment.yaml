@@ -147,7 +147,7 @@ Resources:
                 SourceArn: { "Fn::Sub": "arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/hello@fathomai.com" }
             EmailVerificationSubject: 'Password Reset'
             EmailVerificationMessage: |
-                <p>Hi,
+                <p>Hello,
                 <p>We have received your request for a password reset. Please enter the following 6-digit pin in the Fathom mobile app to update your password.
                 <p><b>Pin: {####}</b>
                 <p>Your new password must include:
@@ -156,7 +156,7 @@ Resources:
                     <li>at least 1 uppercase letter
                     <li>at least 1 number
                 </ul>
-                <p>If you did not initiate this password reset, please contact us at some.email@fathomai.com.
+                <p>If you did not initiate this password reset, please contact us at <a href="mailto:hello@fathomai.com">hello@fathomai.com</a>.
                 <p>Thanks,
                 <p>The Fathom Team
         DeletionPolicy : "Retain"
