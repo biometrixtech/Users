@@ -145,6 +145,20 @@ Resources:
                 Service: "users"
             EmailConfiguration:
                 SourceArn: { "Fn::Sub": "arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/hello@fathomai.com" }
+            EmailVerificationSubject: 'Password Reset'
+            EmailVerificationMessage: |
+                <p>Hi,
+                <p>We have received your request for a password reset. Please enter the following 6-digit pin in the Fathom mobile app to update your password.
+                <p><b>Pin: {####}</b>
+                <p>Your new password must include:
+                <ul>
+                    <li>8-16 characters
+                    <li>at least 1 uppercase letter
+                    <li>at least 1 number
+                </ul>
+                <p>If you did not initiate this password reset, please contact us at some.email@fathomai.com.
+                <p>Thanks,
+                <p>The Fathom Team
         DeletionPolicy : "Retain"
 
     UsersCognitoUserPoolClient:
