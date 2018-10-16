@@ -16,9 +16,11 @@ _secrets = {}
 @xray_recorder.capture('custom_auth.get_secret')
 def get_secret(secret_name):
     secret_name = secret_name.lower()
+    print(f'Getting secret {secret_name}')
     global _secrets
     if secret_name not in _secrets:
         try:
+            print(f'Loading from Secrets Manager')
             get_secret_value_response = _secretsmanager_client.get_secret_value(SecretId=f'users/{os.environ["ENVIRONMENT"]}/{secret_name}')
         except ClientError as e:
             raise Exception('SecretsManagerError', json.dumps(e.response), 500)
@@ -27,6 +29,7 @@ def get_secret(secret_name):
                 _secrets[secret_name] = json.loads(get_secret_value_response['SecretString'])
             else:
                 _secrets[secret_name] = get_secret_value_response['SecretBinary']
+    print(f'Got secret {secret_name}')
     return _secrets[secret_name]
 
 
@@ -52,6 +55,7 @@ def validate_handler(event, _):
 @xray_recorder.capture('custom_auth.service_handler')
 def service_handler(event, _):
     rs256_key = get_secret('service_jwt_key')
+    print(f'Got RS256 key')
 
     if os.environ['ENVIRONMENT'] == 'dev':
         delta = datetime.timedelta(days=1)
@@ -69,7 +73,11 @@ def service_handler(event, _):
         'iat': datetime.datetime.utcnow(),
         'sub': '00000000-0000-4000-8000-000000000000',
     }
-    return {'token': jwt.encode(token, rs256_key, headers={'kid': rs256_key['kid']}, algorithm='RS256')}
+
+    print(f'About to compile token')
+    ret = {'token': jwt.encode(token, rs256_key, headers={'kid': rs256_key['kid']}, algorithm='RS256')}
+    print('Encoded token')
+    return ret
 
 
 @xray_recorder.capture('custom_auth.get_user_id_from_request')
