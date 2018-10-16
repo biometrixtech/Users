@@ -148,8 +148,8 @@ Resources:
             EmailVerificationSubject: 'Password Reset'
             EmailVerificationMessage: |
                 <p>Hello,
-                <p>We have received your request for a password reset. Please enter the following 6-digit pin in the Fathom mobile app to update your password.
-                <p><b>Pin: {####}</b>
+                <p>We have received your request for a password reset. Please enter the following 6-digit PIN in the Fathom mobile app to update your password.
+                <p><b>PIN: {####}</b>
                 <p>Your new password must include:
                 <ul>
                     <li>8-16 characters
