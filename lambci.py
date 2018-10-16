@@ -65,7 +65,6 @@ def read_config():
 
 
 def main():
-    print(sys.version)
     os.environ['PROJECT'] = os.environ['LAMBCI_REPO'].split('/')[-1].lower()
     config = read_config()
 
