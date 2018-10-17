@@ -293,8 +293,7 @@ def _attempt_cognito_migration(user, email, password):
     Service('plans', '2_0').call_apigateway_async(
         method='PATCH',
         endpoint='misc/cognito_migration',
-        body={"legacy_user_id": check_postgres['id'], "user_id": user.id},
-        headers={'Content-Type': "application/json"}
+        body={"legacy_user_id": check_postgres['id'], "user_id": user.id}
     )
     # Change the password in cognito
     user.change_password(
