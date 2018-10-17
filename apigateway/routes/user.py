@@ -289,6 +289,13 @@ def _attempt_cognito_migration(user, email, password):
     if not check_postgres['password_match']:
         raise UnauthorizedException('Password does not match in Postgres')
 
+    # update mongo collections to the new user_id
+    Service('plans', '2_0').call_apigateway_async(
+        method='PATCH',
+        endpoint='misc/cognito_migration',
+        body={"legacy_user_id": check_postgres['id'], "user_id": user.id},
+        headers={'Content-Type': "application/json"}
+    )
     # Change the password in cognito
     user.change_password(
         temp_authorisation['session_token'],
@@ -299,13 +306,7 @@ def _attempt_cognito_migration(user, email, password):
     # And login as normal
     res = user.login(password=password)
 
-    # update mongo collections to the new user_id
-    Service('plans', '2_0').call_apigateway_sync(
-        method='PATCH',
-        endpoint='misc/cognito_migration',
-        body={"legacy_user_id": check_postgres['id'], "user_id": user.id},
-        headers={'Content-Type': "application/json"}
-    )
+
 
     # Mark migration as completed
     user.patch({'migrated_date': 'completed'})
