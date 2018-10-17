@@ -1,0 +1,44 @@
+{
+    "$schema": "http://json-schema.org/schema#",
+    "id": "http://schema.fathomai.com/schemas/device.json",
+    "description": "Device",
+    "type": "object",
+    "properties": {
+        "id": {
+            "description": "Unique UUID",
+            "type": "string",
+            "readonly": true
+        },
+        "device_type": {
+            "description": "Operating system of device",
+            "enum": [
+                "ios" ,
+                "android"
+            ]
+        },
+        "owner_id": {
+            "type": "string"
+        },
+        "push_notifications": {
+            "type": "object",
+            "properties": {
+                "endpoint": {
+                    "type": "string"
+                },
+                "enabled": {
+                    "type": "bool",
+                    "default": false
+                }
+            },
+            "required": [
+                "token",
+                "enabled"
+            ]
+        }
+    },
+    "required": [
+        "id",
+        "type"
+    ],
+    "additionalProperties": false
+}

@@ -11,8 +11,6 @@ apigateway/*
 !apigateway/pip_requirements
 !apigateway/routes
 !apigateway/models
-!apigateway/template.yml
-apigateway/flask_bcrypt.py
+!apigateway/schemas
 apigateway/six.py
-apigateway/flask_lambda.py
 apigateway/itsdangerous.py

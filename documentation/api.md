@@ -1,4 +1,4 @@
-# Users API
+# Users API v1.1
 
 ## Common provisions
 
@@ -148,7 +148,7 @@ The client __must__ submit a request body containing a JSON object with the foll
 * `password` __must__ be a string containing 8 or more characters, with no leading or trailing spaces.
 
 ```
-POST /users/user/login HTTP/1.1
+POST /users/1_1/user/login HTTP/1.1
 Host: apis.env.fathomai.com
 Content-Type: application/json
 
@@ -260,7 +260,7 @@ This method takes no request body.
 Example request:
 
 ```
-GET /users/user/me HTTP/1.1
+GET /users/1_1/user/me HTTP/1.1
 Host: apis.env.fathomai.com
 Content-Type: application/json
 Authorization: eyJraWQ...ajBc4VQ
@@ -297,7 +297,7 @@ The client __must__ submit a request body containing a JSON object with the foll
 * `session_token` __must__ be a session token string previously returned from a call to `login`.
 
 ```
-POST /users/user/e8514489-8de9-47e0-b3d5-b15da244783f/authorise HTTP/1.1
+POST /users/1_1/user/e8514489-8de9-47e0-b3d5-b15da244783f/authorise HTTP/1.1
 Host: apis.env.fathomai.com
 Content-Type: application/json
 
@@ -356,7 +356,7 @@ This endpoint takes no request body.
 
 
 ```
-POST /users/user/e8514489-8de9-47e0-b3d5-b15da244783f/logout HTTP/1.1
+POST /users/1_1/user/e8514489-8de9-47e0-b3d5-b15da244783f/logout HTTP/1.1
 Host: apis.env.fathomai.com
 Content-Type: application/json
 ```
@@ -364,6 +364,72 @@ Content-Type: application/json
 #### Responses
  
 If the logout was successful, the Service __will__ respond with HTTP Status `200 OK`, and with an empty body.
+ 
+### Notify
+
+This endpoint can be called by a client to send a push notification to all the devices affiliated to a given user.
+
+#### Query String
+ 
+The client __must__ submit a request to the endpoint `/user/{user_id}/notify`.
+
+#### Request
+
+The client __must__ submit a request body containing a JSON object with the following schema:
+
+```
+{
+	"message": String
+}
+```
+
+* `message` is the text which __will__ be displayed to the user in push notification.
+
+```
+POST /users/1_1/user/e8514489-8de9-47e0-b3d5-b15da244783f/notify HTTP/1.1
+Host: apis.env.fathomai.com
+Content-Type: application/json
+
+{
+	"message": "Hello world!"
+}
+
+```
+
+#### Responses
+ 
+If the request was successful, the Service __will__ respond with HTTP Status `200 OK`, and with a body with the following syntax:
+ 
+```
+{
+    Uuid: {
+        "message": String,
+        "success": Bool
+    },
+    ...
+}
+```
+
+Where each `Uuid` is the id of a `Device` affiliated to the user, and `success` indicates whether the message was successfully sent to that device.
+
+Example response:
+
+```
+{
+    "0758c0c7-bf2f-4ec7-89a7-926a7eb4ba4c": {
+        "message": "Endpoint disabled for device 0758c0c7-bf2f-4ec7-89a7-926a7eb4ba4c",
+        "success": false
+    },
+    "e8514489-8de9-47e0-b3d5-b15da244783f": {
+        "message": "Success",
+        "success": true
+    }
+}
+```
+
+If the request was not successful, the Service __may__ respond with one of the following HTTP Status codes:
+
+* `429 Too Many Requests`, if an identical message has already been sent to the user within the throttling period.
 
 ## Device
 
@@ -395,7 +461,7 @@ The client __must__ submit a request body containing a JSON object with the foll
 * `push_notifications` is optional.
 
 ```
-POST /users/device/e8514489-8de9-47e0-b3d5-b15da244783f HTTP/1.1
+POST /users/1_1/device/e8514489-8de9-47e0-b3d5-b15da244783f HTTP/1.1
 Host: apis.env.fathomai.com
 Content-Type: application/json
 Authorization: eyJraWQ...ajBc4VQ

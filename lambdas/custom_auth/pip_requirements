@@ -1,1 +1,2 @@
-pyjwt==1.5.3
+python-jose[cryptography]>=3.0.0
+aws_xray_sdk==0.95
