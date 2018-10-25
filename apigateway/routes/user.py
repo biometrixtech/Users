@@ -73,8 +73,9 @@ def create_user():
         request.json['migrated_date'] = nowdate()
         request.json['email_verified'] = 'true'
     else:
-        request.json['email_verified'] = 'false'
-        request.json['_email_confirmation_code'] = binascii.b2a_hex(os.urandom(12)).decode()
+        # request.json['email_verified'] = 'false'
+        # request.json['_email_confirmation_code'] = binascii.b2a_hex(os.urandom(12)).decode()
+        request.json['email_verified'] = 'true'
         if 'migrated_date' in request.json:
             del request.json['migrated_date']
 
