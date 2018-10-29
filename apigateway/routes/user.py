@@ -118,7 +118,7 @@ def create_user():
             _do_without_error(lambda: account.remove_user(user.id))
             raise
     except DuplicateEntityException:
-        raise DuplicateEntityException('A user with that email address is already registered')
+        raise
     except Exception:
         _do_without_error(lambda: user.delete())
         raise
