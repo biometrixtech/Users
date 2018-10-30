@@ -1,11 +1,9 @@
-import boto3
-import json
-
 from fathomapi.api.config import Config
 from fathomapi.models.dynamodb_entity import DynamodbEntity
 
 
 class UserData(DynamodbEntity):
+    _dynamodb_table_name = Config.get('USERS_DYNAMODB_TABLE_NAME')
 
     def __init__(self, user_id):
         super().__init__({'id': user_id})
@@ -13,6 +11,3 @@ class UserData(DynamodbEntity):
     @property
     def user_id(self):
         return self.primary_key['id']
-
-    def _get_dynamodb_resource(self):
-        return boto3.resource('dynamodb').Table(Config.get('USERS_DYNAMODB_TABLE_NAME'))

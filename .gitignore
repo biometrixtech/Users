@@ -12,5 +12,6 @@ apigateway/*
 !apigateway/routes
 !apigateway/models
 !apigateway/schemas
+apigateway/semver.py
 apigateway/six.py
 apigateway/itsdangerous.py
