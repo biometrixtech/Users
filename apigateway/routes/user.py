@@ -85,7 +85,7 @@ def create_user():
     if 'account_code' in request.json:
         try:
             account = Account.get_from_code(request.json['account_code'])
-            xray_recorder.current_segment().put_annotation('account_id', account.id)
+            xray_recorder.current_subsegment().put_annotation('account_id', account.id)
             request.json['account_ids'] = [account.id]
         except NoSuchEntityException:
             raise NoSuchEntityException('Unrecognised account_code')
@@ -102,7 +102,7 @@ def create_user():
         except DuplicateEntityException:
             # The user already exists
             raise DuplicateEntityException('A user with that email address is already registered')
-        xray_recorder.current_segment().put_annotation('user_id', user.id)
+        xray_recorder.current_subsegment().put_annotation('user_id', user.id)
 
         try:
             if account is not None:
@@ -212,7 +212,7 @@ def handle_user_logout(user_id):
 @require.body({})
 @xray_recorder.capture('routes.user.patch')
 def handle_user_patch(user_id):
-    xray_recorder.current_segment().put_annotation('user_id', user_id)
+    xray_recorder.current_subsegment().put_annotation('user_id', user_id)
 
     if 'role' in request.json:
     #     raise UnauthorizedException('Cannot elevate user role')

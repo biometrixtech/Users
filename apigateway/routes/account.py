@@ -22,7 +22,7 @@ def create_account():
 @require.body({})
 @xray_recorder.capture('routes.account.patch')
 def update_account(account_id):
-    xray_recorder.current_segment().put_annotation('account_id', account_id)
+    xray_recorder.current_subsegment().put_annotation('account_id', account_id)
 
     ret = Account(account_id).patch(request.json)
     return {'account': ret}
