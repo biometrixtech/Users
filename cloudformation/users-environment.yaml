@@ -652,6 +652,7 @@ Resources:
                         Effect: "Allow"
                         Resource: { "Fn::GetAtt": [ "UsersCognitoUserPool", "Arn" ] }
                       - Action:
+                          - "dynamodb:BatchGetItem"
                           - "dynamodb:DeleteItem"
                           - "dynamodb:GetItem"
                           - "dynamodb:PutItem"

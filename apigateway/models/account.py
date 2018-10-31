@@ -1,13 +1,13 @@
-import boto3
 from boto3.dynamodb.conditions import Attr
 from botocore.exceptions import ClientError
 
 from fathomapi.api.config import Config
 from fathomapi.models.dynamodb_entity import DynamodbEntity
-from fathomapi.utils.exceptions import NoSuchEntityException, DuplicateEntityException, PaymentRequiredException
+from fathomapi.utils.exceptions import NoSuchEntityException, PaymentRequiredException
 
 
 class Account(DynamodbEntity):
+    _dynamodb_table_name = Config.get('ACCOUNTS_DYNAMODB_TABLE_NAME')
 
     def __init__(self, account_id):
         super().__init__({'id': account_id})
@@ -15,9 +15,6 @@ class Account(DynamodbEntity):
     @property
     def id(self):
         return self.primary_key['id']
-
-    def _get_dynamodb_resource(self):
-        return boto3.resource('dynamodb').Table(Config.get('ACCOUNTS_DYNAMODB_TABLE_NAME'))
 
     def add_user(self, user_id):
         if not self.exists():
