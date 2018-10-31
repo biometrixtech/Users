@@ -17,6 +17,10 @@ class Account(DynamodbEntity):
         return self.primary_key['id']
 
     def add_user(self, user_id):
+        """
+        Link a user to an account
+        :param str user_id:
+        """
         if not self.exists():
             raise NoSuchEntityException(f'No account with id {self.id}')
         try:
@@ -31,6 +35,10 @@ class Account(DynamodbEntity):
                 raise
 
     def remove_user(self, user_id):
+        """
+        Unlink a user from an account
+        :param str user_id:
+        """
         if not self.exists():
             raise NoSuchEntityException(f'No account with id {self.id}')
         upsert = self.DynamodbUpdate()
@@ -38,13 +46,17 @@ class Account(DynamodbEntity):
         self._update_dynamodb(upsert, Attr('id').exists())
 
     @staticmethod
-    def get_from_code(code):
+    def new_from_code(code):
         """
         Get the Account with the given signup code
         :param str code:
         :return: Account
         """
-        # TODO
         res = Account(code)
-        res.get()
-        return Account(code)
+        res._primary_key = {'code': code}
+        res._index = 'code'
+        try:
+            res.get()
+            return res
+        except NoSuchEntityException:
+            raise NoSuchEntityException('No account with that code')

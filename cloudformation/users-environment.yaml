@@ -227,6 +227,15 @@ Resources:
             ProvisionedThroughput:
                 ReadCapacityUnits: { Ref: "DynamodbReadCapacity" }
                 WriteCapacityUnits: { Ref: "DynamodbWriteCapacity" }
+            GlobalSecondaryIndexes:
+              - IndexName: "code"
+                KeySchema:
+                  - { AttributeName: "code", KeyType: "HASH" }
+                Projection:
+                    ProjectionType: "ALL"
+                ProvisionedThroughput:
+                    ReadCapacityUnits: { Ref: "DynamodbReadCapacity" }
+                    WriteCapacityUnits: { Ref: "DynamodbWriteCapacity" }
             Tags:
               - { Key: "Name", Value: { "Fn::Sub": "users-${Environment}-accounts" } }
               - { Key: "Management", Value: "managed" }
