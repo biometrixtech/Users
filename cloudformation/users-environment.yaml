@@ -222,6 +222,7 @@ Resources:
             TableName: { "Fn::Sub": "users-${Environment}-accounts" }
             AttributeDefinitions:
               - { AttributeName: "id", AttributeType: "S" }
+              - { AttributeName: "code", AttributeType: "S" }
             KeySchema:
               - { AttributeName: "id", KeyType: "HASH" }
             ProvisionedThroughput:
