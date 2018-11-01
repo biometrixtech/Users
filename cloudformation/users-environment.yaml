@@ -740,14 +740,6 @@ Resources:
               - { Key: "Service", Value: "apigateway" }
             TracingConfig:
                 Mode: "Active"
-            VpcConfig: { "Fn::If": [
-                "CreateVpc",
-                {
-                    SubnetIds: { "Fn::Split": [ ",", { "Fn::GetAtt": [ "VpcStack", "Outputs.PrivateSubnetIds" ] } ] },
-                    SecurityGroupIds: [ { Ref: "LambdaVpcSecurityGroup" } ]
-                },
-                { Ref: "AWS::NoValue" }
-            ]}
 
     ApigatewayStack:
         Type: "AWS::CloudFormation::Stack"
