@@ -85,7 +85,7 @@ def create_user():
     if 'account_code' in request.json:
         try:
             account = Account.get_from_code(request.json['account_code'])
-            xray_recorder.current_segment().put_annotation('account_id', account.id)
+            xray_recorder.current_subsegment().put_annotation('account_id', account.id)
             request.json['account_ids'] = [account.id]
         except NoSuchEntityException:
             raise NoSuchEntityException('Unrecognised account_code')
@@ -102,7 +102,7 @@ def create_user():
         except DuplicateEntityException:
             # The user already exists
             raise DuplicateEntityException('A user with that email address is already registered')
-        xray_recorder.current_segment().put_annotation('user_id', user.id)
+        xray_recorder.current_subsegment().put_annotation('user_id', user.id)
 
         try:
             if account is not None:
@@ -200,7 +200,7 @@ def handle_user_logout(user_id):
     User(user_id).logout()
 
     # De-affiliate all the user's devices
-    devices = Device.get_many(owner_id=user_id)
+    devices, _ = Device.get_many(owner_id=user_id)
     for device in devices:
         device.patch({'owner_id': None})
 
@@ -212,7 +212,7 @@ def handle_user_logout(user_id):
 @require.body({})
 @xray_recorder.capture('routes.user.patch')
 def handle_user_patch(user_id):
-    xray_recorder.current_segment().put_annotation('user_id', user_id)
+    xray_recorder.current_subsegment().put_annotation('user_id', user_id)
 
     if 'role' in request.json:
     #     raise UnauthorizedException('Cannot elevate user role')
@@ -320,7 +320,7 @@ def _attempt_cognito_migration(user, email, password):
 @require.body({'message': str, 'call_to_action': str})
 @xray_recorder.capture('routes.user.notify')
 def handle_user_notify(user_id):
-    devices = Device.get_many(owner_id=user_id)
+    devices, _ = Device.get_many(owner_id=user_id)
 
     if request.json['call_to_action'] not in ['VIEW_PLAN', 'COMPLETE_DAILY_READINESS', 'COMPLETE_ACTIVE_RECOVERY', 'COMPLETE_ACTIVE_PREP']:
         raise InvalidSchemaException("`call_to_action` must be one of VIEW_PLAN, COMPLETE_DAILY_READINESS, COMPLETE_ACTIVE_RECOVERY, COMPLETE_ACTIVE_PREP")
