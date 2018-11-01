@@ -17,13 +17,14 @@ misc_app = Blueprint('misc', __name__)
 @xray_recorder.capture('routes.misc.dailycron')
 def handle_dailycron():
     # This route will be called daily via a CloudWatch Scheduled Event.
-    Service('users', Config.get('API_VERSION')).call_apigateway_sync('POST', '/misc/activeusers')
+    Service('users', Config.get('API_VERSION')).call_apigateway_sync('POST', '/misc/activeusers', body={})
 
     return {'status': 'Success'}, 200
 
 
 @misc_app.route('/activeusers', methods=['POST'])
 @require.authenticated.service
+@require.body({})
 @xray_recorder.capture('routes.misc.activeusers')
 def handle_activeusers():
     # This route will be invoked daily.  It should scan to find users which meet
