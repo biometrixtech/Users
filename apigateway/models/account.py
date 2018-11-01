@@ -1,5 +1,7 @@
 from boto3.dynamodb.conditions import Attr
 from botocore.exceptions import ClientError
+import random
+import string
 
 from fathomapi.api.config import Config
 from fathomapi.models.dynamodb_entity import DynamodbEntity
@@ -44,6 +46,15 @@ class Account(DynamodbEntity):
         upsert = self.DynamodbUpdate()
         upsert.delete('users', {user_id})
         self._update_dynamodb(upsert, Attr('id').exists())
+
+    @staticmethod
+    def generate_code():
+        """
+        Generate random account code of format "ABCD1234"
+        """
+        allowed_letters = string.ascii_uppercase.replace("O", "")
+        allowed_digits = string.digits.replace("0", "")
+        return ''.join(random.choices(allowed_letters, k=4)) + ''.join(random.choices(allowed_digits, k=4))
 
     @staticmethod
     def new_from_code(code):
