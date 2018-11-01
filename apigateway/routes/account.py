@@ -23,7 +23,7 @@ def create_account():
 
         # Generating an id algorithmically from the code, means that the uniqueness constraint on id extends to
         # enforcing uniqueness of the code
-        account = Account(str(uuid.uuid5(uuid.NAMESPACE_URL, f"https://schemas.fathomai.com/account/{request.json['code']}")))
+        account = Account(str(uuid.uuid5(uuid.NAMESPACE_URL, f"https://schema.fathomai.com/schemas/account/{request.json['code']}")))
         try:
             ret = account.create(request.json)
             break
