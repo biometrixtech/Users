@@ -12,7 +12,7 @@ account_app = Blueprint('account', __name__)
 
 @account_app.route('/', methods=['POST'])
 @require.body({'name': str, 'seats': int})
-@require.authenticated.service
+@require.authenticated.any
 @xray_recorder.capture('routes.account.create')
 def create_account():
 
