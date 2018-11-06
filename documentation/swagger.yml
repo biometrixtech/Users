@@ -1,6 +1,6 @@
 swagger: '2.0'
 info:
-    version: '1.0'
+    version: '2.0.7'
     title: "Users Service"
     description: This API allows clients to perform actions related to Users and Devices.
     license:
@@ -15,6 +15,73 @@ produces:
   - application/json
 
 paths:
+    /user:
+        post:
+            description: 'This endpoint can be called by a client to register a user.'
+            parameters:
+              - name: body
+                in: body
+                required: true
+                schema:
+                    type: object
+                    properties:
+                        personal_data:
+                            type: object
+                            properties:
+                                email:
+                                    type: string
+                                    example: 'glitch0@fathomai.com'
+                                    description: 'The email address that the user registered with.'
+                            required:
+                              - email
+                        password:
+                            type: string
+                            example: 'oatcakes'
+                            # minLength: 8
+                            description: '__must__ be a string containing 8 or more characters, with no leading or trailing spaces.'
+                        account_code:
+                            type: string
+                            example: 'ABCD1234'
+                            pattern: '[A-NP-Z]{4}[1-9]{4}'
+                            description: '__must__ be a string containing of 4 characters followed by 4 digits, not including O or 0.'
+                    required:
+                      - personal_data
+                      - password
+                    example: >-
+                        {
+                            "personal_data": {
+                                 "email": "glitch0@fathomai.com"
+                            },
+                            "password": "oatcakes",
+                            "account_code": "ABCD1234"
+                        }
+            responses:
+                201:
+                    description: 'Creation successful'
+                    schema:
+                        type: object
+                        properties:
+                            authorization:
+                                type: object
+                                properties:
+                                    expires:
+                                        $ref: '#/definitions/Datetime'
+                                    jwt:
+                                        type: string
+                                    session_token:
+                                        type: string
+                                        minLength: 32
+                                        maxLength: 32
+                            user:
+                                $ref: '#/definitions/User'
+                402:
+                    description: 'Account has no spare seats'
+                404:
+                    description: >-
+                        If the account_code is invalid.
+            tags:
+              - user
+
     /user/login:
         # x-summary: Login
         post:
@@ -192,6 +259,35 @@ paths:
             tags:
               - user
 
+        patch:
+            description: 'This endpoint can be called by a client to update a user.'
+            parameters:
+              - name: body
+                in: body
+                required: true
+                schema:
+                    type: object
+                    example: >-
+                        {
+                            "personal_data": {
+                                 "first_name": "John",
+                                 "last_name": "Smith"
+                            },
+                            "onboarding_status": [ "totally_onboard" ]
+                        }
+            responses:
+                200:
+                    description: 'Update successful'
+                    schema:
+                        type: object
+                        properties:
+                            user:
+                                $ref: '#/definitions/User'
+                404:
+                    description: 'User not found'
+            tags:
+              - user
+
     /user/{user_id}/authorise:
         # x-summary: Authorise a user
         post:
@@ -273,9 +369,13 @@ paths:
 
     /user/{user_id}/change_password:
         post:
-            description: >-
-                This endpoint can be called by a client to change a user's password.
+            description: "This endpoint can be called by a client to change a user's password."
             parameters:
+              - name: user_id
+                in: path
+                type: string
+                required: true
+                description: 'The user ID. __must__ be a Uuid.'
               - name: body
                 in: body
                 required: true
@@ -303,6 +403,44 @@ paths:
                     description: 'Success'
                 404:
                     description: 'No such user'
+            tags:
+              - user
+
+    /user/{user_id}/join_account:
+        post:
+            description: 'This endpoint can be called by a client to attach a user to an account.'
+            parameters:
+              - name: user_id
+                in: path
+                type: string
+                required: true
+                description: 'The user ID. __must__ be a Uuid.'
+              - name: body
+                in: body
+                required: true
+                schema:
+                    type: object
+                    properties:
+                        account_code:
+                            type: string
+                    required:
+                      - account_code
+                    example: >-
+                        {
+                            "account_code": "ABCD1234"
+                        }
+            responses:
+                200:
+                    description: 'Success'
+                    schema:
+                        type: object
+                        properties:
+                            account:
+                                $ref: '#/definitions/Account'
+                402:
+                    description: 'No more seats available in the account'
+                404:
+                    description: 'No such account'
             tags:
               - user
 
@@ -423,6 +561,29 @@ paths:
                     description: 'No such device'
             tags:
               - device
+
+    /account/{account_id}:
+        get:
+            description: 'This endpoint allows the client to get information about an account.'
+            parameters:
+              - name: account_id
+                in: path
+                type: string
+                required: true
+                description: 'The account ID. __must__ be a Uuid.'
+              - $ref: '#/parameters/authorization'
+            responses:
+                200:
+                    description: 'Ok'
+                    schema:
+                        type: object
+                        properties:
+                            account:
+                                $ref: '#/definitions/Account'
+                404:
+                    description: 'No such account'
+            tags:
+              - account
 
 parameters:
     authorization:
@@ -576,3 +737,14 @@ definitions:
                 enum:
                   - 'ios'
                   - 'android'
+
+    Account:
+        title: 'Account'
+        type: object
+        properties:
+            id:
+                $ref: '#/definitions/Uuid'
+            name:
+                type: string
+            code:
+                type: string
