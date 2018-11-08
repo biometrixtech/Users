@@ -68,6 +68,8 @@ class Account(DynamodbEntity):
         res._index = 'code'
         try:
             res.get()
+            res._primary_key = {'id': res.id}
+            res._index = None
             return res
         except NoSuchEntityException:
             raise NoSuchEntityException('No account with that code')
