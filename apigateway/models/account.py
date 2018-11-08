@@ -67,8 +67,8 @@ class Account(DynamodbEntity):
         res._primary_key = {'code': code}
         res._index = 'code'
         try:
-            res.get()
-            res._primary_key = {'id': res.id}
+            get = res.get()
+            res._primary_key = {'id': get['id']}
             res._index = None
             return res
         except NoSuchEntityException:
