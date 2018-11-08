@@ -63,13 +63,11 @@ class Account(DynamodbEntity):
         :param str code:
         :return: Account
         """
-        res = Account(code)
-        res._primary_key = {'code': code}
+        res = Account(None)
+        res._secondary_key = {'code': code}
         res._index = 'code'
         try:
-            get = res.get()
-            res._primary_key = {'id': get['id']}
-            res._index = None
+            res.get()
             return res
         except NoSuchEntityException:
             raise NoSuchEntityException('No account with that code')
