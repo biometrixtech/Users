@@ -278,7 +278,7 @@ def handle_user_verify_email(user_id):
 def handle_user_join_account(user_id):
     user = User(user_id)
     account = Account.new_from_code(request.json['account_code'])
-    account.add_user(user)
+    account.add_user(user.id)
     return {'message': 'Success', 'account': account.get()}
 
 
