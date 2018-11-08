@@ -63,8 +63,8 @@ class Account(DynamodbEntity):
         :param str code:
         :return: Account
         """
-        res = Account(code)
-        res._primary_key = {'code': code}
+        res = Account(None)
+        res._secondary_key = {'code': code}
         res._index = 'code'
         try:
             res.get()
