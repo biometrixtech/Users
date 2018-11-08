@@ -3,7 +3,7 @@ from flask import Blueprint, request
 import uuid
 
 from fathomapi.utils.decorators import require
-from fathomapi.utils.exceptions import DuplicateEntityException
+from fathomapi.utils.exceptions import DuplicateEntityException, InvalidSchemaException
 
 from models.account import Account
 
@@ -59,3 +59,12 @@ def handle_delete_account(account_id):
 @xray_recorder.capture('routes.account.get')
 def handle_account_get(account_id):
     return {'account': Account(account_id).get()}
+
+
+@account_app.route('/', methods=['GET'])
+# @require.authenticated.any
+@xray_recorder.capture('routes.account.get_from_code')
+def handle_account_get_from_code():
+    if 'account_code' not in request.args:
+        raise InvalidSchemaException('Query string parameter `account_code` is required')
+    return {'account': Account.new_from_code(request.args['account_code']).get()}
