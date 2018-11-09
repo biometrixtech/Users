@@ -104,18 +104,18 @@ def create_user():
             raise DuplicateEntityException('A user with that email address is already registered')
         xray_recorder.current_subsegment().put_annotation('user_id', user.id)
 
+
         try:
-            if account is not None:
-                account.add_user(user.id)
-
+            UserData(user.id).create(request.json)
             try:
-                UserData(user.id).create(request.json)
-
+                if account is not None:
+                    account.add_user(user.id)
             except Exception:
-                _do_without_error(lambda: UserData(user.id).delete())
+                _do_without_error(lambda: account.remove_user(user.id))
                 raise
+
         except Exception:
-            _do_without_error(lambda: account.remove_user(user.id))
+            _do_without_error(lambda: UserData(user.id).delete())
             raise
     except DuplicateEntityException:
         raise
