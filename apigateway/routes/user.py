@@ -84,7 +84,7 @@ def create_user():
 
     if 'account_code' in request.json:
         try:
-            account = Account.get_from_code(request.json['account_code'])
+            account = Account.new_from_code(request.json['account_code'])
             xray_recorder.current_subsegment().put_annotation('account_id', account.id)
             request.json['account_ids'] = [account.id]
         except NoSuchEntityException:
@@ -104,18 +104,18 @@ def create_user():
             raise DuplicateEntityException('A user with that email address is already registered')
         xray_recorder.current_subsegment().put_annotation('user_id', user.id)
 
+
         try:
-            if account is not None:
-                account.add_user(user.id)
-
+            UserData(user.id).create(request.json)
             try:
-                UserData(user.id).create(request.json)
-
+                if account is not None:
+                    account.add_user(user.id)
             except Exception:
-                _do_without_error(lambda: UserData(user.id).delete())
+                _do_without_error(lambda: account.remove_user(user.id))
                 raise
+
         except Exception:
-            _do_without_error(lambda: account.remove_user(user.id))
+            _do_without_error(lambda: UserData(user.id).delete())
             raise
     except DuplicateEntityException:
         raise
@@ -215,7 +215,7 @@ def handle_user_patch(user_id):
     xray_recorder.current_subsegment().put_annotation('user_id', user_id)
 
     if 'role' in request.json:
-    #     raise UnauthorizedException('Cannot elevate user role')
+        # raise UnauthorizedException('Cannot elevate user role')
         request.json['role'] = 'athlete'
 
     # Get the metric values for height and mass if only imperial values were given
@@ -269,6 +269,17 @@ def handle_user_verify_email(user_id):
     user = User(user_id)
     user.verify_email(request.json['confirmation_code'])
     return {'message': 'Success'}
+
+
+@user_app.route('/<uuid:user_id>/join_account', methods=['POST'])
+@require.authenticated.self
+@require.body({'account_code': str})
+@xray_recorder.capture('routes.user.join_account')
+def handle_user_join_account(user_id):
+    user = User(user_id)
+    account = Account.new_from_code(request.json['account_code'])
+    account.add_user(user.id)
+    return {'message': 'Success', 'account': account.get()}
 
 
 def _attempt_cognito_migration(user, email, password):
