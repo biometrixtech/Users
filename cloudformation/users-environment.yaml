@@ -57,7 +57,7 @@ Parameters:
 Mappings:
     TemplateVersion:
         Self: { Commit: "da39a3ee5e6b4b0d3255bfef95601890afd80709" }
-        Infrastructure: { Commit: "7c6f66762804ded587ed4fa2085705f0a46892cd" }
+        Infrastructure: { Commit: "98e9da164652624396c90e3b34b4ca3f829e4c32" }
 
 Metadata:
     "AWS::CloudFormation::Interface":
@@ -819,7 +819,7 @@ Resources:
         Properties:
             Code:
                 ZipFile: |
-                    import boto3, json, os
+                    import boto3, datetime, json, os
                     _lambda_client = boto3.client('lambda')
                     _sqs_client = boto3.client('sqs')
                     def handler(_, __):
@@ -831,6 +831,8 @@ Resources:
                                 "Authorization": get_service_token(),
                                 "Content-Type": "application/json",
                                 "User-Agent": "Biometrix/DailyScheduler",
+                                "X-Execute-At": (datetime.datetime.now() + datetime.timedelta(minutes=5)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                                "X-Prewarm": 5,
                             },
                             "pathParameters": {"endpoint": 'misc/dailycron'},
                             "stageVariables": {"LambdaAlias": '2_0'},

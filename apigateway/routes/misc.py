@@ -2,6 +2,7 @@ from aws_xray_sdk.core import xray_recorder
 from flask import Blueprint, request
 import datetime
 import random
+import time
 
 from fathomapi.api.config import Config
 from fathomapi.comms.service import Service
@@ -11,6 +12,14 @@ from models.user import User
 from models.user_data import UserData
 
 misc_app = Blueprint('misc', __name__)
+
+
+@misc_app.route('/prewarm', methods=['GET', 'POST'])
+@xray_recorder.capture('routes.misc.prewarm')
+def handle_prewarm():
+    time.sleep(1)
+
+    return {'status': 'Success'}, 200
 
 
 @misc_app.route('/dailycron', methods=['POST'])
