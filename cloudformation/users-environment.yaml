@@ -245,6 +245,35 @@ Resources:
               - { Key: "Service", Value: "accounts" }
         DeletionPolicy : "Retain"
 
+    AccountCodesTable:
+        Type: "AWS::DynamoDB::Table"
+        Properties:
+            TableName: { "Fn::Sub": "users-${Environment}-account-codes" }
+            AttributeDefinitions:
+              - { AttributeName: "account_id", AttributeType: "S" }
+              - { AttributeName: "code", AttributeType: "S" }
+            KeySchema:
+              - { AttributeName: "account_id", KeyType: "HASH" }
+            ProvisionedThroughput:
+                ReadCapacityUnits: { Ref: "DynamodbReadCapacity" }
+                WriteCapacityUnits: { Ref: "DynamodbWriteCapacity" }
+            GlobalSecondaryIndexes:
+              - IndexName: "code"
+                KeySchema:
+                  - { AttributeName: "code", KeyType: "HASH" }
+                Projection:
+                    ProjectionType: "ALL"
+                ProvisionedThroughput:
+                    ReadCapacityUnits: { Ref: "DynamodbReadCapacity" }
+                    WriteCapacityUnits: { Ref: "DynamodbWriteCapacity" }
+            Tags:
+              - { Key: "Name", Value: { "Fn::Sub": "users-${Environment}-account-codes" } }
+              - { Key: "Management", Value: "managed" }
+              - { Key: "Project", Value: "users" }
+              - { Key: "Environment", Value: { Ref: "Environment" } }
+              - { Key: "Service", Value: "accounts" }
+        DeletionPolicy : "Retain"
+
     ##########################################################################################################
     ##  IOT
     ##########################################################################################################
@@ -676,6 +705,8 @@ Resources:
                           - { "Fn::Sub": "${PushNotificationsTable.Arn}/*" }
                           - { "Fn::Sub": "${AccountsTable.Arn}" }
                           - { "Fn::Sub": "${AccountsTable.Arn}/*" }
+                          - { "Fn::Sub": "${AccountCodesTable.Arn}" }
+                          - { "Fn::Sub": "${AccountCodesTable.Arn}/*" }
                       - Action:
                           - "iot:AddThingToThingGroup"
                           - "iot:AttachPrincipalPolicy"
@@ -737,6 +768,7 @@ Resources:
                     USERS_COGNITO_USER_POOL_ID: { Ref: "UsersCognitoUserPool" }
                     USERS_COGNITO_USER_POOL_CLIENT_ID: { Ref: "UsersCognitoUserPoolClient" }
                     PUSHNOTIFICATIONS_DYNAMODB_TABLE_NAME: { Ref: "PushNotificationsTable" }
+                    ACCOUNTCODES_DYNAMODB_TABLE_NAME: { Ref: "AccountCodesTable" }
                     ACCOUNTS_DYNAMODB_TABLE_NAME: { Ref: "AccountsTable" }
             Handler: "apigateway.handler"
             Runtime: "python3.6"
