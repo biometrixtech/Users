@@ -11,10 +11,7 @@
         },
         "role": {
             "description": "Role",
-            "enum": [
-                "admin" ,
-                "athlete"
-            ]
+            "type": "object"
         },
         "password": {
             "type": "string",

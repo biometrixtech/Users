@@ -216,7 +216,7 @@ def handle_user_patch(user_id):
 
     if 'role' in request.json:
         # raise UnauthorizedException('Cannot elevate user role')
-        request.json['role'] = 'athlete'
+        del request.json['role']
 
     # Get the metric values for height and mass if only imperial values were given
     metricise_values()
