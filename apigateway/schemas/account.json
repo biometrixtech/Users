@@ -18,9 +18,17 @@
                 "type": "number"
             }
         },
-        "code": {
-            "description": "The access code",
-            "type": "string"
+        "coach_seats": {
+            "type": "number",
+            "default": 0
+        },
+        "coach_users": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "The coaches in the account",
+            "readonly": true
         },
         "conference": {
             "type": "string"
