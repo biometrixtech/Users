@@ -2,7 +2,7 @@ import boto3
 
 from fathomapi.api.config import Config
 from fathomapi.models.cognito_entity import CognitoEntity
-from fathomapi.utils.exceptions import UnauthorizedException
+from fathomapi.utils.exceptions import UnauthorizedException, NoUpdatesException
 
 from models.user_data import UserData
 from utils import metres_to_ftin, kg_to_lb
@@ -30,9 +30,24 @@ class User(CognitoEntity):
         return ret
 
     def patch(self, body):
-        super().patch(body)
+        updated = False
+
+        try:
+            ret = super().patch(body)
+            updated = True
+        except NoUpdatesException:
+            ret = self.get()
+
         user_data = UserData(self.id)
-        ret = user_data.patch(body)
+        try:
+            ret.update(user_data.patch(body))
+            updated = True
+        except NoUpdatesException:
+            ret.update(user_data.get())
+
+        if not updated:
+            raise NoUpdatesException()
+
         self._munge_response(ret)
         return ret
 

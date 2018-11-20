@@ -12,8 +12,8 @@
         "role": {
             "description": "Role",
             "enum": [
-                "admin" ,
-                "athlete"
+                "athlete",
+                "coach"
             ]
         },
         "password": {

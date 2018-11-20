@@ -17,10 +17,11 @@ class UserData(DynamodbEntity):
     def id(self):
         return self.primary_key['id']
 
-    def add_account(self, account_id):
+    def add_account(self, account_id, role):
         """
         Link the user to an account
         :param str account_id:
+        :param str role:
         """
         if not self.exists():
             raise NoSuchEntityException(f'No user with id {self.id}')
@@ -34,12 +35,13 @@ class UserData(DynamodbEntity):
 
         self._attributes.setdefault('account_ids', []).append(account_id)
 
-        models.account.Account(account_id).add_user(self.id)
+        models.account.Account(account_id).add_user(self.id, role)
 
-    def remove_account(self, account_id):
+    def remove_account(self, account_id, role):
         """
         Unlink the user from an account
         :param str account_id:
+        :param str role:
         """
         if not self.exists():
             raise NoSuchEntityException(f'No user with id {self.id}')
@@ -53,4 +55,4 @@ class UserData(DynamodbEntity):
 
         self._attributes['account_ids'].remove(account_id)
 
-        models.account.Account(account_id).add_user(self.id)
+        models.account.Account(account_id).add_user(self.id, role)
