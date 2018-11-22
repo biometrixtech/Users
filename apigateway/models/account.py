@@ -8,7 +8,7 @@ from fathomapi.api.config import Config
 from fathomapi.models.dynamodb_entity import DynamodbEntity
 from fathomapi.utils.exceptions import NoSuchEntityException, PaymentRequiredException, InvalidSchemaException
 
-import models.user_data
+import models.user
 
 
 class Account(DynamodbEntity):
@@ -48,7 +48,7 @@ class Account(DynamodbEntity):
 
         self._attributes.setdefault(f'{prefix}users', []).append(user_id)
 
-        models.user_data.UserData(user_id).add_account(self.id, role)
+        models.user.User(user_id).add_account(self.id, role)
 
     def remove_user(self, user_id, role):
         """
@@ -70,4 +70,4 @@ class Account(DynamodbEntity):
 
         self._attributes[field_name].remove(user_id)
 
-        models.user_data.UserData(user_id).remove_account(self.id, role)
+        models.user.User(user_id).remove_account(self.id, role)

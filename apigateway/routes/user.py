@@ -282,8 +282,9 @@ def handle_user_join_account(user_id):
     account_code = AccountCode(request.json['account_code']).get()
     account = Account(account_code['account_id'])
 
-    if user.get()['role'] != account_code['role']:
+    if user.get()['role'] != account_code['role'] and len(user.get()['account_ids']) > 0:
         raise NotImplementedError(f'User is currently {user.get()["role"]}, cannot use {account_code["role"]} token')
+
     account.add_user(user.id, account_code['role'])
     return {'message': 'Success', 'account': account.get()}
 
