@@ -35,8 +35,6 @@ class UserData(DynamodbEntity):
 
         self._attributes.setdefault('account_ids', []).append(account_id)
 
-        models.account.Account(account_id).add_user(self.id, role)
-
     def remove_account(self, account_id, role):
         """
         Unlink the user from an account
@@ -54,5 +52,3 @@ class UserData(DynamodbEntity):
         self._update_dynamodb(upsert, Attr('id').exists())
 
         self._attributes['account_ids'].remove(account_id)
-
-        models.account.Account(account_id).add_user(self.id, role)
