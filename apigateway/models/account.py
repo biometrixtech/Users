@@ -1,12 +1,9 @@
 from boto3.dynamodb.conditions import Attr
 from botocore.exceptions import ClientError
-import random
-import re
-import string
 
 from fathomapi.api.config import Config
 from fathomapi.models.dynamodb_entity import DynamodbEntity
-from fathomapi.utils.exceptions import NoSuchEntityException, PaymentRequiredException, InvalidSchemaException
+from fathomapi.utils.exceptions import NoSuchEntityException, PaymentRequiredException
 
 import models.user
 import models.account_code
@@ -24,11 +21,7 @@ class Account(DynamodbEntity):
 
     def get(self, include_internal_properties=False):
         ret = super().get(include_internal_properties)
-
-        ret['codes'] = {}
-        for code in models.account_code.AccountCode.get_many(account_id=[self.id]):
-            ret['codes'][code.role] = code.account_id
-
+        ret['codes'] = {code['role']: code['code'] for code in models.account_code.AccountCode.get_many(index='account_id', account_id=[self.id])[0]}
         return ret
 
     def add_user(self, user_id, role):
