@@ -241,11 +241,21 @@ Resources:
             TableName: { "Fn::Sub": "users-${Environment}-account-codes" }
             AttributeDefinitions:
               - { AttributeName: "code", AttributeType: "S" }
+              - { AttributeName: "account_id", AttributeType: "S" }
             KeySchema:
               - { AttributeName: "code", KeyType: "HASH" }
             ProvisionedThroughput:
                 ReadCapacityUnits: { Ref: "DynamodbReadCapacity" }
                 WriteCapacityUnits: { Ref: "DynamodbWriteCapacity" }
+            GlobalSecondaryIndexes:
+              - IndexName: "account_id"
+                KeySchema:
+                  - { AttributeName: "account_id", KeyType: "HASH" }
+                Projection:
+                    ProjectionType: "ALL"
+                ProvisionedThroughput:
+                    ReadCapacityUnits: { Ref: "DynamodbReadCapacity" }
+                    WriteCapacityUnits: { Ref: "DynamodbWriteCapacity" }
             Tags:
               - { Key: "Name", Value: { "Fn::Sub": "users-${Environment}-account-codes" } }
               - { Key: "Management", Value: "managed" }
