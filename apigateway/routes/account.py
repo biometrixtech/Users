@@ -7,6 +7,7 @@ from fathomapi.utils.exceptions import DuplicateEntityException, InvalidSchemaEx
 
 from models.account import Account
 from models.account_code import AccountCode
+from models.user import User
 
 account_app = Blueprint('account', __name__)
 
@@ -76,3 +77,12 @@ def handle_account_get_from_code():
         raise InvalidSchemaException('Query string parameter `account_code` is required')
     account_code = AccountCode(request.args['account_code'].upper()).get()
     return {'account': Account(account_code['account_id']).get()}
+
+
+@account_app.route('/<uuid:account_id>/users', methods=['GET'])
+@require.authenticated.any
+@xray_recorder.capture('routes.account.get_users')
+def handle_account_get_users(account_id):
+    account = Account(account_id).get()
+
+    return {'account': account, 'users': [u.get() for u in User.get_many(id=account['users'])]}

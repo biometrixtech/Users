@@ -21,7 +21,7 @@ class Account(DynamodbEntity):
 
     def get(self, include_internal_properties=False):
         ret = super().get(include_internal_properties)
-        ret['codes'] = {code['role']: code['code'] for code in models.account_code.AccountCode.get_many(index='account_id', account_id=[self.id])[0]}
+        ret['codes'] = {code['role']: code['code'] for code in models.account_code.AccountCode.get_many(index='account_id', account_id=self.id)}
         return ret
 
     def add_user(self, user_id, role):
