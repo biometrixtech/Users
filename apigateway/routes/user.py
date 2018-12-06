@@ -18,6 +18,7 @@ from fathomapi.utils.exceptions import DuplicateEntityException, UnauthorizedExc
 
 from utils import ftin_to_metres, lb_to_kg
 from models.account import Account
+from models.account_code import AccountCode
 from models.user import User
 from models.user_data import UserData
 from models.device import Device
@@ -84,9 +85,11 @@ def create_user():
 
     if 'account_code' in request.json:
         try:
-            account = Account.new_from_code(request.json['account_code'])
+            account_code = AccountCode(request.json['account_code']).get()
+            account = Account(account_code['account_id'])
             xray_recorder.current_subsegment().put_annotation('account_id', account.id)
             request.json['account_ids'] = [account.id]
+            request.json['role'] = account_code['role']
         except NoSuchEntityException:
             raise NoSuchEntityException('Unrecognised account_code')
     else:
@@ -104,14 +107,13 @@ def create_user():
             raise DuplicateEntityException('A user with that email address is already registered')
         xray_recorder.current_subsegment().put_annotation('user_id', user.id)
 
-
         try:
             UserData(user.id).create(request.json)
             try:
                 if account is not None:
-                    account.add_user(user.id)
+                    account.add_user(user.id, request.json['role'])
             except Exception:
-                _do_without_error(lambda: account.remove_user(user.id))
+                _do_without_error(lambda: account.remove_user(user.id, request.json['role']))
                 raise
 
         except Exception:
@@ -200,8 +202,7 @@ def handle_user_logout(user_id):
     User(user_id).logout()
 
     # De-affiliate all the user's devices
-    devices, _ = Device.get_many(owner_id=user_id)
-    for device in devices:
+    for device in Device.get_many(owner_id=user_id):
         device.patch({'owner_id': None})
 
     return {'authorization': None}
@@ -216,7 +217,7 @@ def handle_user_patch(user_id):
 
     if 'role' in request.json:
         # raise UnauthorizedException('Cannot elevate user role')
-        request.json['role'] = 'athlete'
+        del request.json['role']
 
     # Get the metric values for height and mass if only imperial values were given
     metricise_values()
@@ -233,7 +234,7 @@ def handle_user_delete(user_id):
     account_ids = user.get()['account_ids']
     for account_id in account_ids:
         account = Account(account_id)
-        account.remove_user(user_id)
+        account.remove_user(user_id, 'athlete')
     UserData(user.id).delete()
     user.delete()
     return {'message': 'Success'}
@@ -277,8 +278,13 @@ def handle_user_verify_email(user_id):
 @xray_recorder.capture('routes.user.join_account')
 def handle_user_join_account(user_id):
     user = User(user_id)
-    account = Account.new_from_code(request.json['account_code'])
-    account.add_user(user.id)
+    account_code = AccountCode(request.json['account_code']).get()
+    account = Account(account_code['account_id'])
+
+    if user.get()['role'] != account_code['role'] and len(user.get()['account_ids']) > 0:
+        raise NotImplementedError(f'User is currently {user.get()["role"]}, cannot use {account_code["role"]} token')
+
+    account.add_user(user.id, account_code['role'])
     return {'message': 'Success', 'account': account.get()}
 
 
@@ -331,7 +337,7 @@ def _attempt_cognito_migration(user, email, password):
 @require.body({'message': str, 'call_to_action': str})
 @xray_recorder.capture('routes.user.notify')
 def handle_user_notify(user_id):
-    devices, _ = Device.get_many(owner_id=user_id)
+    devices = list(Device.get_many(owner_id=user_id))
 
     if request.json['call_to_action'] not in ['VIEW_PLAN', 'COMPLETE_DAILY_READINESS', 'COMPLETE_ACTIVE_RECOVERY', 'COMPLETE_ACTIVE_PREP']:
         raise InvalidSchemaException("`call_to_action` must be one of VIEW_PLAN, COMPLETE_DAILY_READINESS, COMPLETE_ACTIVE_RECOVERY, COMPLETE_ACTIVE_PREP")

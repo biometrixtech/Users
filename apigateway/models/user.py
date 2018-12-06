@@ -2,8 +2,9 @@ import boto3
 
 from fathomapi.api.config import Config
 from fathomapi.models.cognito_entity import CognitoEntity
-from fathomapi.utils.exceptions import UnauthorizedException
+from fathomapi.utils.exceptions import UnauthorizedException, NoUpdatesException, NoSuchEntityException
 
+import models.account
 from models.user_data import UserData
 from utils import metres_to_ftin, kg_to_lb
 
@@ -30,9 +31,24 @@ class User(CognitoEntity):
         return ret
 
     def patch(self, body):
-        super().patch(body)
+        updated = False
+
+        try:
+            ret = super().patch(body)
+            updated = True
+        except NoUpdatesException:
+            ret = self.get()
+
         user_data = UserData(self.id)
-        ret = user_data.patch(body)
+        try:
+            ret.update(user_data.patch(body))
+            updated = True
+        except NoUpdatesException:
+            ret.update(user_data.get())
+
+        if not updated:
+            raise NoUpdatesException()
+
         self._munge_response(ret)
         return ret
 
@@ -72,3 +88,37 @@ class User(CognitoEntity):
             UserData(self.id).patch({'_email_confirmation_code': None})
         else:
             raise UnauthorizedException('Incorrect Confirmation Code')
+
+    def add_account(self, account_id, role):
+        """
+        Link the user to an account
+        :param str account_id:
+        :param str role:
+        """
+        if not self.exists():
+            raise NoSuchEntityException(f'No user with id {self.id}')
+
+        if account_id in self.get()['account_ids']:
+            return
+
+        UserData(self.id).add_account(account_id, role)
+
+        self._patch(['role'], {'role': role})
+
+        models.account.Account(account_id).add_user(self.id, role)
+
+    def remove_account(self, account_id, role):
+        """
+        Unlink the user from an account
+        :param str account_id:
+        :param str role:
+        """
+        if not self.exists():
+            raise NoSuchEntityException(f'No user with id {self.id}')
+
+        if account_id not in (self.get()['account_ids'] or []):
+            return
+
+        UserData(self.id).remove_account(account_id, role)
+
+        models.account.Account(account_id).add_user(self.id, role)

@@ -6,6 +6,8 @@ from fathomapi.utils.decorators import require
 from fathomapi.utils.exceptions import DuplicateEntityException, InvalidSchemaException
 
 from models.account import Account
+from models.account_code import AccountCode
+from models.user import User
 
 account_app = Blueprint('account', __name__)
 
@@ -19,13 +21,19 @@ def create_account():
     # Since codes are generated randomly, there is a small (about one in 3.3-billion-divided-by-number-of-existing-codes)
     # of a clash.  Retrying a few times makes the probability of failing to secure a unique code essentially zero.
     for i in range(5):
-        request.json['code'] = Account.generate_code()
+        athlete_code = AccountCode.generate_code('athlete')
+        coach_code = AccountCode.generate_code('coach')
 
         # Generating an id algorithmically from the code, means that the uniqueness constraint on id extends to
         # enforcing uniqueness of the code
-        account = Account(str(uuid.uuid5(uuid.NAMESPACE_URL, f"https://schema.fathomai.com/schemas/account/{request.json['code']}")))
+        account = Account(str(uuid.uuid5(uuid.NAMESPACE_URL, f"https://schema.fathomai.com/schemas/account/{athlete_code}")))
         try:
-            ret = account.create(request.json)
+            account.create(request.json)
+            AccountCode(athlete_code).create({'account_id': account.id, 'role': 'athlete'})
+            AccountCode(coach_code).create({'account_id': account.id, 'role': 'coach'})
+            ret = account.get()
+            ret['code'] = athlete_code  # Legacy
+            ret['codes'] = {'athlete': athlete_code, 'coach': coach_code}
             break
         except DuplicateEntityException:
             continue
@@ -51,6 +59,7 @@ def update_account(account_id):
 @xray_recorder.capture('routes.account.delete')
 def handle_delete_account(account_id):
     Account(account_id).delete()
+    # TODO delete orphan account codes
     return {'message': 'Success'}, 202
 
 
@@ -66,4 +75,14 @@ def handle_account_get(account_id):
 def handle_account_get_from_code():
     if 'account_code' not in request.args:
         raise InvalidSchemaException('Query string parameter `account_code` is required')
-    return {'account': Account.new_from_code(request.args['account_code'].upper()).get()}
+    account_code = AccountCode(request.args['account_code'].upper()).get()
+    return {'account': Account(account_code['account_id']).get()}
+
+
+@account_app.route('/<uuid:account_id>/users', methods=['GET'])
+@require.authenticated.any
+@xray_recorder.capture('routes.account.get_users')
+def handle_account_get_users(account_id):
+    account = Account(account_id).get()
+
+    return {'account': account, 'users': [u.get() for u in User.get_many(id=account['users'])]}

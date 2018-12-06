@@ -66,6 +66,12 @@
         "_email_confirmation_code": {
             "type": "string"
         },
+        "first_time_experience": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
         "injury_status": {
             "enum": [ "healthy", "healthy_chronically_injured", "returning_from_injury", "returning_from_acute_injury" ]
         },
