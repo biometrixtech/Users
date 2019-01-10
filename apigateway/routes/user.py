@@ -354,6 +354,8 @@ def handle_user_notify(user_id):
         'message': message,
         'call_to_action': request.json['call_to_action'],
     }
+    if 'last_updated' in request.json:
+        payload['last_updated'] = request.json['last_updated']
     message_digest = hashlib.sha512(json.dumps(payload).encode()).hexdigest()
     now_time = int(time.time())
 
@@ -373,6 +375,8 @@ def handle_user_notify(user_id):
         raise e
 
     statuses = {}
+    if 'last_updated' in payload:
+        del payload['last_updated']
     for device in devices:
         try:
             device.send_push_notification(message, payload)
