@@ -86,4 +86,4 @@ def handle_account_get_from_code():
 def handle_account_get_users(account_id):
     account = Account(account_id).get()
 
-    return {'account': account, 'users': list(UserData.get_many(id=account['users']))}
+    return {'account': account, 'users': [ud.get() for ud in list(UserData.get_many(id=account['users']))]}
