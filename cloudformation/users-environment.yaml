@@ -122,10 +122,10 @@ Resources:
             Policies:
                 PasswordPolicy:
                     MinimumLength: 8
-                    RequireLowercase: true
+                    RequireLowercase: false
                     RequireNumbers: true
                     RequireSymbols: false
-                    RequireUppercase: true
+                    RequireUppercase: false
             UserPoolName: { "Fn::Sub": "users-${Environment}-users" }
             Schema:
               - Name: 'role'
@@ -153,7 +153,6 @@ Resources:
                 <p>Your new password must include:
                 <ul>
                     <li>8-16 characters
-                    <li>at least 1 uppercase letter
                     <li>at least 1 number
                 </ul>
                 <p>If you did not initiate this password reset, please contact us at <a href="mailto:hello@fathomai.com">hello@fathomai.com</a>.
