@@ -37,7 +37,7 @@ def handle_activeusers():
 
     user_data = list(UserData.get_many(id=[user.id for user in active_users]))
 
-    plans_service = Service('plans', '2_0')
+    plans_service = Service('plans', '2_1')
     now = datetime.datetime.now()
     calls = []
     for user in active_users:
