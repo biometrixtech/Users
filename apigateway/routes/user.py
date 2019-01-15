@@ -33,29 +33,9 @@ user_app = Blueprint('user', __name__)
 @xray_recorder.capture('routes.user.login')
 def user_login():
     user = User(request.json['personal_data']['email'])
-    user_record = user.get()
-
-    try:
-        authorisation = user.login(password=request.json['password'])
-    except UnauthorizedException as e:
-        if user_record['migrated_date'] is not None and user_record['migrated_date'] != 'completed':
-            # Try migrating them
-            try:
-                authorisation = _attempt_cognito_migration(
-                    user,
-                    request.json['personal_data']['email'],
-                    request.json['password']
-                )
-            except Exception as e2:
-                print(e2)
-                # Raise the original error
-                raise e
-        else:
-            raise e
-
     return {
-        'user': user_record,
-        'authorization': authorisation
+        'user': user.get(),
+        'authorization': user.login(password=request.json['password']),
     }
 
 
@@ -288,50 +268,6 @@ def handle_user_join_account(user_id):
     return {'message': 'Success', 'account': account.get()}
 
 
-def _attempt_cognito_migration(user, email, password):
-    print('Attempting cognito migration')
-
-    # Check that we can still log in with the migration default password
-    try:
-        temp_authorisation = user.login(password=Config.get('MIGRATION_DEFAULT_PASSWORD')['password'])
-    except UnauthorizedException:
-        raise UnauthorizedException('Could not log in with migration default password')
-
-    # Check that the supplied password matches the one in Cognito.  Note that this does not require
-    # us to have bcrypt or Flask-bcrypt installed in this codebase, but does require the `pgcrypto`
-    # extension to be enabled in postgres.
-    check_postgres = query_postgres_sync(
-        "SELECT id, replace(password_digest, '$2b$', '$2a$')=crypt(%s, replace(password_digest, '$2b$', '$2a$')) AS password_match FROM users WHERE email=%s",
-        [password, email]
-    )[0]
-
-    if not check_postgres['password_match']:
-        raise UnauthorizedException('Password does not match in Postgres')
-
-    # update mongo collections to the new user_id
-    Service('plans', '2_0').call_apigateway_async(
-        method='PATCH',
-        endpoint='misc/cognito_migration',
-        body={"legacy_user_id": check_postgres['id'], "user_id": user.id}
-    )
-    # Change the password in cognito
-    user.change_password(
-        temp_authorisation['session_token'],
-        Config.get('MIGRATION_DEFAULT_PASSWORD')['password'],
-        password
-    )
-
-    # And login as normal
-    res = user.login(password=password)
-
-
-
-    # Mark migration as completed
-    user.patch({'migrated_date': 'completed'})
-
-    return res
-
-
 @user_app.route('/<uuid:user_id>/notify', methods=['POST'])
 @require.authenticated.service
 @require.body({'message': str, 'call_to_action': str})
@@ -385,4 +321,3 @@ def handle_user_notify(user_id):
             statuses[device.id] = {'success': False, 'message': str(e)}
 
     return statuses, 200
-
