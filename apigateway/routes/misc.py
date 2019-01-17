@@ -56,7 +56,7 @@ def handle_activeusers():
     if user_generator.value is not None:
         print('Triggering next batch')
         self_service = Service('users', Config.get('API_VERSION'))
-        self_service.call_apigateway_async('POST', '/misc/activeusers', body={'next_token': user_generator.value})
+        self_service.call_apigateway_async('POST', '/misc/activeusers', body={'next_token': user_generator.value}, execute_at=now + datetime.timedelta(seconds=60))
 
     return {'status': 'Success'}
 
