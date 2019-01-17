@@ -50,8 +50,8 @@ def handle_activeusers():
 
         calls.append({'method': 'POST', 'endpoint': f'/athlete/{user.id}/active', 'body': body})
 
-    execute_at = now + datetime.timedelta(seconds=random.randint(0, 10*60))
-    plans_service.call_apigateway_async_multi(calls=calls, execute_at=execute_at)
+    # execute_at = now + datetime.timedelta(seconds=random.randint(0, 10*60))
+    plans_service.call_apigateway_async_multi(calls=calls, jitter=10 * 60)
 
     if user_generator.value is not None:
         print('Triggering next batch')
