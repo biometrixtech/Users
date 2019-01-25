@@ -169,7 +169,7 @@ Resources:
             GenerateSecret: false
             ReadAttributes:
               - "custom:role"
-            RefreshTokenValidity: 30
+            RefreshTokenValidity: 3650
             UserPoolId: { Ref: "UsersCognitoUserPool" }
 
     UsersTable:
