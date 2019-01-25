@@ -13,6 +13,11 @@ Parameters:
         Type: "String"
         Description: "The name of the environment"
 
+    # Plan API version
+    PlansApiVersion: 
+        Type: "String"
+        Default: "2_2"
+        Description: "Corresponding Plans API version"
     # The second part of the CIDR block for the VPN (10.xx.0.0/24).
     VpnCidr:
         Type: "Number"
@@ -748,6 +753,7 @@ Resources:
                     PUSHNOTIFICATIONS_DYNAMODB_TABLE_NAME: { Ref: "PushNotificationsTable" }
                     ACCOUNTCODES_DYNAMODB_TABLE_NAME: { Ref: "AccountCodesTable" }
                     ACCOUNTS_DYNAMODB_TABLE_NAME: { Ref: "AccountsTable" }
+                    PLANS_API_VERSION: {Ref: "PlansApiVersion"}
             Handler: "apigateway.handler"
             Runtime: "python3.6"
             Timeout: "30"
