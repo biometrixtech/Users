@@ -17,6 +17,9 @@
         "agreed_terms_of_use": {
             "type": "bool"
         },
+        "apple_healthkit_paired": {
+            "type": "bool"
+        },
         "id": {
             "description": "The user id",
             "type": "string",
