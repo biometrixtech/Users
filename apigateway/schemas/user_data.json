@@ -17,6 +17,9 @@
         "agreed_terms_of_use": {
             "type": "bool"
         },
+        "health_enabled": {
+            "type": "bool"
+        },
         "id": {
             "description": "The user id",
             "type": "string",
@@ -71,6 +74,14 @@
             "items": {
                 "type": "string"
             }
+        },
+        "historic_health_sync_date": {
+            "description": "The date the app successfully synced historic health data",
+            "type": "string"
+        },
+        "health_sync_date": {
+            "description": "The date the app was last synced with healthkit",
+            "type": "string"
         },
         "injury_status": {
             "enum": [ "healthy", "healthy_chronically_injured", "returning_from_injury", "returning_from_acute_injury" ]

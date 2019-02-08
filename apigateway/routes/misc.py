@@ -2,6 +2,7 @@ from aws_xray_sdk.core import xray_recorder
 from flask import Blueprint, request
 import datetime
 import random
+import os
 
 from fathomapi.api.config import Config
 from fathomapi.comms.service import Service
@@ -11,7 +12,7 @@ from models.user import User
 from models.user_data import UserData
 
 misc_app = Blueprint('misc', __name__)
-
+PLANS_API_VERSION = os.environ['PLANS_API_VERSION']
 
 @misc_app.route('/dailycron', methods=['POST'])
 @xray_recorder.capture('routes.misc.dailycron')
@@ -37,7 +38,7 @@ def handle_activeusers():
 
     user_data = list(UserData.get_many(id=[user.id for user in active_users]))
 
-    plans_service = Service('plans', '2_1')
+    plans_service = Service('plans', PLANS_API_VERSION)
     now = datetime.datetime.now()
     calls = []
     for user in active_users:
