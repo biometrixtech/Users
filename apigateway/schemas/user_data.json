@@ -75,6 +75,10 @@
                 "type": "string"
             }
         },
+        "historic_health_sync_date": {
+            "description": "The date the app successfully synced historic health data",
+            "type": "string"
+        },
         "health_sync_date": {
             "description": "The date the app was last synced with healthkit",
             "type": "string"
