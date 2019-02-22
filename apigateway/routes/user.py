@@ -55,7 +55,7 @@ def create_user():
                                                 month=now.month,
                                                 day=now.day))
     if birth_date > cutoff_date:
-        return {'message': "Sorry, Fathom is only for users 13 or older!"}, 404
+        return {'message': "Sorry, Fathom is only for users 13 or older!"}, 409
 
     request.json['role'] = 'athlete'
 
