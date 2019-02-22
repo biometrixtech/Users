@@ -7,6 +7,7 @@ import hashlib
 import json
 import os
 import time
+import datetime
 
 from fathomapi.api.config import Config
 from fathomapi.comms.service import Service
@@ -22,7 +23,7 @@ from models.account_code import AccountCode
 from models.user import User
 from models.user_data import UserData
 from models.device import Device
-from utils import nowdate
+from utils import nowdate, format_date
 
 push_notifications_table = boto3.resource('dynamodb').Table(Config.get('PUSHNOTIFICATIONS_DYNAMODB_TABLE_NAME'))
 user_app = Blueprint('user', __name__)
@@ -48,6 +49,14 @@ def create_user():
     """
     # if 'role' in request.json and request.json['role'] != 'athlete':
     #     raise ForbiddenException('Cannot create user with elevated role')
+    birth_date = format_date(request.json['personal_data']['birth_date'])
+    now = datetime.datetime.now()
+    cutoff_date = format_date(datetime.datetime(year=now.year - 13,
+                                                month=now.month,
+                                                day=now.day))
+    if birth_date > cutoff_date:
+        raise ForbiddenException('Sorry, Fathom is only for users 13 or older!')
+
     request.json['role'] = 'athlete'
 
     if 'User-Agent' in request.headers and request.headers['User-Agent'] == 'biometrix/cognitomigrator':
