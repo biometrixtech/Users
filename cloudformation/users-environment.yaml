@@ -16,7 +16,7 @@ Parameters:
     # Plan API version
     PlansApiVersion: 
         Type: "String"
-        Default: "2_2"
+        Default: "3_0"
         Description: "Corresponding Plans API version"
     # The second part of the CIDR block for the VPN (10.xx.0.0/24).
     VpnCidr:
