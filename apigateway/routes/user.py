@@ -289,11 +289,14 @@ def handle_user_verify_email(user_id):
 @xray_recorder.capture('routes.user.join_account')
 def handle_user_join_account(user_id):
     user = User(user_id)
-    account_code = AccountCode(request.json['account_code']).get()
+    try:
+        account_code = AccountCode(request.json['account_code']).get()
+    except NoSuchEntityException:
+        raise NoSuchEntityException('Invalid account code. Please try again.')
     account = Account(account_code['account_id'])
 
     if user.get()['role'] != account_code['role'] and len(user.get()['account_ids']) > 0:
-        raise NotImplementedError(f'User is currently {user.get()["role"]}, cannot use {account_code["role"]} token')
+        raise NotImplementedError(f'User is currently {user.get()["role"]}, cannot use {account_code["role"]} code.')
 
     account.add_user(user.id, account_code['role'])
     return {'message': 'Success', 'account': account.get()}
