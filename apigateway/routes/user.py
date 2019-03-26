@@ -1,17 +1,13 @@
 from aws_xray_sdk.core import xray_recorder
 from botocore.exceptions import ClientError
 from flask import Blueprint, request
-import binascii
 import boto3
 import hashlib
 import json
-import os
 import time
 import datetime
 
 from fathomapi.api.config import Config
-from fathomapi.comms.service import Service
-from fathomapi.comms.legacy import query_postgres_sync
 from fathomapi.comms.transport import send_ses_email
 from fathomapi.utils.decorators import require
 from fathomapi.utils.exceptions import DuplicateEntityException, UnauthorizedException, NoSuchEntityException, \
@@ -29,15 +25,18 @@ push_notifications_table = boto3.resource('dynamodb').Table(Config.get('PUSHNOTI
 user_app = Blueprint('user', __name__)
 
 
-@user_app.route('/login', methods=['POST'])  # TODO was /sign_in
+@user_app.route('/login', methods=['POST'])
 @require.body({'personal_data': {'email': str}, 'password': str})
 @xray_recorder.capture('routes.user.login')
 def user_login():
-    user = User(request.json['personal_data']['email'])
-    return {
-        'user': user.get(),
-        'authorization': user.login(password=request.json['password']),
-    }
+    try:
+        user = User(request.json['personal_data']['email'])
+        return {
+            'user': user.get(),
+            'authorization': user.login(password=request.json['password']),
+        }
+    except (NoSuchEntityException, UnauthorizedException):
+        raise UnauthorizedException('Your email or password is incorrect.  Please try again.')
 
 
 @user_app.route('/', methods=['POST'])
@@ -80,7 +79,7 @@ def create_user():
             request.json['account_ids'] = [account.id]
             request.json['role'] = account_code['role']
         except NoSuchEntityException:
-            raise NoSuchEntityException('Unrecognised account_code')
+            raise NoSuchEntityException('Invalid account code.  Please try again')
     else:
         account = None
 
@@ -94,6 +93,9 @@ def create_user():
         except DuplicateEntityException:
             # The user already exists
             raise DuplicateEntityException('A user with that email address is already registered')
+        except ClientError as e:
+            if 'InvalidParameterException' in str(e) and 'username' in str(e):
+                raise InvalidSchemaException(f'"{user.id}" is not a valid username')
         xray_recorder.current_subsegment().put_annotation('user_id', user.id)
 
         try:
@@ -158,7 +160,14 @@ def metricise_values():
 @xray_recorder.capture('routes.user.forgotpassword')
 def handle_user_forgot_password():
     user = User(request.json['personal_data']['email'])
-    user.send_password_reset()
+
+    try:
+        user.send_password_reset()
+    except ClientError as e:
+        if 'UserNotFoundException' in str(e):
+            raise NoSuchEntityException('No account with that email address exists.')
+        raise e
+
     return {'message': 'Success'}, 200
 
 
@@ -167,7 +176,14 @@ def handle_user_forgot_password():
 @xray_recorder.capture('routes.user.reset_password')
 def handle_user_reset_password():
     user = User(request.json['personal_data']['email'])
-    user.reset_password(request.json['confirmation_code'], request.json['password'])
+
+    try:
+        user.reset_password(request.json['confirmation_code'], request.json['password'])
+    except ClientError as e:
+        if 'ExpiredCodeException' in str(e):
+            raise UnauthorizedException('Invalid or expired reset code.  Please request a new code.')
+        raise e
+
     return {'message': 'Success'}, 200
 
 
@@ -176,7 +192,13 @@ def handle_user_reset_password():
 @xray_recorder.capture('routes.user.authorise')
 def handle_user_authorise(user_id):
     user = User(user_id)
-    auth = user.login(token=request.json['session_token'])
+
+    try:
+        auth = user.login(token=request.json['session_token'])
+    except ClientError as e:
+        if 'NotAuthorizedException' in str(e):
+            raise ForbiddenException('Refresh token has been revoked.  Please log in again.')
+        raise e
 
     if 'timezone' in request.json:
         user.patch({'timezone': request.json['timezone']})
@@ -197,7 +219,7 @@ def handle_user_logout(user_id):
     return {'authorization': None}
 
 
-@user_app.route('/<uuid:user_id>', methods=['PATCH'])  # TODO This was PUT
+@user_app.route('/<uuid:user_id>', methods=['PATCH'])
 @require.authenticated.any
 @require.body({})
 @xray_recorder.capture('routes.user.patch')
