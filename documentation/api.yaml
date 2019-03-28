@@ -1,145 +1,150 @@
-swagger: '2.0'
+openapi: 3.0.0
 info:
-    version: '2.0.7'
+    version: '2.0.8'
     title: "Users Service"
-    description: This API allows clients to perform actions related to Users and Devices.
+    description: "This API allows clients to perform actions related to Users and Devices..."
     license:
-        name: Proprietary
-host: apis.environment.fathomai.com
-basePath: /users
-schemes:
-  - https
-consumes:
-  - application/json
-produces:
-  - application/json
+        name: "Proprietary"
+
+servers:
+  - url: "https://apis.{environment}.fathomai.com/users/2_0"
+    description: "API Endpoint"
+    variables:
+        environment:
+            default: dev
+            enum:
+              - dev
+              - test
+              - production
+            description: "Environment"
+
+tags:
+    - name: user
+      description: "Users"
 
 paths:
     /user:
         post:
             description: 'This endpoint can be called by a client to register a user.'
-            parameters:
-              - name: body
-                in: body
+            requestBody:
                 required: true
-                schema:
-                    type: object
-                    properties:
-                        personal_data:
-                            type: object
-                            properties:
-                                email:
-                                    type: string
-                                    example: 'glitch0@fathomai.com'
-                                    description: 'The email address that the user registered with.'
-                            required:
-                              - email
-                        password:
-                            type: string
-                            example: 'oatcakes'
-                            # minLength: 8
-                            description: '__must__ be a string containing 8 or more characters, with no leading or trailing spaces.'
-                        account_code:
-                            type: string
-                            example: 'ABCD1234'
-                            pattern: '[A-NP-Z]{4}[1-9]{4}'
-                            description: '__must__ be a string containing of 4 characters followed by 4 digits, not including O or 0.'
-                    required:
-                      - personal_data
-                      - password
-                    example: >-
-                        {
-                            "personal_data": {
-                                 "email": "glitch0@fathomai.com"
-                            },
-                            "password": "oatcakes",
-                            "account_code": "ABCD1234"
-                        }
+                content:
+                    application/json:
+                        type: object
+                        properties:
+                            personal_data:
+                                type: object
+                                properties:
+                                    email:
+                                        type: string
+                                        example: 'glitch0@fathomai.com'
+                                        description: 'The email address that the user registered with.'
+                                required:
+                                  - email
+                            password:
+                                type: string
+                                example: 'oatcakes'
+                                # minLength: 8
+                                description: '__must__ be a string containing 8 or more characters, with no leading or trailing spaces.'
+                            account_code:
+                                type: string
+                                example: 'ABCD1234'
+                                pattern: '[A-NP-Z]{4}[1-9]{4}'
+                                description: '__must__ be a string containing of 4 characters followed by 4 digits, not including O or 0.'
+                        required:
+                          - personal_data
+                          - password
+                        example: >-
+                            {
+                                "personal_data": {
+                                     "email": "glitch0@fathomai.com"
+                                },
+                                "password": "oatcakes",
+                                "account_code": "ABCD1234"
+                            }
             responses:
                 201:
                     description: 'Creation successful'
-                    schema:
-                        type: object
-                        properties:
-                            authorization:
-                                type: object
-                                properties:
-                                    expires:
-                                        $ref: '#/definitions/Datetime'
-                                    jwt:
-                                        type: string
-                                    session_token:
-                                        type: string
-                                        minLength: 32
-                                        maxLength: 32
-                            user:
-                                $ref: '#/definitions/User'
+                    content:
+                        application/json:
+                            type: object
+                            properties:
+                                authorization:
+                                    type: object
+                                    properties:
+                                        expires:
+                                            $ref: '#/components/schemas/Datetime'
+                                        jwt:
+                                            type: string
+                                        session_token:
+                                            type: string
+                                            minLength: 32
+                                            maxLength: 32
+                                user:
+                                    $ref: '#/components/schemas/User'
                 402:
                     description: 'Account has no spare seats'
                 404:
-                    description: >-
-                        If the account_code is invalid.
+                    description: "If the account_code is invalid."
             tags:
               - user
 
     /user/login:
-        # x-summary: Login
         post:
             description: >-
                 This endpoint can be called by a client, once registered, to acquire
                 credentials with which to access other endpoints.  The user __must__
                 have been registered prior to requesting this endpoint.
-            # summary: Login with username and password
-            parameters:
-              - name: body
-                in: body
+            requestBody:
                 required: true
-                schema:
-                    type: object
-                    properties:
-                        personal_data:
-                            type: object
-                            properties:
-                                email:
-                                    type: string
-                                    example: 'glitch0@fathomai.com'
-                                    description: 'The email address that the user registered with.'
-                            required:
-                              - email
-                        password:
-                            type: string
-                            example: 'oatcakes'
-                            # minLength: 8
-                            description: '__must__ be a string containing 8 or more characters, with no leading or trailing spaces.'
-                    required:
-                      - personal_data
-                      - password
-                    example: >-
-                        {
-                            "personal_data": {
-                                 "email": "glitch0@fathomai.com"
-                            },
-                            "password": "oatcakes"
-                        }
+                content:
+                    application/json:
+                        type: object
+                        properties:
+                            personal_data:
+                                type: object
+                                properties:
+                                    email:
+                                        type: string
+                                        example: 'glitch0@fathomai.com'
+                                        description: 'The email address that the user registered with.'
+                                required:
+                                  - email
+                            password:
+                                type: string
+                                example: 'oatcakes'
+                                # minLength: 8
+                                description: '__must__ be a string containing 8 or more characters, with no leading or trailing spaces.'
+                        required:
+                          - personal_data
+                          - password
+                        example: >-
+                            {
+                                "personal_data": {
+                                     "email": "glitch0@fathomai.com"
+                                },
+                                "password": "oatcakes"
+                            }
             responses:
                 200:
                     description: 'Authentication successful'
-                    schema:
-                        type: object
-                        properties:
-                            authorization:
-                                type: object
-                                properties:
-                                    expires:
-                                        $ref: '#/definitions/Datetime'
-                                    jwt:
-                                        type: string
-                                    session_token:
-                                        type: string
-                                        minLength: 32
-                                        maxLength: 32
-                            user:
-                                $ref: '#/definitions/User'
+                    content:
+                        application/json:
+                            type: object
+                            properties:
+                                authorization:
+                                    type: object
+                                    properties:
+                                        expires:
+                                            $ref: '#/components/schemas/Datetime'
+                                        jwt:
+                                            type: string
+                                        session_token:
+                                            type: string
+                                            minLength: 32
+                                            maxLength: 32
+                                user:
+                                    $ref: '#/components/schemas/User'
                 401:
                     description: 'Authentication failed'
                 404:
@@ -155,30 +160,30 @@ paths:
         post:
             description: >-
                 This endpoint can be called by a client to trigger a password reset for a user.
-            parameters:
-              - name: body
-                in: body
+
+            requestBody:
                 required: true
-                schema:
-                    type: object
-                    properties:
-                        personal_data:
-                            type: object
-                            properties:
-                                email:
-                                    type: string
-                                    example: 'glitch0@fathomai.com'
-                                    description: 'The email address that the user registered with.'
-                            required:
-                              - email
-                    required:
-                      - personal_data
-                    example: >-
-                        {
-                            "personal_data": {
-                                 "email": "glitch0@fathomai.com"
+                content:
+                    application/json:
+                        type: object
+                        properties:
+                            personal_data:
+                                type: object
+                                properties:
+                                    email:
+                                        type: string
+                                        example: 'glitch0@fathomai.com'
+                                        description: 'The email address that the user registered with.'
+                                required:
+                                  - email
+                        required:
+                          - personal_data
+                        example: >-
+                            {
+                                "personal_data": {
+                                     "email": "glitch0@fathomai.com"
+                                }
                             }
-                        }
             responses:
                 200:
                     description: 'Success'
@@ -191,38 +196,37 @@ paths:
         post:
             description: >-
                 This endpoint can be called by a client to reset a password with a confirmation code.
-            parameters:
-              - name: body
-                in: body
+            requestBody:
                 required: true
-                schema:
-                    type: object
-                    properties:
-                        personal_data:
-                            type: object
-                            properties:
-                                email:
-                                    type: string
-                                    example: 'glitch0@fathomai.com'
-                                    description: 'The email address that the user registered with.'
-                            required:
-                              - email
-                        confirmation_code:
-                            type: string
-                        password:
-                            type: string
-                    required:
-                      - personal_data
-                      - confirmation_code
-                      - password
-                    example: >-
-                        {
-                            "personal_data": {
-                                 "email": "glitch0@fathomai.com"
-                            },
-                            "confirmation_code": "123456",
-                            "password": "garibaldis"
-                        }
+                content:
+                    application/json:
+                        type: object
+                        properties:
+                            personal_data:
+                                type: object
+                                properties:
+                                    email:
+                                        type: string
+                                        example: 'glitch0@fathomai.com'
+                                        description: 'The email address that the user registered with.'
+                                required:
+                                  - email
+                            confirmation_code:
+                                type: string
+                            password:
+                                type: string
+                        required:
+                          - personal_data
+                          - confirmation_code
+                          - password
+                        example: >-
+                            {
+                                "personal_data": {
+                                     "email": "glitch0@fathomai.com"
+                                },
+                                "confirmation_code": "123456",
+                                "password": "garibaldis"
+                            }
             responses:
                 200:
                     description: 'Success'
@@ -232,28 +236,27 @@ paths:
               - user
 
     /user/{user_id}:
-        # x-summary: Get a user
+        parameters:
+          - name: user_id
+            in: path
+            type: string
+            required: true
+            description: "The user ID. __must__ be a Uuid."
+
         get:
             description: >-
                 This endpoint allows the client to get information about a user,
                 including the current user.
-            # summary: Get a user
-            parameters:
-              - name: user_id
-                in: path
-                type: string
-                required: true
-                description: >-
-                    The user ID. __must__ be a Uuid.
-              - $ref: '#/parameters/authorization'
+#              - $ref: '#/parameters/authorization'
             responses:
                 200:
                     description: 'Ok'
-                    schema:
-                        type: object
-                        properties:
-                            user:
-                                $ref: '#/definitions/User'
+                    content:
+                        application/json:
+                            type: object
+                            properties:
+                                user:
+                                    $ref: '#/components/schemas/User'
                 404:
                     description: 'No such user'
             tags:
@@ -261,80 +264,80 @@ paths:
 
         patch:
             description: 'This endpoint can be called by a client to update a user.'
-            parameters:
-              - name: body
-                in: body
+            requestBody:
                 required: true
-                schema:
-                    type: object
-                    example: >-
-                        {
-                            "personal_data": {
-                                 "first_name": "John",
-                                 "last_name": "Smith"
-                            },
-                            "onboarding_status": [ "totally_onboard" ]
-                        }
+                content:
+                    application/json:
+                        type: object
+                        example: >-
+                            {
+                                "personal_data": {
+                                     "first_name": "John",
+                                     "last_name": "Smith"
+                                },
+                                "onboarding_status": [ "totally_onboard" ]
+                            }
             responses:
                 200:
                     description: 'Update successful'
-                    schema:
-                        type: object
-                        properties:
-                            user:
-                                $ref: '#/definitions/User'
+                    content:
+                        application/json:
+                            type: object
+                            properties:
+                                user:
+                                    $ref: '#/components/schemas/User'
                 404:
                     description: 'User not found'
             tags:
               - user
 
     /user/{user_id}/authorise:
-        # x-summary: Authorise a user
+        parameters:
+          - name: user_id
+            in: path
+            type: string
+            required: true
+            description: >-
+                The user ID. __must__ be a Uuid.
+
         post:
             description: >-
                 This endpoint can be called by a client, which has previously logged in, renew
                 its JWT authorisation token
-            # summary: Authorise a user
-            parameters:
-              - name: user_id
-                in: path
-                type: string
+            requestBody:
                 required: true
-                description: >-
-                    The user ID. __must__ be a Uuid.
-              - name: body
-                in: body
-                required: true
-                schema:
-                    type: object
-                    properties:
-                        session_token:
-                            type: string
-                            example: 'bf652a1a90f4a3edc0887716c6bc309939a5bf87d1274ad624de0374e3ad1b1e'
-                            description: 'The session token previously returned from a call to /login.'
-                    required:
-                        - session_token
-                    example: >-
-                        {
-                            "session_token": "bf652a1a90f4a3edc0887716c6bc309939a5bf87d1274ad624de0374e3ad1b1e"
-                        }
+                content:
+                    application/json:
+                        type: object
+                        properties:
+                            session_token:
+                                type: string
+                                example: 'bf652a1a90f4a3edc0887716c6bc309939a5bf87d1274ad624de0374e3ad1b1e'
+                                description: 'The session token previously returned from a call to /login.'
+                        required:
+                            - session_token
+                        example: >-
+                            {
+                                "session_token": "bf652a1a90f4a3edc0887716c6bc309939a5bf87d1274ad624de0374e3ad1b1e"
+                            }
             responses:
                 200:
                     description: 'Authentication successful'
-                    schema:
-                        type: object
-                        properties:
-                            authorization:
-                                type: object
-                                properties:
-                                    expires:
-                                        $ref: '#/definitions/Datetime'
-                                    jwt:
-                                        type: string
-                                    session_token:
-                                        type: string
-                                        minLength: 32
-                                        maxLength: 32
+                    content:
+                        application/json:
+                            type: object
+                            properties:
+                                authorization:
+                                    type: object
+                                    properties:
+                                        expires:
+                                            $ref: '#/components/schemas/Datetime'
+                                        jwt:
+                                            type: string
+                                        session_token:
+                                            type: string
+                                            minLength: 32
+                                            maxLength: 32
                 401:
                     description: 'The session token was not (or is no longer) valid'
                 404:
@@ -343,20 +346,20 @@ paths:
               - user
 
     /user/{user_id}/logout:
-        # x-summary: Logout
+        parameters:
+        -   name: user_id
+            in: path
+            type: string
+            required: true
+            description: >-
+                The user ID. __must__ be a Uuid.
         post:
+            summary: 'Log out'
             description: >-
                 This endpoint can be called by a client, which has previously logged in,
                 to log out.
-            # summary: Log a user out
-            parameters:
-              - name: user_id
-                in: path
-                type: string
-                required: true
-                description: >-
-                    The user ID. __must__ be a Uuid.
-              - $ref: '#/parameters/authorization'
+#            parameters:
+#              - $ref: '#/parameters/authorization'
             responses:
                 200:
                     description: 'Logout successful'
@@ -368,36 +371,37 @@ paths:
               - user
 
     /user/{user_id}/change_password:
+        parameters:
+        -   name: user_id
+            in: path
+            type: string
+            required: true
+            description: 'The user ID. __must__ be a Uuid.'
+
         post:
             description: "This endpoint can be called by a client to change a user's password."
-            parameters:
-              - name: user_id
-                in: path
-                type: string
+            requestBody:
                 required: true
-                description: 'The user ID. __must__ be a Uuid.'
-              - name: body
-                in: body
-                required: true
-                schema:
-                    type: object
-                    properties:
-                        old_password:
-                            type: string
-                        password:
-                            type: string
-                        session_token:
-                            type: string
-                    required:
-                      - old_password
-                      - password
-                      - session_token
-                    example: >-
-                        {
-                            "old_password": "oatcakes",
-                            "password": "garibaldis",
-                            "session_token": "..."
-                        }
+                content:
+                    application/json:
+                        type: object
+                        properties:
+                            old_password:
+                                type: string
+                            password:
+                                type: string
+                            session_token:
+                                type: string
+                        required:
+                          - old_password
+                          - password
+                          - session_token
+                        example: >-
+                            {
+                                "old_password": "oatcakes",
+                                "password": "garibaldis",
+                                "session_token": "..."
+                            }
             responses:
                 200:
                     description: 'Success'
@@ -407,36 +411,38 @@ paths:
               - user
 
     /user/{user_id}/join_account:
+        parameters:
+        -   name: user_id
+            in: path
+            type: string
+            required: true
+            description: 'The user ID. __must__ be a Uuid.'
         post:
             description: 'This endpoint can be called by a client to attach a user to an account.'
-            parameters:
-              - name: user_id
-                in: path
-                type: string
+
+            requestBody:
                 required: true
-                description: 'The user ID. __must__ be a Uuid.'
-              - name: body
-                in: body
-                required: true
-                schema:
-                    type: object
-                    properties:
-                        account_code:
-                            type: string
-                    required:
-                      - account_code
-                    example: >-
-                        {
-                            "account_code": "ABCD1234"
-                        }
+                content:
+                    application/json:
+                        type: object
+                        properties:
+                            account_code:
+                                type: string
+                        required:
+                          - account_code
+                        example: >-
+                            {
+                                "account_code": "ABCD1234"
+                            }
             responses:
                 200:
                     description: 'Success'
-                    schema:
-                        type: object
-                        properties:
-                            account:
-                                $ref: '#/definitions/Account'
+                    content:
+                        application/json:
+                            type: object
+                            properties:
+                                account:
+                                    $ref: '#/components/schemas/Account'
                 402:
                     description: 'No more seats available in the account'
                 404:
@@ -450,68 +456,68 @@ paths:
             in: path
             type: string
             required: true
-            description: >-
-                The device ID. __must__ be a Uuid, and __must__ be unique to the device.
-          - $ref: '#/parameters/authorization'
+            description: 'The device ID. __must__ be a Uuid, and __must__ be unique to the device.'
+#          - $ref: '#/parameters/authorization'
+
         post:
-            description: >-
-                This endpoint can be called by a client to register a new mobile device.
-            parameters:
-              - name: body
-                in: body
+            description: 'This endpoint can be called by a client to register a new mobile device.'
+
+            requestBody:
                 required: true
-                schema:
-                    type: object
-                    properties:
-                        device_type:
-                            type: string
-                            enum:
-                              - ios
-                              - android
-                            example: 'ios'
-                            description: 'The hardware type of the device'
-                        push_notifications:
-                            type: object
-                            properties:
-                                token:
-                                    type: string
-                                enabled:
-                                    type: boolean
-                            required:
-                              - token
-                              - enabled
-                    required:
-                        - device_type
-                    example: >-
-                        {
-                            "device_type": "android",
-                            "push_notifications": {
-                                "token": "ABCDEF",
-                                "enabled" true
+                content:
+                    application/json:
+                        type: object
+                        properties:
+                            device_type:
+                                type: string
+                                enum:
+                                  - ios
+                                  - android
+                                example: 'ios'
+                                description: 'The hardware type of the device'
+                            push_notifications:
+                                type: object
+                                properties:
+                                    token:
+                                        type: string
+                                    enabled:
+                                        type: boolean
+                                required:
+                                  - token
+                                  - enabled
+                        required:
+                            - device_type
+                        example: >-
+                            {
+                                "device_type": "android",
+                                "push_notifications": {
+                                    "token": "ABCDEF",
+                                    "enabled" true
+                                }
                             }
-                        }
             responses:
                 200:
                     description: 'Authentication successful'
-                    schema:
-                        type: object
-                        properties:
-                            certificate:
-                                type: object
-                                properties:
-                                    id:
-                                        type: string
-                                    pem:
-                                        type: string
-                                        description: 'An RSA keypair in PEM format.'
-                                    private_key:
-                                        type: string
-                                        description: 'An RSA keypair in PEM format.'
-                                    public_key:
-                                        type: string
-                                        description: 'An RSA keypair in PEM format.'
-                            device:
-                                $ref: '#/definitions/Device'
+                    content:
+                        application/json:
+                            type: object
+                            properties:
+                                certificate:
+                                    type: object
+                                    properties:
+                                        id:
+                                            type: string
+                                        pem:
+                                            type: string
+                                            description: 'An RSA keypair in PEM format.'
+                                        private_key:
+                                            type: string
+                                            description: 'An RSA keypair in PEM format.'
+                                        public_key:
+                                            type: string
+                                            description: 'An RSA keypair in PEM format.'
+                                device:
+                                    $ref: '#/components/schemas/Device'
                 401:
                     description: 'Invalid authentication'
                 404:
@@ -520,41 +526,42 @@ paths:
               - device
 
         patch:
-            description: >-
-                This endpoint can be called by a client to affiliate an already-registered device to a new user
-            parameters:
-              - name: body
-                in: body
+            description: 'This endpoint can be called by a client to affiliate an already-registered device to a new user'
+
+            requestBody:
                 required: true
-                schema:
-                    type: object
-                    properties:
-                        owner_id:
-                            $ref: '#/definitions/Uuid'
-                            description: 'The new owner of the device, or null to de-affiliate the device from all users.'
-                    example: >-
-                        {
-                          "owner_id": "e8514489-8de9-47e0-b3d5-b15da244783f"
-                        }
+                content:
+                    application/json:
+                        type: object
+                        properties:
+                            owner_id:
+                                $ref: '#/components/schemas/Uuid'
+                                description: 'The new owner of the device, or null to de-affiliate the device from all users.'
+                        example: >-
+                            {
+                              "owner_id": "e8514489-8de9-47e0-b3d5-b15da244783f"
+                            }
             responses:
                 200:
                     description: 'Authentication successful'
-                    schema:
-                        type: object
-                        properties:
-                            message:
-                                type: string
-                                enum:
-                                  - 'Update successful'
+                    content:
+                        application/json:
+                            type: object
+                            properties:
+                                message:
+                                    type: string
+                                    enum:
+                                      - 'Update successful'
                 204:
                     description: 'Not modified'
-                    schema:
-                        type: object
-                        properties:
-                            message:
-                                type: string
-                                enum:
-                                  - 'No updates'
+                    content:
+                        application/json:
+                            type: object
+                            properties:
+                                message:
+                                    type: string
+                                    enum:
+                                      - 'No updates'
                 401:
                     description: 'Invalid authentication'
                 404:
@@ -563,188 +570,190 @@ paths:
               - device
 
     /account/{account_id}:
+        parameters:
+        -   name: account_id
+            in: path
+            type: string
+            required: true
+            description: 'The account ID. __must__ be a Uuid.'
         get:
             description: 'This endpoint allows the client to get information about an account.'
-            parameters:
-              - name: account_id
-                in: path
-                type: string
-                required: true
-                description: 'The account ID. __must__ be a Uuid.'
-              - $ref: '#/parameters/authorization'
+#              - $ref: '#/parameters/authorization'
             responses:
                 200:
                     description: 'Ok'
-                    schema:
-                        type: object
-                        properties:
-                            account:
-                                $ref: '#/definitions/Account'
+                    content:
+                        application/json:
+                            type: object
+                            properties:
+                                account:
+                                    $ref: '#/components/schemas/Account'
                 404:
                     description: 'No such account'
             tags:
               - account
 
-parameters:
-    authorization:
-        in: header
-        name: 'Authorization'
-        required: true
-        type: string
-        description: 'JWT authentication token'
-        default: 'eyJraWQ...ajBc4VQ'
+#parameters:
+#    authorization:
+#        in: header
+#        name: 'Authorization'
+#        required: true
+#        type: string
+#        description: 'JWT authentication token'
+#        default: 'eyJraWQ...ajBc4VQ'
 
-definitions:
-    Date:
-        title: Date
-        type: string
-        description: >-
-            A date in [ISO 8601](https://www.iso.org/iso-8601-date-and-time-format.html)
-            'YYYY-MM-DD' format.
-        # format: date
-        pattern: '^\d{4}-\d{2}-\d{2}$'
-        example: '2018-06-21'
-    Datetime:
-        title: Datetime
-        type: string
-        description: >-
-            A datetime in [ISO 8601](https://www.iso.org/iso-8601-date-and-time-format.html)
-            'YYYY-MM-DD HH:MM:SS' format.
-        # format: date-time
-        pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$'
-        example: '2018-06-21T11:33:45Z'
-    Uuid:
-        title: Uuid
-        type: string
-        description: >-
-            An [RFC 4122](https://tools.ietf.org/html/rfc4122) UUID.
-        # format: uuid
-        pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
-        example: 'e8514489-8de9-47e0-b3d5-b15da244783f'
-    Gender:
-        title: Gender
-        type: string
-        enum:
-          - male
-          - female
-          - mixed
-          - other
-        example: 'e8514489-8de9-47e0-b3d5-b15da244783f'
+components:
+    schemas:
+        Date:
+            title: Date
+            type: string
+            description: >-
+                A date in [ISO 8601](https://www.iso.org/iso-8601-date-and-time-format.html)
+                'YYYY-MM-DD' format.
+            # format: date
+            pattern: '^\d{4}-\d{2}-\d{2}$'
+            example: '2018-06-21'
+        Datetime:
+            title: Datetime
+            type: string
+            description: >-
+                A datetime in [ISO 8601](https://www.iso.org/iso-8601-date-and-time-format.html)
+                'YYYY-MM-DD HH:MM:SS' format.
+            # format: date-time
+            pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$'
+            example: '2018-06-21T11:33:45Z'
+        Uuid:
+            title: Uuid
+            type: string
+            description: >-
+                An [RFC 4122](https://tools.ietf.org/html/rfc4122) UUID.
+            # format: uuid
+            pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+            example: 'e8514489-8de9-47e0-b3d5-b15da244783f'
+        Gender:
+            title: Gender
+            type: string
+            enum:
+              - male
+              - female
+              - mixed
+              - other
+            example: 'e8514489-8de9-47e0-b3d5-b15da244783f'
 
-    User:
-        title: User
-        type: object
-        properties:
-            account_ids:
-                type: array
-                items:
-                    $ref: '#/definitions/Uuid'
-            agreed_privacy_policy:
-                type: boolean
-            agreed_terms_of_use:
-                type: boolean
-            biometric_data:
-                type: object
-                properties:
-                    sex:
-                        $ref: '#/definitions/Gender'
-                    height:
-                        type: object
-                        properties:
-                            ft_in:
-                                type: array
-                                items:
-                                    type: integer
+        User:
+            title: User
+            type: object
+            properties:
+                account_ids:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/Uuid'
+                agreed_privacy_policy:
+                    type: boolean
+                agreed_terms_of_use:
+                    type: boolean
+                biometric_data:
+                    type: object
+                    properties:
+                        sex:
+                            $ref: '#/components/schemas/Gender'
+                        height:
+                            type: object
+                            properties:
+                                ft_in:
+                                    type: array
+                                    items:
+                                        type: integer
+                                        minimum: 0
+                                m:
+                                    type: number
                                     minimum: 0
-                            m:
-                                type: number
-                                minimum: 0
-                    mass:
-                        type: object
-                        properties:
-                            lb:
-                                type: number
-                                minimum: 0
-                            kg:
-                                type: number
-                                minimum: 0
-            cleared_to_play:
-                type: boolean
-            created_date:
-                $ref: '#/definitions/Datetime'
-            deleted_date:
-                $ref: '#/definitions/Datetime'
-            id:
-                $ref: '#/definitions/Uuid'
-            injury_status:
-                type: string
-            migrated_date:
-                $ref: '#/definitions/Datetime'
-            mobile_udid:
-                type: string
-            onboarding_status:
-                type: array
-                items:
+                        mass:
+                            type: object
+                            properties:
+                                lb:
+                                    type: number
+                                    minimum: 0
+                                kg:
+                                    type: number
+                                    minimum: 0
+                cleared_to_play:
+                    type: boolean
+                created_date:
+                    $ref: '#/components/schemas/Datetime'
+                deleted_date:
+                    $ref: '#/components/schemas/Datetime'
+                id:
+                    $ref: '#/components/schemas/Uuid'
+                injury_status:
                     type: string
-            organization_id:
-                $ref: '#/definitions/Uuid'
-            personal_data:
-                type: object
-                properties:
-                    account_status:
+                migrated_date:
+                    $ref: '#/components/schemas/Datetime'
+                mobile_udid:
+                    type: string
+                onboarding_status:
+                    type: array
+                    items:
                         type: string
-                    account_type:
-                        type: string
-                    birth_date:
-                        $ref: '#/definitions/Date'
-                    email:
-                        type: string
-                    first_name:
-                        type: string
-                    last_name:
-                        type: string
-                    zip_code:
-                        type: string
-            role:
-                type: string
-                enum:
-                  - athlete
-                  - manager
-                  - admin
-                  - super_admin
-                  - biometrix_admin
-                  - subject
-                  - consumer
-            sensor_pid:
-                type: string
-            system_type:
-                type: string
-            timezone:
-                type: string
-            updated_date:
-                $ref: '#/definitions/Datetime'
+                organization_id:
+                    $ref: '#/components/schemas/Uuid'
+                personal_data:
+                    type: object
+                    properties:
+                        account_status:
+                            type: string
+                        account_type:
+                            type: string
+                        birth_date:
+                            $ref: '#/components/schemas/Date'
+                        email:
+                            type: string
+                        first_name:
+                            type: string
+                        last_name:
+                            type: string
+                        zip_code:
+                            type: string
+                role:
+                    type: string
+                    enum:
+                      - athlete
+                      - manager
+                      - admin
+                      - super_admin
+                      - biometrix_admin
+                      - subject
+                      - consumer
+                sensor_pid:
+                    type: string
+                system_type:
+                    type: string
+                timezone:
+                    type: string
+                updated_date:
+                    $ref: '#/components/schemas/Datetime'
 
-    Device:
-        title: 'Device'
-        type: object
-        properties:
-            id:
-                $ref: '#/definitions/Uuid'
-            thing_id:
-                $ref: '#/definitions/Uuid'
-            type:
-                type: string
-                enum:
-                  - 'ios'
-                  - 'android'
+        Device:
+            title: 'Device'
+            type: object
+            properties:
+                id:
+                    $ref: '#/components/schemas/Uuid'
+                thing_id:
+                    $ref: '#/components/schemas/Uuid'
+                type:
+                    type: string
+                    enum:
+                      - 'ios'
+                      - 'android'
 
-    Account:
-        title: 'Account'
-        type: object
-        properties:
-            id:
-                $ref: '#/definitions/Uuid'
-            name:
-                type: string
-            code:
-                type: string
+        Account:
+            title: 'Account'
+            type: object
+            properties:
+                id:
+                    $ref: '#/components/schemas/Uuid'
+                name:
+                    type: string
+                code:
+                    type: string
