@@ -255,7 +255,18 @@ def handle_user_delete(user_id):
 @require.authenticated.any
 @xray_recorder.capture('routes.user.get')
 def handle_user_get(user_id):
-    return {'user': User(user_id).get()}
+    user = User(user_id).get()
+    if 'get_team' in request.args and request.args['get_team'] in  ['TRUE', 'True', 'true']:
+        accounts = user['account_ids']
+        if len(accounts) == 0:
+            raise NoSuchEntityException("User does not belong to a team")
+        account_users = []
+        for account_id in accounts:
+            account = Account(account_id).get()
+            account_users.append({'account': account, 'users': [ud.get() for ud in list(UserData.get_many(id=account['users']))]})
+        return {'user': user, 'accounts': account_users}
+
+    return {'user': user}
 
 
 @user_app.route('/<uuid:user_id>/change_password', methods=['POST'])
