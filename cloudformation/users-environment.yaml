@@ -832,7 +832,7 @@ Resources:
                     _sqs_client = boto3.client('sqs')
                     def handler(_, __):
                         payload = {
-                            "path": '/users/2_1/misc/dailycron',
+                            "path": '/users/2_2/misc/dailycron',
                             "httpMethod": 'POST',
                             "headers": {
                                 "Accept": "*/*",
@@ -841,7 +841,7 @@ Resources:
                                 "User-Agent": "Biometrix/DailyScheduler",
                             },
                             "pathParameters": {"endpoint": 'misc/dailycron'},
-                            "stageVariables": {"LambdaAlias": '2_1'},
+                            "stageVariables": {"LambdaAlias": '2_2'},
                             "body": None,
                             "isBase64Encoded": False
                         }
