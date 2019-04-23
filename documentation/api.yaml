@@ -2,13 +2,13 @@ openapi: 3.0.0
 info:
     version: '2.0.8'
     title: "Users Service"
-    description: "This API allows clients to perform actions related to Users and Devices..."
+    description: 'This API allows clients to perform actions related to Users and Devices.'
     license:
-        name: "Proprietary"
+        name: 'Proprietary'
 
 servers:
-  - url: "https://apis.{environment}.fathomai.com/users/2_0"
-    description: "API Endpoint"
+  - url: 'https://apis.{environment}.fathomai.com/users/2_0'
+    description: 'API Endpoint'
     variables:
         environment:
             default: dev
@@ -16,81 +16,91 @@ servers:
               - dev
               - test
               - production
-            description: "Environment"
+            description: 'Environment'
 
 tags:
-    - name: user
-      description: "Users"
+  - name: user
+    description: 'Endpoints related to users.'
 
 paths:
     /user:
         post:
+            summary: 'Create a new user'
             description: 'This endpoint can be called by a client to register a user.'
             requestBody:
                 required: true
                 content:
                     application/json:
-                        type: object
-                        properties:
-                            personal_data:
-                                type: object
-                                properties:
-                                    email:
-                                        type: string
-                                        example: 'glitch0@fathomai.com'
-                                        description: 'The email address that the user registered with.'
-                                required:
-                                  - email
-                            password:
-                                type: string
-                                example: 'oatcakes'
-                                # minLength: 8
-                                description: '__must__ be a string containing 8 or more characters, with no leading or trailing spaces.'
-                            account_code:
-                                type: string
-                                example: 'ABCD1234'
-                                pattern: '[A-NP-Z]{4}[1-9]{4}'
-                                description: '__must__ be a string containing of 4 characters followed by 4 digits, not including O or 0.'
-                        required:
-                          - personal_data
-                          - password
-                        example: >-
-                            {
-                                "personal_data": {
-                                     "email": "glitch0@fathomai.com"
-                                },
-                                "password": "oatcakes",
-                                "account_code": "ABCD1234"
-                            }
+                        schema:
+                            type: object
+                            properties:
+                                personal_data:
+                                    type: object
+                                    properties:
+                                        email:
+                                            type: string
+                                            example: 'glitch0@fathomai.com'
+                                            description: 'The email address that the user registered with.'
+                                    required:
+                                      - email
+                                password:
+                                    $ref: '#/components/schemas/Password'
+                                account_code:
+                                    $ref: '#/components/schemas/AccountCode'
+                            required:
+                              - personal_data
+                              - password
             responses:
                 201:
                     description: 'Creation successful'
                     content:
                         application/json:
-                            type: object
-                            properties:
-                                authorization:
-                                    type: object
-                                    properties:
-                                        expires:
-                                            $ref: '#/components/schemas/Datetime'
-                                        jwt:
-                                            type: string
-                                        session_token:
-                                            type: string
-                                            minLength: 32
-                                            maxLength: 32
-                                user:
-                                    $ref: '#/components/schemas/User'
+                            schema:
+                                type: object
+                                properties:
+                                    authorization:
+                                        $ref: '#/components/schemas/Authorization'
+                                    user:
+                                        $ref: '#/components/schemas/User'
+                400:
+                    $ref: '#/components/responses/InvalidSchema'
                 402:
-                    description: 'Account has no spare seats'
+                    description: 'The maximum number of users has been reached for this account'
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/SimpleResponse'
+                            example:
+                                message: "The maximum number of users has been reached for this account."
+                403:
+                    description: 'Birthdate indicates user is under 13'
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/SimpleResponse'
+                            example:
+                                message: "Sorry, Fathom is only for users 13 or older!"
                 404:
-                    description: "If the account_code is invalid."
-            tags:
-              - user
+                    description: 'Unrecognised account_code'
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/SimpleResponse'
+                            example:
+                                message: "Invalid account code.  Please try again"
+                409:
+                    description: 'Duplicate email address'
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/SimpleResponse'
+                            example:
+                                message: "A user with that email address is already registered"
+            tags: [ user ]
 
     /user/login:
         post:
+            summary: 'Log in'
             description: >-
                 This endpoint can be called by a client, once registered, to acquire
                 credentials with which to access other endpoints.  The user __must__
@@ -99,484 +109,567 @@ paths:
                 required: true
                 content:
                     application/json:
-                        type: object
-                        properties:
-                            personal_data:
-                                type: object
+                        schema:
+                            allOf:
+                              - $ref: '#/components/schemas/PersonalDataEmail'
+                              - type: object
                                 properties:
-                                    email:
+                                    password:
                                         type: string
-                                        example: 'glitch0@fathomai.com'
-                                        description: 'The email address that the user registered with.'
                                 required:
-                                  - email
-                            password:
-                                type: string
-                                example: 'oatcakes'
-                                # minLength: 8
-                                description: '__must__ be a string containing 8 or more characters, with no leading or trailing spaces.'
-                        required:
-                          - personal_data
-                          - password
-                        example: >-
-                            {
-                                "personal_data": {
-                                     "email": "glitch0@fathomai.com"
-                                },
-                                "password": "oatcakes"
-                            }
+                                - password
+                            example:
+                                personal_data:
+                                    email: "glitch0@fathomai.com"
+                                password: "oatcakes"
             responses:
                 200:
                     description: 'Authentication successful'
                     content:
                         application/json:
-                            type: object
-                            properties:
-                                authorization:
-                                    type: object
-                                    properties:
-                                        expires:
-                                            $ref: '#/components/schemas/Datetime'
-                                        jwt:
-                                            type: string
-                                        session_token:
-                                            type: string
-                                            minLength: 32
-                                            maxLength: 32
-                                user:
-                                    $ref: '#/components/schemas/User'
+                            schema:
+                                type: object
+                                properties:
+                                    authorization:
+                                        $ref: '#/components/schemas/Authorization'
+                                    user:
+                                        $ref: '#/components/schemas/User'
+                400:
+                    $ref: '#/components/responses/InvalidSchema'
                 401:
                     description: 'Authentication failed'
-                404:
-                    description: >-
-                        If no user with those credentials was found and the Service is
-                        willing to reveal that fact (note that the Service __may__ choose
-                        to reply with `400 Unauthorized` in this instance, for security
-                        reasons).
-            tags:
-              - user
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/SimpleResponse'
+                            example:
+                                message: "Your email or password is incorrect.  Please try again."
+            tags: [ user ]
 
     /user/forgot_password:
         post:
-            description: >-
-                This endpoint can be called by a client to trigger a password reset for a user.
-
+            summary: 'Forgot password'
+            description: 'This endpoint can be called by a client to trigger a password reset for a user.'
             requestBody:
                 required: true
                 content:
                     application/json:
-                        type: object
-                        properties:
-                            personal_data:
-                                type: object
-                                properties:
-                                    email:
-                                        type: string
-                                        example: 'glitch0@fathomai.com'
-                                        description: 'The email address that the user registered with.'
-                                required:
-                                  - email
-                        required:
-                          - personal_data
-                        example: >-
-                            {
-                                "personal_data": {
-                                     "email": "glitch0@fathomai.com"
-                                }
-                            }
+                        schema:
+                            $ref: '#/components/schemas/PersonalDataEmail'
             responses:
                 200:
-                    description: 'Success'
+                    $ref: '#/components/responses/Success'
+                400:
+                    $ref: '#/components/responses/InvalidSchema'
                 404:
-                    description: 'No such user'
-            tags:
-              - user
+                    description: 'Authentication failed'
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/SimpleResponse'
+                            example:
+                                message: "No account with that email address exists."
+            tags: [ user ]
 
     /user/reset_password:
         post:
-            description: >-
-                This endpoint can be called by a client to reset a password with a confirmation code.
+            summary: 'Reset password'
+            description: 'This endpoint can be called by a client to reset a password with a confirmation code.'
             requestBody:
                 required: true
                 content:
                     application/json:
-                        type: object
-                        properties:
-                            personal_data:
-                                type: object
+                        schema:
+                            allOf:
+                              - $ref: '#/components/schemas/PersonalDataEmail'
+                              - type: object
                                 properties:
-                                    email:
+                                    confirmation_code:
                                         type: string
-                                        example: 'glitch0@fathomai.com'
-                                        description: 'The email address that the user registered with.'
+                                    password:
+                                        type: string
                                 required:
-                                  - email
-                            confirmation_code:
-                                type: string
-                            password:
-                                type: string
-                        required:
-                          - personal_data
-                          - confirmation_code
-                          - password
-                        example: >-
-                            {
-                                "personal_data": {
-                                     "email": "glitch0@fathomai.com"
-                                },
-                                "confirmation_code": "123456",
-                                "password": "garibaldis"
-                            }
+                                  - confirmation_code
+                                  - password
+                            example:
+                                personal_data:
+                                    email: "glitch0@fathomai.com"
+                                confirmation_code: "123456"
+                                password: "garibaldis"
             responses:
                 200:
-                    description: 'Success'
+                    $ref: '#/components/responses/Success'
+                400:
+                    $ref: '#/components/responses/InvalidSchema'
+                401:
+                    description: 'User has requested another confirmation code subsequently'
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/SimpleResponse'
+                            example:
+                                message: "Invalid or expired reset code.  Please request a new code."
                 404:
-                    description: 'No such user'
-            tags:
-              - user
+                    description: 'Authentication failed'
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/SimpleResponse'
+                            example:
+                                message: "No account with that email address exists."
+            tags: [ user ]
 
     /user/{user_id}:
         parameters:
-          - name: user_id
-            in: path
-            type: string
-            required: true
-            description: "The user ID. __must__ be a Uuid."
+          - $ref: '#/components/parameters/UserId'
 
         get:
-            description: >-
-                This endpoint allows the client to get information about a user,
-                including the current user.
+            summary: 'Get User'
+            description: 'This endpoint allows the client to get information about a user.'
 #              - $ref: '#/parameters/authorization'
             responses:
                 200:
                     description: 'Ok'
                     content:
                         application/json:
-                            type: object
-                            properties:
-                                user:
-                                    $ref: '#/components/schemas/User'
+                            schema:
+                                type: object
+                                properties:
+                                    user:
+                                        $ref: '#/components/schemas/User'
+                400:
+                    $ref: '#/components/responses/InvalidSchema'
+                401:
+                    $ref: '#/components/responses/Unauthorized'
                 404:
-                    description: 'No such user'
-            tags:
-              - user
+                    $ref: '#/components/responses/NoSuchEntity'
+            tags: [ user ]
 
         patch:
+            summary: 'Update User'
             description: 'This endpoint can be called by a client to update a user.'
             requestBody:
                 required: true
                 content:
                     application/json:
-                        type: object
-                        example: >-
-                            {
-                                "personal_data": {
-                                     "first_name": "John",
-                                     "last_name": "Smith"
-                                },
-                                "onboarding_status": [ "totally_onboard" ]
-                            }
+                        schema:
+                            type: object
+                            example:
+                                personal_data:
+                                     first_name: "John"
+                                     last_name: "Smith"
+                                onboarding_status: [ "totally_onboard" ]
             responses:
                 200:
                     description: 'Update successful'
                     content:
                         application/json:
-                            type: object
-                            properties:
-                                user:
-                                    $ref: '#/components/schemas/User'
+                            schema:
+                                type: object
+                                properties:
+                                    user:
+                                        $ref: '#/components/schemas/User'
+                400:
+                    $ref: '#/components/responses/InvalidSchema'
+                401:
+                    $ref: '#/components/responses/Unauthorized'
                 404:
-                    description: 'User not found'
-            tags:
-              - user
+                    $ref: '#/components/responses/NoSuchEntity'
+            tags: [ user ]
 
-    /user/{user_id}/authorise:
+        delete:
+            summary: 'Delete User'
+            description: 'This endpoint can be called by a client to delete a user.'
+            responses:
+                200:
+                    $ref: '#/components/responses/Success'
+                400:
+                    $ref: '#/components/responses/InvalidSchema'
+                401:
+                    $ref: '#/components/responses/Unauthorized'
+                404:
+                    $ref: '#/components/responses/NoSuchEntity'
+            tags: [ user ]
+
+    /user/{user_id}/authorize:
         parameters:
-          - name: user_id
-            in: path
-            type: string
-            required: true
-            description: >-
-                The user ID. __must__ be a Uuid.
+          - $ref: '#/components/parameters/UserId'
 
         post:
+            summary: 'Get authentication token'
             description: >-
-                This endpoint can be called by a client, which has previously logged in, renew
+                This endpoint can be called by a client, which has previously logged in, to renew
                 its JWT authorisation token
             requestBody:
                 required: true
                 content:
                     application/json:
-                        type: object
-                        properties:
-                            session_token:
-                                type: string
-                                example: 'bf652a1a90f4a3edc0887716c6bc309939a5bf87d1274ad624de0374e3ad1b1e'
-                                description: 'The session token previously returned from a call to /login.'
-                        required:
-                            - session_token
-                        example: >-
-                            {
-                                "session_token": "bf652a1a90f4a3edc0887716c6bc309939a5bf87d1274ad624de0374e3ad1b1e"
-                            }
+                        schema:
+                            type: object
+                            properties:
+                                session_token:
+                                    type: string
+                                    example: 'bf652a1a90f4a3edc0887716c6bc309939a5bf87d1274ad624de0374e3ad1b1e'
+                                    description: 'The session token previously returned from a call to `/login`.'
+                            required:
+                                - session_token
+                            example:
+                                session_token: "bf652a1a90f4a3edc0887716c6bc309939a5bf87d1274ad624de0374e3ad1b1e"
             responses:
                 200:
                     description: 'Authentication successful'
                     content:
                         application/json:
-                            type: object
-                            properties:
-                                authorization:
-                                    type: object
-                                    properties:
-                                        expires:
-                                            $ref: '#/components/schemas/Datetime'
-                                        jwt:
-                                            type: string
-                                        session_token:
-                                            type: string
-                                            minLength: 32
-                                            maxLength: 32
+                            schema:
+                                type: object
+                                properties:
+                                    authorization:
+                                        $ref: '#/components/schemas/Authorization'
+
+                400:
+                    $ref: '#/components/responses/InvalidSchema'
                 401:
-                    description: 'The session token was not (or is no longer) valid'
+                    description: 'Login required'
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/SimpleResponse'
+                            example:
+                                message: 'Refresh token has been revoked.  Please log in again.'
                 404:
-                    description: 'No such user'
-            tags:
-              - user
+                    $ref: '#/components/responses/NoSuchEntity'
+            tags: [ user ]
 
     /user/{user_id}/logout:
         parameters:
-        -   name: user_id
-            in: path
-            type: string
-            required: true
-            description: >-
-                The user ID. __must__ be a Uuid.
+          - $ref: '#/components/parameters/UserId'
+
         post:
             summary: 'Log out'
-            description: >-
-                This endpoint can be called by a client, which has previously logged in,
-                to log out.
+            description: 'This endpoint can be called by a client, which has previously logged in, to log out.'
 #            parameters:
 #              - $ref: '#/parameters/authorization'
             responses:
                 200:
-                    description: 'Logout successful'
-                401:
-                    description: 'Invalid authentication'
+                    $ref: '#/components/responses/Success'
+                400:
+                    $ref: '#/components/responses/InvalidSchema'
                 404:
-                    description: 'No such user'
-            tags:
-              - user
+                    $ref: '#/components/responses/NoSuchEntity'
+            tags: [ user ]
 
     /user/{user_id}/change_password:
         parameters:
-        -   name: user_id
-            in: path
-            type: string
-            required: true
-            description: 'The user ID. __must__ be a Uuid.'
+          - $ref: '#/components/parameters/UserId'
 
         post:
+            summary: 'Change password'
             description: "This endpoint can be called by a client to change a user's password."
             requestBody:
                 required: true
                 content:
                     application/json:
-                        type: object
-                        properties:
-                            old_password:
-                                type: string
-                            password:
-                                type: string
-                            session_token:
-                                type: string
-                        required:
-                          - old_password
-                          - password
-                          - session_token
-                        example: >-
-                            {
-                                "old_password": "oatcakes",
-                                "password": "garibaldis",
-                                "session_token": "..."
-                            }
+                        schema:
+                            type: object
+                            properties:
+                                old_password:
+                                    type: string
+                                password:
+                                    type: string
+                                session_token:
+                                    type: string
+                            required:
+                              - old_password
+                              - password
+                              - session_token
+                            example:
+                                old_password: "oatcakes"
+                                password: "garibaldis"
+                                session_token: "..."
             responses:
                 200:
-                    description: 'Success'
+                    $ref: '#/components/responses/Success'
+                401:
+                    $ref: '#/components/responses/Unauthorized'
+                400:
+                    $ref: '#/components/responses/InvalidSchema'
                 404:
-                    description: 'No such user'
-            tags:
-              - user
+                    $ref: '#/components/responses/NoSuchEntity'
+            tags: [ user ]
+
+    /user/{user_id}/verify_email:
+        parameters:
+          - $ref: '#/components/parameters/UserId'
+
+        post:
+            summary: 'Verify email'
+            description: "This endpoint can be called by a client to mark their email address as verified."
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                confirmation_code:
+                                    type: string
+                            required:
+                              - confirmation_code
+                            example:
+                                confirmation_code: "..."
+            responses:
+                200:
+                    $ref: '#/components/responses/Success'
+                400:
+                    $ref: '#/components/responses/InvalidSchema'
+                401:
+                    $ref: '#/components/responses/Unauthorized'
+                404:
+                    $ref: '#/components/responses/NoSuchEntity'
+            tags: [ user ]
 
     /user/{user_id}/join_account:
         parameters:
-        -   name: user_id
-            in: path
-            type: string
-            required: true
-            description: 'The user ID. __must__ be a Uuid.'
+          - $ref: '#/components/parameters/UserId'
+
         post:
+            summary: 'Join account'
             description: 'This endpoint can be called by a client to attach a user to an account.'
 
             requestBody:
                 required: true
                 content:
                     application/json:
-                        type: object
-                        properties:
-                            account_code:
-                                type: string
-                        required:
-                          - account_code
-                        example: >-
-                            {
-                                "account_code": "ABCD1234"
-                            }
+                        schema:
+                            type: object
+                            properties:
+                                account_code:
+                                    type: string
+                            required:
+                              - account_code
+                            example:
+                                account_code: "ABCD1234"
             responses:
                 200:
                     description: 'Success'
                     content:
                         application/json:
-                            type: object
-                            properties:
-                                account:
-                                    $ref: '#/components/schemas/Account'
+                            schema:
+                                type: object
+                                properties:
+                                    account:
+                                        $ref: '#/components/schemas/Account'
+                400:
+                    $ref: '#/components/responses/InvalidSchema'
+                401:
+                    $ref: '#/components/responses/Unauthorized'
                 402:
-                    description: 'No more seats available in the account'
+                    description: 'The maximum number of users has been reached for this account'
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/SimpleResponse'
+                            example:
+                                message: "The maximum number of users has been reached for this account."
                 404:
-                    description: 'No such account'
-            tags:
-              - user
+                    $ref: '#/components/responses/NoSuchEntity'
+            tags: [ user ]
 
     /device/{device_id}:
         parameters:
-          - name: device_id
-            in: path
-            type: string
-            required: true
-            description: 'The device ID. __must__ be a Uuid, and __must__ be unique to the device.'
+          - $ref: '#/components/parameters/DeviceId'
 #          - $ref: '#/parameters/authorization'
 
+        get:
+            summary: 'Get Device'
+            description: 'This endpoint allows the client to get information about a Device.'
+            #              - $ref: '#/parameters/authorization'
+            responses:
+                200:
+                    description: 'Ok'
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    device:
+                                        $ref: '#/components/schemas/Device'
+                400:
+                    $ref: '#/components/responses/InvalidSchema'
+                401:
+                    $ref: '#/components/responses/Unauthorized'
+                404:
+                    $ref: '#/components/responses/NoSuchEntity'
+            tags: [ device ]
+
         post:
+            summary: 'Register Device'
             description: 'This endpoint can be called by a client to register a new mobile device.'
 
             requestBody:
                 required: true
                 content:
                     application/json:
-                        type: object
-                        properties:
-                            device_type:
-                                type: string
-                                enum:
-                                  - ios
-                                  - android
-                                example: 'ios'
-                                description: 'The hardware type of the device'
-                            push_notifications:
-                                type: object
-                                properties:
-                                    token:
-                                        type: string
-                                    enabled:
-                                        type: boolean
-                                required:
-                                  - token
-                                  - enabled
-                        required:
-                            - device_type
-                        example: >-
-                            {
-                                "device_type": "android",
-                                "push_notifications": {
-                                    "token": "ABCDEF",
-                                    "enabled" true
-                                }
-                            }
-            responses:
-                200:
-                    description: 'Authentication successful'
-                    content:
-                        application/json:
+                        schema:
                             type: object
                             properties:
-                                certificate:
+                                device_type:
+                                    type: string
+                                    enum:
+                                      - ios
+                                      - android
+                                    example: 'ios'
+                                    description: 'The hardware type of the device'
+                                push_notifications:
                                     type: object
                                     properties:
-                                        id:
+                                        token:
                                             type: string
-                                        pem:
-                                            type: string
-                                            description: 'An RSA keypair in PEM format.'
-                                        private_key:
-                                            type: string
-                                            description: 'An RSA keypair in PEM format.'
-                                        public_key:
-                                            type: string
-                                            description: 'An RSA keypair in PEM format.'
-                                device:
-                                    $ref: '#/components/schemas/Device'
+                                        enabled:
+                                            type: boolean
+                                    required:
+                                      - token
+                                      - enabled
+                            required:
+                                - device_type
+                            example:
+                                device_type: "android"
+                                push_notifications:
+                                    token: "ABCDEF"
+                                    enabled: true
+            responses:
+                200:
+                    description: 'Registration successful'
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    certificate:
+                                        type: object
+                                        properties:
+                                            id:
+                                                type: string
+                                            pem:
+                                                type: string
+                                                description: 'An RSA keypair in PEM format.'
+                                            private_key:
+                                                type: string
+                                                description: 'An RSA keypair in PEM format.'
+                                            public_key:
+                                                type: string
+                                                description: 'An RSA keypair in PEM format.'
+                                    device:
+                                        $ref: '#/components/schemas/Device'
+                400:
+                    $ref: '#/components/responses/InvalidSchema'
                 401:
-                    description: 'Invalid authentication'
+                    $ref: '#/components/responses/Unauthorized'
                 404:
-                    description: 'No such user'
-            tags:
-              - device
+                    $ref: '#/components/responses/NoSuchEntity'
+            tags: [ device ]
 
         patch:
+            summary: 'Affiliate Device to User'
             description: 'This endpoint can be called by a client to affiliate an already-registered device to a new user'
 
             requestBody:
                 required: true
                 content:
                     application/json:
-                        type: object
-                        properties:
-                            owner_id:
-                                $ref: '#/components/schemas/Uuid'
-                                description: 'The new owner of the device, or null to de-affiliate the device from all users.'
-                        example: >-
-                            {
-                              "owner_id": "e8514489-8de9-47e0-b3d5-b15da244783f"
-                            }
-            responses:
-                200:
-                    description: 'Authentication successful'
-                    content:
-                        application/json:
+                        schema:
                             type: object
                             properties:
-                                message:
-                                    type: string
-                                    enum:
-                                      - 'Update successful'
-                204:
+                                owner_id:
+                                    $ref: '#/components/schemas/Uuid'
+                                    description: 'The new owner of the device, or null to de-affiliate the device from all users.'
+                            example:
+                                owner_id: "e8514489-8de9-47e0-b3d5-b15da244783f"
+            responses:
+                200:
+                    $ref: '#/components/responses/Success'
+                202:
                     description: 'Not modified'
                     content:
                         application/json:
+                            schema:
+                                $ref: '#/components/schemas/SimpleResponse'
+                400:
+                    $ref: '#/components/responses/InvalidSchema'
+                401:
+                    $ref: '#/components/responses/Unauthorized'
+                404:
+                    $ref: '#/components/responses/NoSuchEntity'
+            tags: [ device ]
+
+    /account:
+
+        get:
+            summary: 'Get Account by code'
+            description: 'This endpoint allows the client to get an Account by its code.'
+#              - $ref: '#/parameters/authorization'
+            parameters:
+              - in: query
+                name: account_code
+                schema:
+                    $ref: '#/components/schemas/AccountCode'
+                required: true
+            responses:
+                200:
+                    description: 'Ok'
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    account:
+                                        $ref: '#/components/schemas/Account'
+                404:
+                    $ref: '#/components/responses/NoSuchEntity'
+            tags: [ account ]
+
+        post:
+            summary: 'Create Account'
+            description: 'This endpoint allows the client to create a new Account.'
+#              - $ref: '#/parameters/authorization'
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
                             type: object
                             properties:
-                                message:
+                                name:
                                     type: string
-                                    enum:
-                                      - 'No updates'
+                                    description: 'The name of the Account'
+                                seats:
+                                    type: int
+                                    description: 'Number of seats'
+                        example:
+                            name: 'The A-Team'
+                            seats: 42
+            responses:
+                200:
+                    description: 'Ok'
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    account:
+                                        $ref: '#/components/schemas/Account'
+                400:
+                    $ref: '#/components/responses/InvalidSchema'
                 401:
-                    description: 'Invalid authentication'
-                404:
-                    description: 'No such device'
-            tags:
-              - device
+                    $ref: '#/components/responses/Unauthorized'
+            tags: [ account ]
 
     /account/{account_id}:
         parameters:
-        -   name: account_id
-            in: path
-            type: string
-            required: true
-            description: 'The account ID. __must__ be a Uuid.'
+          - $ref: '#/components/parameters/AccountId'
+
         get:
+            summary: 'Get Account'
             description: 'This endpoint allows the client to get information about an account.'
 #              - $ref: '#/parameters/authorization'
             responses:
@@ -584,16 +677,42 @@ paths:
                     description: 'Ok'
                     content:
                         application/json:
-                            type: object
-                            properties:
-                                account:
-                                    $ref: '#/components/schemas/Account'
+                            schema:
+                                type: object
+                                properties:
+                                    account:
+                                        $ref: '#/components/schemas/Account'
+                401:
+                    $ref: '#/components/responses/Unauthorized'
                 404:
-                    description: 'No such account'
-            tags:
-              - account
+                    $ref: '#/components/responses/NoSuchEntity'
+            tags: [ account ]
 
-#parameters:
+    /account/{account_id}/users:
+        get:
+            summary: 'List Users for Account'
+            description: 'This endpoint allows the client to get the users affiliated to an Account.'
+#              - $ref: '#/parameters/authorization'
+            responses:
+                200:
+                    description: 'Ok'
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    account:
+                                        $ref: '#/components/schemas/Account'
+                                    users:
+                                        type: array
+                                        items:
+                                            $ref: '#/components/schemas/User'
+                401:
+                    $ref: '#/components/responses/Unauthorized'
+                404:
+                    $ref: '#/components/responses/NoSuchEntity'
+            tags: [ account ]
+
 #    authorization:
 #        in: header
 #        name: 'Authorization'
@@ -603,42 +722,136 @@ paths:
 #        default: 'eyJraWQ...ajBc4VQ'
 
 components:
+
+    parameters:
+        AccountId:
+            name: user_id
+            in: path
+            type: string
+            required: true
+            description: 'The Account ID. __must__ be a Uuid.'
+        DeviceId:
+            name: device_id
+            in: path
+            type: string
+            required: true
+            description: 'The Device ID. __must__ be a Uuid, and __must__ be unique to the device.'
+        UserId:
+            name: user_id
+            in: path
+            type: string
+            required: true
+            description: 'The User ID. __must__ be a Uuid.'
+
+    responses:
+        Success:
+            description: 'Success'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/SimpleResponse'
+                    example:
+                        message: 'Success'
+
+        InvalidSchema:
+            description: 'Incorrect parameters supplied'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/SimpleResponse'
+                    example:
+                        message: "'someparam' is a required field"
+
+        Unauthorized:
+            description: 'Unauthorized'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/SimpleResponse'
+                    example:
+                        message: "Unauthorized"
+
+        NoSuchEntity:
+            description: 'No such entity'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/SimpleResponse'
+                    example:
+                        message: "No such entity"
+
     schemas:
+        AccountCode:
+            type: string
+            example: 'ABCD1234'
+            pattern: '[A-NP-Z]{4}[1-9]{4}'
+            description: 'A string containing of 4 characters followed by 4 digits, not including O or 0.'
         Date:
             title: Date
             type: string
-            description: >-
-                A date in [ISO 8601](https://www.iso.org/iso-8601-date-and-time-format.html)
-                'YYYY-MM-DD' format.
+            description: "A date in [ISO 8601](https://www.iso.org/iso-8601-date-and-time-format.html) 'YYYY-MM-DD' format."
             # format: date
             pattern: '^\d{4}-\d{2}-\d{2}$'
             example: '2018-06-21'
         Datetime:
             title: Datetime
             type: string
-            description: >-
-                A datetime in [ISO 8601](https://www.iso.org/iso-8601-date-and-time-format.html)
-                'YYYY-MM-DD HH:MM:SS' format.
+            description: "A datetime in [ISO 8601](https://www.iso.org/iso-8601-date-and-time-format.html) 'YYYY-MM-DD HH:MM:SS' format."
             # format: date-time
             pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$'
             example: '2018-06-21T11:33:45Z'
-        Uuid:
-            title: Uuid
-            type: string
-            description: >-
-                An [RFC 4122](https://tools.ietf.org/html/rfc4122) UUID.
-            # format: uuid
-            pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
-            example: 'e8514489-8de9-47e0-b3d5-b15da244783f'
         Gender:
             title: Gender
             type: string
             enum:
-              - male
-              - female
-              - mixed
-              - other
+            - male
+            - female
+            - mixed
+            - other
             example: 'e8514489-8de9-47e0-b3d5-b15da244783f'
+        Password:
+            title: Password
+            type: string
+            example: 'oatcakes'
+            description: 'A string containing 8 or more characters, with no leading or trailing spaces.'
+        Uuid:
+            title: Uuid
+            type: string
+            description: 'An [RFC 4122](https://tools.ietf.org/html/rfc4122) UUID.'
+            # format: uuid
+            pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+            example: 'e8514489-8de9-47e0-b3d5-b15da244783f'
+
+        SimpleResponse:
+            type: object
+            properties:
+                message:
+                    type: string
+
+        Authorization:
+            type: object
+            properties:
+                expires:
+                    $ref: '#/components/schemas/Datetime'
+                jwt:
+                    type: string
+                session_token:
+                    type: string
+
+        PersonalDataEmail:
+            type: object
+            properties:
+                personal_data:
+                    type: object
+                    properties:
+                        email:
+                            type: string
+                            example: 'glitch0@fathomai.com'
+                            description: 'The email address that the user registered with.'
+                    required:
+                    - email
+            required:
+                - personal_data
 
         User:
             title: User
