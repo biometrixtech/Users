@@ -142,6 +142,35 @@
         "updated_date": {
             "description": "The date the user was last updated",
             "type": "string"
+        },
+        "sensor_networks": {
+            "description": "The wifi network accessory is currently connected to",
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
+        "sensor_data": {
+            "type": "object",
+            "properties": {
+                "sensor_pid": {
+                    "type": "string"
+                },
+                "mobile_udid": {
+                    "type": "string"
+                },
+                "system_type": {
+                    "enum": [ "no-sensor", "1-sensor", "3-sensor" ]
+                },
+                "sensor_networks": {
+                    "description": "The wifi network accessory is currently connected to",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            },
+            "required": []
         }
     },
     "required": [
