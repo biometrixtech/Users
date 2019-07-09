@@ -16,7 +16,7 @@ Parameters:
     # Plan API version
     PlansApiVersion: 
         Type: "String"
-        Default: "4_0"
+        Default: "4_1"
         Description: "Corresponding Plans API version"
     # The second part of the CIDR block for the VPN (10.xx.0.0/24).
     VpnCidr:
@@ -840,7 +840,7 @@ Resources:
                     _sqs_client = boto3.client('sqs')
                     def handler(_, __):
                         payload = {
-                            "path": '/users/2_2/misc/dailycron',
+                            "path": '/users/2_3/misc/dailycron',
                             "httpMethod": 'POST',
                             "headers": {
                                 "Accept": "*/*",
@@ -849,7 +849,7 @@ Resources:
                                 "User-Agent": "Biometrix/DailyScheduler",
                             },
                             "pathParameters": {"endpoint": 'misc/dailycron'},
-                            "stageVariables": {"LambdaAlias": '2_2'},
+                            "stageVariables": {"LambdaAlias": '2_3'},
                             "body": None,
                             "isBase64Encoded": False
                         }
