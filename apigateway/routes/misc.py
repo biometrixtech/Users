@@ -49,6 +49,7 @@ def handle_activeusers():
             continue
         body = {"timezone": user_datum.get().get('timezone', None) or "-05:00"}
         plans_api_version = user_datum.get().get('plans_api_version', '4_3')
+        print(user.id, plans_api_version)
         if plans_api_version == '4_3':  # user after 4_3 will be scheduled directly through plans
             calls.append({'method': 'POST', 'endpoint': f'/athlete/{user.id}/active', 'body': body})
 
