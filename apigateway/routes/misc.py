@@ -48,8 +48,9 @@ def handle_activeusers():
             print(f"user not found {user.id}")
             continue
         body = {"timezone": user_datum.get().get('timezone', None) or "-05:00"}
-
-        calls.append({'method': 'POST', 'endpoint': f'/athlete/{user.id}/active', 'body': body})
+        plans_api_version = user_datum.get().get('plans_api_version', '4_3')
+        if plans_api_version == '4_3':  # user after 4_3 will be scheduled directly through plans
+            calls.append({'method': 'POST', 'endpoint': f'/athlete/{user.id}/active', 'body': body})
 
     plans_service.call_apigateway_async_multi(calls=calls, jitter=10 * 60)
 

@@ -155,6 +155,10 @@
                 }
             },
             "required": []
+        },
+        "plans_api_version": {
+            "description": "plans api version the user is currently on",
+            "type": "string"
         }
     },
     "required": [
