@@ -30,6 +30,15 @@ class User(CognitoEntity):
         self._munge_response(ret)
         return ret
 
+    def exists(self):
+        if self._exists is None:
+            try:
+                super().get()
+                self._exists = True
+            except NoSuchEntityException:
+                self._exists = False
+        return self._exists
+
     def patch(self, body):
         updated = False
         with xray_recorder.in_subsegment('user.patch'):
