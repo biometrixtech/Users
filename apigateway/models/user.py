@@ -34,21 +34,26 @@ class User(CognitoEntity):
         updated = False
 
         try:
-            ret = super().patch(body)
+            super().patch(body)
             updated = True
         except NoUpdatesException:
-            ret = self.get()
+            pass
+            # ret = self.get()
 
         user_data = UserData(self.id)
         try:
-            ret.update(user_data.patch(body))
+            user_data.patch(body)
+            # ret.update(user_data.patch(body))
             updated = True
         except NoUpdatesException:
-            ret.update(user_data.get())
+            pass
+            # ret.update(user_data.get())
 
         if not updated:
             raise NoUpdatesException()
 
+        ret = super().get()
+        ret.update(user_data.get())
         self._munge_response(ret)
         return ret
 
