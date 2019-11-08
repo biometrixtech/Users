@@ -1,5 +1,5 @@
 import boto3
-
+from aws_xray_sdk.core import xray_recorder
 from fathomapi.api.config import Config
 from fathomapi.models.cognito_entity import CognitoEntity
 from fathomapi.utils.exceptions import UnauthorizedException, NoUpdatesException, NoSuchEntityException
@@ -32,19 +32,20 @@ class User(CognitoEntity):
 
     def patch(self, body):
         updated = False
-
-        try:
-            super().patch(body)
-            updated = True
-        except NoUpdatesException:
-            pass
-            # ret = self.get()
+        with xray_recorder.in_subsegment('user.patch'):
+            try:
+                super().patch(body)
+                updated = True
+            except NoUpdatesException:
+                pass
+                # ret = self.get()
 
         user_data = UserData(self.id)
         try:
-            user_data.patch(body)
-            # ret.update(user_data.patch(body))
-            updated = True
+            with xray_recorder.in_subsegment('user_data.patch'):
+                user_data.patch(body)
+                # ret.update(user_data.patch(body))
+                updated = True
         except NoUpdatesException:
             pass
             # ret.update(user_data.get())
@@ -52,8 +53,10 @@ class User(CognitoEntity):
         if not updated:
             raise NoUpdatesException()
 
-        ret = super().get()
-        ret.update(user_data.get())
+        with xray_recorder.in_subsegment('user.get'):
+            ret = super().get()
+        with xray_recorder.in_subsegment('user_data.get'):
+            ret.update(user_data.get())
         self._munge_response(ret)
         return ret
 
