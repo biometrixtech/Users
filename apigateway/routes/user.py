@@ -200,8 +200,9 @@ def handle_user_authorise(user_id):
             raise ForbiddenException('Refresh token has been revoked.  Please log in again.')
         raise e
 
+    user_data = UserData(user.id)
     if 'timezone' in request.json:
-        user.patch({'timezone': request.json['timezone']})
+        user_data.patch({'timezone': request.json['timezone']})
 
     return {'authorization': auth}
 
