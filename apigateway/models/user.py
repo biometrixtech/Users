@@ -1,4 +1,5 @@
 import boto3
+
 from fathomapi.api.config import Config
 from fathomapi.models.cognito_entity import CognitoEntity
 from fathomapi.utils.exceptions import UnauthorizedException, NoUpdatesException, NoSuchEntityException
@@ -29,38 +30,25 @@ class User(CognitoEntity):
         self._munge_response(ret)
         return ret
 
-    def exists(self):
-        if self._exists is None:
-            try:
-                super().get()
-                self._exists = True
-            except NoSuchEntityException:
-                self._exists = False
-        return self._exists
-
     def patch(self, body):
         updated = False
+
         try:
-            super().patch(body)
+            ret = super().patch(body)
             updated = True
         except NoUpdatesException:
-            pass
-            # ret = self.get()
+            ret = self.get()
 
         user_data = UserData(self.id)
         try:
-            user_data.patch(body)
-            # ret.update(user_data.patch(body))
+            ret.update(user_data.patch(body))
             updated = True
         except NoUpdatesException:
-            pass
-            # ret.update(user_data.get())
+            ret.update(user_data.get())
 
         if not updated:
             raise NoUpdatesException()
 
-        ret = super().get()
-        ret.update(user_data.get())
         self._munge_response(ret)
         return ret
 
