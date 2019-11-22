@@ -200,8 +200,9 @@ def handle_user_authorise(user_id):
             raise ForbiddenException('Refresh token has been revoked.  Please log in again.')
         raise e
 
+    user_data = UserData(user.id)
     if 'timezone' in request.json:
-        user.patch({'timezone': request.json['timezone']})
+        user_data.patch({'timezone': request.json['timezone']})
 
     return {'authorization': auth}
 
@@ -326,6 +327,7 @@ def handle_user_notify(user_id):
     }
     if 'last_updated' in request.json:
         payload['last_updated'] = request.json['last_updated']
+    expire_in = request.json.get('expire_in', 30)  # notification expiration time in seconds
     message_digest = hashlib.sha512(json.dumps(payload).encode()).hexdigest()
     now_time = int(time.time())
 
@@ -334,7 +336,7 @@ def handle_user_notify(user_id):
             Item={
                 'user_id': user_id,
                 'message_hash': message_digest,
-                'expiry_timestamp': now_time + 30,
+                'expiry_timestamp': now_time + expire_in,
             },
             ConditionExpression='attribute_not_exists(user_id) OR expiry_timestamp < :expiry_timestamp',
             ExpressionAttributeValues={':expiry_timestamp': now_time}
